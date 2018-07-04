@@ -322,19 +322,35 @@ bool RRatios::PrepareShower
   p_cmetric = p_cmetric_np1;
 
 
-  //TODO: choose momenta at random
-  size_t leg1 = p_ampl_np1->NIn();
-  size_t leg2 = leg1+1;
-  //std::swap(leg1,leg2);
-  size_t leg3 = leg2+1;
+  //TODO: choose momenta at random, this probably needs much improvement still
+  size_t leg_emit, leg_soft, leg_spect;
 
-  msg_Debugging()<<leg1<<" "<<leg2<<" "<<leg3<<"\n";
-  kf_code new_fl = new_flavour(p_ampl_np1->Leg(leg1)->Flav().Kfcode(),
-                               p_ampl_np1->Leg(leg2)->Flav().Kfcode());
+  for(size_t i=p_ampl_np1->NIn();i<p_ampl_np1->Legs().size();i++) {
+    if(p_ampl_np1->Leg(i)->Flav().Kfcode() == 21) {
+      leg_soft = i;
+      if(i==p_ampl_np1->NIn()) {
+        leg_emit = i+1;
+        leg_spect = i+2;
+      }
+      else if(i==p_ampl_np1->Legs().size()-1) {
+        leg_emit = i-2;
+        leg_spect = i-1;
+      }
+      else {
+        leg_emit = i-1;
+        leg_spect = i+1;
+      }
+      break;
+    }
+  }
+  
+  kf_code new_fl = new_flavour(p_ampl_np1->Leg(leg_emit)->Flav().Kfcode(),
+                               p_ampl_np1->Leg(leg_soft)->Flav().Kfcode());
 
-  p_emit = p_ampl_np1->Leg(leg1);
-  p_soft = p_ampl_np1->Leg(leg2);
-  p_spect = p_ampl_np1->Leg(leg3);
+  p_emit = p_ampl_np1->Leg(leg_emit);
+  p_soft = p_ampl_np1->Leg(leg_soft);
+  p_spect = p_ampl_np1->Leg(leg_spect);
+
   
   Vec4D p1 = p_emit->Mom();
   Vec4D p2 = p_soft->Mom();
@@ -344,18 +360,24 @@ bool RRatios::PrepareShower
 
   
   p_ampl_n = p_ampl_np1->Copy();
+
   p_ampl_n->SetOrderQCD(p_ampl_np1->OrderQCD()-1);
-  p_ampl_n->CombineLegs(p_ampl_n->Leg(leg1),p_ampl_n->Leg(leg2),
+  p_ampl_n->CombineLegs(p_ampl_n->Leg(leg_emit),p_ampl_n->Leg(leg_soft),
                       Flavour(new_fl));
   // p_ampl_n->Leg(leg1)->SetMom(p_ampl_n->Leg(leg1)->Mom()-y/(1-y)*p_ampl_np1->Leg(leg3)->Mom());
   // p_ampl_n->Leg(leg3)->SetMom(1./(1.-y) * p_ampl_n->Leg(leg3)->Mom());
-  p_ampl_n->Leg(leg1)->SetMom({100,-50,-50,0});
-  p_ampl_n->Leg(leg3)->SetMom({100,50,50,0});
-  p_ampl_n->Leg(leg1)->SetId(4);
-  p_ampl_n->Leg(leg3)->SetId(8);
-
-  p_emit_n = p_ampl_n->Leg(leg1);
-  p_spect_n = p_ampl_n->Leg(leg3);
+  for(size_t i=0;i<p_ampl_n->Legs().size();i++) {
+    msg_Debugging()<<"Set leg "<<i<<" "<<*p_ampl_n<<"\n";
+    if(i==leg_soft) {
+      p_ampl_n->Leg(i)->SetMom({100,-100,0,0});
+      p_emit_n = p_ampl_n->Leg(i);
+      p_ampl_n->Leg(i+1)->SetMom({100,100,0,0});
+      p_spect_n = p_ampl_n->Leg(i+1);
+    }
+    p_ampl_n->Leg(i)->SetId(pow(2,i));
+    msg_Out()<<*p_ampl_n<<"\n";
+  }
+  msg_Debugging()<<"New amplitude for n-parton process: "<<*p_ampl_n<<"\n";
 
   tmp = p_ampl_n->Copy();
   tmp->SetNIn(0);
