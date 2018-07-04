@@ -2,5 +2,7 @@
 Results.*
 Process/*
 Status_*
-SherpaReferences.tex
+Sherpa_References.tex
 *.os
+.SConstruct
+.sconsign.dblite

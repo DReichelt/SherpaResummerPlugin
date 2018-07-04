@@ -46,5 +46,18 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 	RPATH=['${sherpa}/lib/SHERPA-MC'],
 	LIBS=['SherpaAnalyses','SherpaAnalysis'])
 
-env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib])
+rratiolib = env.SharedLibrary('SherpaRRatios',
+	['Math/r8lib.cpp',
+	'Math/c8lib.cpp',
+	'Math/matexp.cpp',
+	'Math/asa007.cpp',
+	'Tools/CBasis.C',
+	'Tools/CMetric_Base.C',
+	'Tools/Hard_Matrix.C',
+	'Bases/QCD_Generic.C',
+	'Main/Comix_Interface.C',
+        'RRatios/RRatios.C',
+	'Main/Cluster_Definitions.C'])
+
+env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Alias('install', '${sherpa}/lib/SHERPA-MC')
