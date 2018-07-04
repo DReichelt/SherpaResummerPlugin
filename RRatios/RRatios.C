@@ -271,18 +271,19 @@ bool RRatios::PrepareShower
   SetMomenta(p_ampl_np1, {{100,0,0,100},{100,0,0,-100},emit,s,spect});
   msg_Out()<<*p_ampl_np1<<"\n";
 
-  p_ampl_np1->SetNIn(0);  
-  std::string pname=Process_Base::GenerateName(p_ampl_np1);
+  ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
+  tmp->SetNIn(0);  
+  std::string pname=Process_Base::GenerateName(tmp);
 
-  Process_Base::SortFlavours(p_ampl_np1);
+  Process_Base::SortFlavours(tmp);
   CMetric_Base* cmetric;
 
   n_g=0;
   n_q=0;
   n_aq=0;
    
-  for (size_t i=0;i<p_ampl_np1->Legs().size();i++) {
-    Flavour flav = p_ampl_np1->Leg(i)->Flav();
+  for (size_t i=0;i<tmp->Legs().size();i++) {
+    Flavour flav = tmp->Leg(i)->Flav();
     if (i<2) flav=flav.Bar();
     if (flav==Flavour(kf_gluon)) n_g++;
     if (flav.IsQuark() && !flav.IsAnti()) n_q++;
@@ -290,7 +291,7 @@ bool RRatios::PrepareShower
   }
 
   //number of color singlets
-  color_sings = p_ampl_np1->Legs().size() - (n_g + n_aq + n_q);
+  color_sings = tmp->Legs().size() - (n_g + n_aq + n_q);
    
   std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   
@@ -308,7 +309,7 @@ bool RRatios::PrepareShower
     //initial bases calc 
     //Compute metric for process arranged like q...qb...g
     msg_Debugging() << name << std::endl;
-    cmetric=CMetric_Base::GetCM(CMetric_Key(name,p_ampl_np1));
+    cmetric=CMetric_Base::GetCM(CMetric_Key(name,tmp));
     if (cmetric==NULL) THROW(not_implemented,"No metric for "+name);
     msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
     m_cmetrics.insert(make_pair(pname,cmetric));
@@ -320,12 +321,14 @@ bool RRatios::PrepareShower
 
   p_cmetric = p_cmetric_np1;
 
-  p_ampl_np1=ampl->Copy();
 
   //TODO: choose momenta at random
   size_t leg1 = p_ampl_np1->NIn();
   size_t leg2 = leg1+1;
+  //std::swap(leg1,leg2);
   size_t leg3 = leg2+1;
+
+  msg_Debugging()<<leg1<<" "<<leg2<<" "<<leg3<<"\n";
   kf_code new_fl = new_flavour(p_ampl_np1->Leg(leg1)->Flav().Kfcode(),
                                p_ampl_np1->Leg(leg2)->Flav().Kfcode());
 
@@ -354,7 +357,7 @@ bool RRatios::PrepareShower
   p_emit_n = p_ampl_n->Leg(leg1);
   p_spect_n = p_ampl_n->Leg(leg3);
 
-  ATOOLS::Cluster_Amplitude* tmp = p_ampl_n->Copy();
+  tmp = p_ampl_n->Copy();
   tmp->SetNIn(0);
   Process_Base::SortFlavours(tmp);
   std::string pname_n = Process_Base::GenerateName(tmp);
