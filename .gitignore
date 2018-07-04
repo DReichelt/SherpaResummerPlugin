@@ -1,6 +1,6 @@
 *.dylib
 Results.*
-Process/*
+Process/
 Status_*
 Sherpa_References.tex
 *.os
