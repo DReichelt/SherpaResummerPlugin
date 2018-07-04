@@ -66,7 +66,6 @@ int RRatios::PerformShowers()
 {
   DEBUG_FUNC(this);
   // first check we got everything we need
-  if (p_ampl==NULL) THROW(fatal_error,"No process info");
   if(p_ampl_np1==nullptr) THROW(fatal_error,"No process info for n+1.");
   if(p_ampl_n==nullptr) THROW(fatal_error,"No process info for n.");
 
@@ -115,7 +114,7 @@ int RRatios::PerformShowers()
                           dim_np1, 0).real();
   MatrixD H_n = MatrixC(p_comix->ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                         dim_n, 0).real();
-
+ 
   // TODO: this currently only exists to create debugging output
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
@@ -255,8 +254,10 @@ bool RRatios::PrepareShower
   DEBUG_FUNC(this);
   DEBUG_VAR(ampl->Proc<Process_Base>());
 
+
   p_ampl_np1=ampl->Copy();
-  p_ampl = p_ampl_np1;
+  p_ampl=p_ampl_np1;
+  //p_ampl = p_ampl_np1;
 
   // if we want we can reset momenta here
   Vec4D emit = {100,50,50,0};
@@ -270,17 +271,18 @@ bool RRatios::PrepareShower
   SetMomenta(p_ampl_np1, {{100,0,0,100},{100,0,0,-100},emit,s,spect});
   msg_Out()<<*p_ampl_np1<<"\n";
 
-  
+  p_ampl_np1->SetNIn(0);  
   std::string pname=Process_Base::GenerateName(p_ampl_np1);
-  Process_Base::SortFlavours(p_ampl);
+
+  Process_Base::SortFlavours(p_ampl_np1);
   CMetric_Base* cmetric;
 
   n_g=0;
   n_q=0;
   n_aq=0;
    
-  for (size_t i=0;i<p_ampl->Legs().size();i++) {
-    Flavour flav = p_ampl->Leg(i)->Flav();
+  for (size_t i=0;i<p_ampl_np1->Legs().size();i++) {
+    Flavour flav = p_ampl_np1->Leg(i)->Flav();
     if (i<2) flav=flav.Bar();
     if (flav==Flavour(kf_gluon)) n_g++;
     if (flav.IsQuark() && !flav.IsAnti()) n_q++;
@@ -288,7 +290,7 @@ bool RRatios::PrepareShower
   }
 
   //number of color singlets
-  color_sings = p_ampl->Legs().size() - (n_g + n_aq + n_q);
+  color_sings = p_ampl_np1->Legs().size() - (n_g + n_aq + n_q);
    
   std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   
@@ -317,7 +319,8 @@ bool RRatios::PrepareShower
   p_cmetric_np1=cmetric;
 
   p_cmetric = p_cmetric_np1;
-  
+
+  p_ampl_np1=ampl->Copy();
 
   //TODO: choose momenta at random
   size_t leg1 = p_ampl_np1->NIn();
@@ -351,16 +354,20 @@ bool RRatios::PrepareShower
   p_emit_n = p_ampl_n->Leg(leg1);
   p_spect_n = p_ampl_n->Leg(leg3);
 
-  std::string pname_n = Process_Base::GenerateName(p_ampl_n);
+  ATOOLS::Cluster_Amplitude* tmp = p_ampl_n->Copy();
+  tmp->SetNIn(0);
+  Process_Base::SortFlavours(tmp);
+  std::string pname_n = Process_Base::GenerateName(tmp);
+
   msg_Debugging()<<"new process: "<<pname_n<<"\n";
-  msg_Debugging()<<*p_ampl_n<<"\n";
+  msg_Debugging()<<*tmp<<"\n";
 
   n_g=0;
   n_q=0;
   n_aq=0;
    
-  for (size_t i=0;i<p_ampl_n->Legs().size();i++) {
-    Flavour flav = p_ampl_n->Leg(i)->Flav();
+  for (size_t i=0;i<tmp->Legs().size();i++) {
+    Flavour flav = tmp->Leg(i)->Flav();
     if (i<2) flav=flav.Bar();
     if (flav==Flavour(kf_gluon)) n_g++;
     if (flav.IsQuark() && !flav.IsAnti()) n_q++;
@@ -379,13 +386,14 @@ bool RRatios::PrepareShower
   else {
     //initial bases calc 
     //Compute metric for process arranged like q...qb...g
-    cmetric_n=CMetric_Base::GetCM(CMetric_Key(name_n,p_ampl_n));
+    cmetric_n=CMetric_Base::GetCM(CMetric_Key(name_n,tmp));
     if (cmetric_n==NULL) THROW(not_implemented,"No metric for "+name_n);
     msg_Debugging()<<"Metric for '"<<pname_n<<"' is "<<cmetric_n<<"\n";
     m_cmetrics.insert(make_pair(pname_n,cmetric_n));
   }
 
   p_cmetric_n = cmetric_n;
+  tmp->Delete();
   return true;
 } 
   
