@@ -1,0 +1,84 @@
+(initial){
+  PIECE_SETUP Compare.dat (LnThrust.dat){ }(LnThrust.dat);
+  PIECE_SETUP Compare.dat (LogThrust.dat){ }(LogThrust.dat);
+  LEG_DELTA_Y 0.055;
+}(initial);
+
+(LnThrust.dat){
+  PIECE_SETUP Compare.dat (level0){ }(level0);
+  FILE_PIECE FinalState_Resum_h2_Thrust.dat;
+  HISTOGRAM_NAME LnTau; X_MIN -14; X_MAX 0;
+  X_AXIS_TITLE ln#tau_{T}; @@ YTITLE d#sigma/dln#tau_{T} [#mub];
+  @@ YMIN -0.7; @@ YMAX 3; @@ YSCALING Id;
+  LEG_LEFT 0.5; LEG_RIGHT 0.8;
+}(LnThrust.dat);
+(LogThrust.dat){
+  PIECE_SETUP Compare.dat (level0){ }(level0);
+  FILE_PIECE FinalState_Resum_h1_Thrust.dat;
+  HISTOGRAM_NAME LogTau; X_MIN -6; X_MAX 0;
+  X_AXIS_TITLE log#tau_{T}; @@ YTITLE d#sigma/dlog#tau_{T} [#mub];
+  @@ YMIN -1.5; @@ YMAX 7; @@ YSCALING Id;
+  LEG_LEFT 0.5; LEG_RIGHT 0.8;
+}(LogThrust.dat);
+
+(level0){
+  PIECE_SETUP Compare.dat (paths){ }(paths);
+  PIECE_SETUP Compare.dat (dpaths){ }(dpaths);
+}(level0);
+
+(paths){
+  PIECE_SETUP Compare.dat (BI){ }(BI);
+  PIECE_SETUP Compare.dat (P){ }(P);
+  PIECE_SETUP Compare.dat (RS){ }(RS);
+  PIECE_SETUP Compare.dat (sum){ }(sum);
+  PIECE_SETUP Compare.dat (R){ }(R);
+  DRAW YES; BOTTOM_MARGIN 0.35; Y_AXIS_TITLE YTITLE;
+  X_AXIS_LABEL_SIZE 0; X_TITLE_SIZE 0;
+  Y_MIN YMIN; Y_MAX YMAX; Y_SCALING YSCALING;
+}(paths);
+(BI){
+  PATH_PIECE BI/; DATA_TYPE ATOOLS; Y_FUNCTION y/1e6;
+  LINE_COLOUR 2; LEGEND_TITLE NLL @ O(#alpha_{s});
+}(BI);
+(P){
+  PATH_PIECE P/; DATA_TYPE ATOOLS; Y_FUNCTION -y/1e6;
+  LINE_COLOUR 6; LEGEND_TITLE PDF @ O(#alpha_{s});
+}(P);
+(RS){
+  PATH_PIECE RS/; DATA_TYPE ATOOLS; Y_FUNCTION y/1e6;
+  LINE_COLOUR 4; LEGEND_TITLE LO Matching;
+}(RS);
+(sum){
+  PATH_PIECE BI/ P/ RS/ BI/ P/ RS/ R/; ## COLUMNS 2 2 2 5 5 5 2;
+  DATA_TYPE ALGEBRA(y[0]+y[1]+y[2])(sqrt(sqr(y[3])+sqr(y[4])+sqr(y[5])))(sqrt(sqr(y[3])+sqr(y[4])+sqr(y[5])));
+  LINE_COLOUR 1; LEGEND_TITLE Sum;
+}(sum);
+(R){
+  PATH_PIECE R/; DATA_TYPE ATOOLS; Y_FUNCTION y/1e6;
+  LINE_COLOUR 1; LINE_STYLE 3; LEGEND_TITLE LO;
+  DRAW_LATEX p_{T,j2} > 80 GeV | LEFT 0.075 TOP 0.425 ALIGN 11 COLOUR 1 SIZE 0.035\;;
+  DRAW_LATEX p_{T,j1} > 100 GeV | LEFT 0.075 TOP 0.35 ALIGN 11 COLOUR 1 SIZE 0.035\;;
+  DRAW_LATEX pp#rightarrow jj @ 8 TeV | LEFT 0.075 TOP 0.25 ALIGN 11 COLOUR 1 SIZE 0.035\;;
+  DRAW_LINE H 0 | STYLE 1 PRIORITY -10;
+}(R);
+
+(dpaths){
+  PIECE_SETUP Compare.dat (dsum){ }(dsum);
+  PIECE_SETUP Compare.dat (dR){ }(dR);
+  DRAW YES; TOP_MARGIN 0.65;
+  DIFF_PLOT YES; DRAW_LEGEND NO;
+  Y_AXIS_TITLE (#sigma_{Sum}-#sigma_{LO}) / #sqrt{#delta_{Sum}^{2}+#delta_{LO}^{2}}; Y_AXIS_TICK_LENGTH 0.08;
+  Y_TITLE_SIZE 0.0325;
+  Y_AXIS_NDIVISIONS 505; Y_AXIS_LABEL_DIVISIONS 1;
+  Y_MIN -2.99; Y_MAX 2.99;
+}(dpaths);
+(dsum){
+  PATH_PIECE BI/ P/ RS/ R/ BI/ P/ RS/ R/; ## COLUMNS 2 2 2 2 5 5 5 5;
+  DATA_TYPE ALGEBRA((y[0]+y[1]+y[2]-y[3])/sqrt(sqr(y[4])+sqr(y[5])+sqr(y[6])+sqr(y[7])));
+  LINE_COLOUR 1; LEGEND_TITLE sum;
+}(dsum);
+(dR){
+  PATH_PIECE R/ R/; ## COLUMNS 2 5;
+  DATA_TYPE ALGEBRA(0);
+  LINE_COLOUR 1; LINE_STYLE 3;
+}(dR);
