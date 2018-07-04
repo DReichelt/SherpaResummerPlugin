@@ -101,7 +101,7 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
     msg_Debugging()<<"Perm "<<l<<": ";
     for (size_t m = 0; m < m_ntot; m++){
       in >> temp;
-      msg_Debugging()<<ID(ampl->Leg(Map(temp))->Id())<<" ";
+      msg_Debugging()<<temp<<" -> "<<Map(temp)<<" -> "<<ID(ampl->Leg(Map(temp))->Id())<<" ";
       // m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
       m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
     }
