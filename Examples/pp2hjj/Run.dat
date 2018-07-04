@@ -1,0 +1,39 @@
+(run){
+  # general settings
+  EVENTS 1M; 
+  EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None;
+  BEAM_REMNANTS 0;
+  # collider setup
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  # resummation setup
+  SHOWER_GENERATOR Resum;
+  SCALES VAR{Abs2(p[0]+p[1])};
+  # model setup
+  MODEL SM+EHC;
+  # analysis setup
+  # ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+}(run);
+(processes){
+  Process 93 93 -> 25 93 93;
+  Print_Graphs graphs; Order_EW 1;
+  End process;
+}(processes);
+(selector){
+  NJetFinder 2 20 0 0.4;
+}(selector);
+
+(analysis){
+
+  BEGIN_ANALYSIS {
+
+    LEVEL Shower;
+
+    Resum { FinalState;
+      TauT  1e-15 1 30 LogErr;
+      TauTm 1e-15 1 30 LogErr;
+    }
+
+  } END_ANALYSIS;
+
+}(analysis);

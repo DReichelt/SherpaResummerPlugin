@@ -1,0 +1,6 @@
+*.dylib
+Results.*
+Process/*
+Status_*
+SherpaReferences.tex
+*.os

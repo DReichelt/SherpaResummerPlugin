@@ -1,0 +1,14 @@
+import os
+vars = Variables()
+vars.Add(PathVariable('libdir','lib path',os.getcwd()+'/Process/Amegic/lib',PathVariable.PathIsDirCreate))
+vars.Add('CXX','The C++ Compiler','clang++')
+vars.Add('CXXFLAGS','The C++ Flags',['-O2'])
+vars.Add(PathVariable('incdir','include path','/Users/Daniel/devel/Resummer/include/SHERPA-MC',PathVariable.PathIsDir))
+env = Environment(variables=vars,CPPPATH=['${incdir}'])
+env['ENV']=os.environ
+if env['PLATFORM']=='darwin':
+   env.Append( LINKFLAGS='-Wl,-undefined -Wl,dynamic_lookup' )
+
+SConscript('Process/Amegic/P2_3/SConscript',exports='env')
+SConscript('Process/Amegic/P2_3/fsrchannels3/SConscript',exports='env')
+SConscript('Process/Amegic/P2_2/SConscript',exports='env')

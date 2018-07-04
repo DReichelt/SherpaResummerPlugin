@@ -1,0 +1,31 @@
+(run){
+  EVENTS 10k; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  SHOWER_GENERATOR Resum;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{Abs2(p[2]+p[3])};
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  ANALYSIS_WRITEOUT_INTERVAL 10000;
+  ACTIVE[22] 0; ACTIVE[23] 0; MASS[25] 125;
+  MODEL SM+EHC; YUKAWA[15] 1.777;
+  RESUM_MODE 2;
+}(run);
+(processes){
+  Process 93 93 -> 15 -15;
+  End process;
+}(processes);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL Shower; PATH_PIECE P/;
+    Resum { FinalState;
+      Thrust_II 0 1 100 LinErr;
+      Thrust_II 1e-8 1 80 LogErr;
+      Thrust_II 1.12535174719e-07 1 80 LnErr;
+      Y1_II 0 1 100 LinErr;
+      Y1_II 1e-8 1 80 LogErr;
+      Y1_II 1.12535174719e-07 1 80 LnErr;
+    }
+  } END_ANALYSIS;
+}(analysis);
