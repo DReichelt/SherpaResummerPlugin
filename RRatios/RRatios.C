@@ -202,7 +202,7 @@ int RRatios::PerformShowers()
   MatrixD chGamma = metric_n*H_n*Gamma;
   msg_Out()<<chGamma;
   double TrcHG = 0.118/M_PI * chGamma.trace();
-  msg_Out<< "Tr c_n*H_n = " << TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  msg_Out()<< "Tr c_n*H_n = " << TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
   exit(1);
   CleanUp();
   return 1;
