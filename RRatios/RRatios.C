@@ -346,13 +346,19 @@ bool RRatios::PrepareShower
                       Flavour(new_fl));
   // p_ampl_n->Leg(leg1)->SetMom(p_ampl_n->Leg(leg1)->Mom()-y/(1-y)*p_ampl_np1->Leg(leg3)->Mom());
   // p_ampl_n->Leg(leg3)->SetMom(1./(1.-y) * p_ampl_n->Leg(leg3)->Mom());
-  p_ampl_n->Leg(leg1)->SetMom({100,-50,-50,0});
-  p_ampl_n->Leg(leg3)->SetMom({100,50,50,0});
-  p_ampl_n->Leg(leg1)->SetId(4);
-  p_ampl_n->Leg(leg3)->SetId(8);
+  for(size_t i=0;i<p_ampl_n->Legs().size();i++) {
+    msg_Debugging()<<"Set leg "<<i<<" "<<*p_ampl_n<<"\n";
+    if(i==leg_soft) {
+      p_ampl_n->Leg(i)->SetMom({100.,100, 0,0.});
+      p_emit_n = p_ampl_n->Leg(i);
+      p_ampl_n->Leg(i+1)->SetMom({100.,-100, 0,0.});
+      p_spect_n = p_ampl_n->Leg(i+1);
 
-  p_emit_n = p_ampl_n->Leg(leg1);
-  p_spect_n = p_ampl_n->Leg(leg3);
+    }
+    p_ampl_n->Leg(i)->SetId(pow(2,i));
+    msg_Out()<<*p_ampl_n<<"\n";
+  }
+  msg_Debugging()<<"New amplitude for n-parton process: "<<*p_ampl_n<<"\n";
 
   ATOOLS::Cluster_Amplitude* tmp = p_ampl_n->Copy();
   tmp->SetNIn(0);
