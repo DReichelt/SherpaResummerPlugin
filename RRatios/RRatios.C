@@ -103,8 +103,8 @@ int RRatios::PerformShowers()
   MatrixD metric_np1 = p_cmetric_np1->CMetric();
   MatrixD metric_n = p_cmetric_n->CMetric();
 
-  metric_np1.print(msg_Out());
-  metric_n.print(msg_Out());
+  msg_Out()<<metric_np1<<"\n\n";
+  msg_Out()<<metric_n<<"\n";
   
   unsigned int dim_np1 = metric_np1.dim();  
   unsigned int dim_n = metric_n.dim();
@@ -133,20 +133,20 @@ int RRatios::PerformShowers()
   MatrixD cH_np1 = metric_np1*H_np1;
   MatrixD cH_n = metric_n*H_n;
   
-  std::cout << "c*H:" << std::endl;
-  cH_np1.print(std::cout);
+  msg_Out() << "c_n+1 * H_n+1:\n";
+  msg_Out()<<cH_np1<<"\n";
   
   
 
-  std::cout << "c_n*H_n:" << std::endl;
-  cH_n.print(std::cout);
+  msg_Out() << "c_n * H_n:\n";
+  msg_Out()<< cH_n<<"\n";
   
   
   double TrcH = cH_np1.trace();
   double TrcH_n = cH_n.trace();
   
-  std::cout<< "Tr c*H = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
-  std::cout<< "Tr c_n*H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  msg_Out()<< "Tr c_n+1 *H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
+  msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
 
 
   
@@ -176,12 +176,8 @@ int RRatios::PerformShowers()
   msg_Out()<<*p_ampl_n<<"\n";
   
   msg_Out()<<"\n";
-  metric_n.print(msg_Out());
-  msg_Out()<<"\n";
-  Imetric.print(msg_Out());
-  msg_Out()<<"\n";
-  (metric_n*Imetric).print(msg_Out());
-  msg_Out()<<"\n";
+  msg_Out()<<metric_n<<"\n"<<Imetric<<"\n";
+  msg_Out()<<metric_n*Imetric<<"\n";
   size_t i=0;
   for(size_t f=0; f<p_ampl_n->Legs().size(); f++){ 
     for(size_t r=f+1; r<p_ampl_n->Legs().size(); r++) {
@@ -191,7 +187,7 @@ int RRatios::PerformShowers()
       if(f < p_ampl_n->NIn()) pt *= -1;
       if(r < p_ampl_n->NIn()) pr *= -1;
       double eikonal = pt*pr / ((pt*soft)*(pr*soft));
-      (Tprods.at(i)).print(std::cout);
+      msg_Out()<<Tprods.at(i)<<"\n";
       msg_Out()<<pt<<"\n";
       msg_Out()<<pr<<"\n";
       msg_Out()<<eikonal<<"\n";
@@ -200,15 +196,13 @@ int RRatios::PerformShowers()
       i++;
     }
   }
-  msg_Out()<<"Sum Cij\n";
-  SumTs.print(msg_Out());
-  msg_Out()<<"\n";
-  ((2.*3.*MatrixD::diagonal(1,0,SumTs.dim())+SumTs)).print(msg_Out());
+  msg_Out()<<"Sum Cij\n"<<SumTs<<"\n";
+  msg_Out()<<((2.*3.*MatrixD::diagonal(1,0,SumTs.dim())+SumTs));
   msg_Out()<<"\n";
   MatrixD chGamma = metric_n*H_n*Gamma;
-  chGamma.print(msg_Out());
+  msg_Out()<<chGamma;
   double TrcHG = 0.118/M_PI * chGamma.trace();
-  std::cout<< "Tr c_n*H_n = " << TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  msg_Out<< "Tr c_n*H_n = " << TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
   exit(1);
   CleanUp();
   return 1;
@@ -295,7 +289,7 @@ bool RRatios::PrepareShower
    
   std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   
-  msg_Debugging()<<" Found process with "<<n_g<<" Gluons, "<<n_q<<" Quarks and "<<n_aq<<" Anti-Quarks : "<<name<<std::endl;
+  msg_Debugging()<<" Found process with "<<n_g<<" Gluons, "<<n_q<<" Quarks and "<<n_aq<<" Anti-Quarks : "<<name<<"\n";
 
   //search for metric in m_cmetrics, 
   //otherwise get it from available getters
@@ -303,12 +297,12 @@ bool RRatios::PrepareShower
   //get_Cbasis(name)
   if (CMiter!=m_cmetrics.end()) {
     cmetric=CMiter->second;
-    msg_Debugging()<<" found metric in list : "<<pname<<" -> "<<cmetric<<std::endl;
+    msg_Debugging()<<" found metric in list : "<<pname<<" -> "<<cmetric<<"\n";
   }
   else {
     //initial bases calc 
     //Compute metric for process arranged like q...qb...g
-    msg_Debugging() << name << std::endl;
+    msg_Debugging() << name << "\n";
     cmetric=CMetric_Base::GetCM(CMetric_Key(name,tmp));
     if (cmetric==NULL) THROW(not_implemented,"No metric for "+name);
     msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
@@ -407,7 +401,7 @@ bool RRatios::PrepareShower
   msg_Debugging()<<"Found process "<<name_n<<"\n";
   if (CMiter_n!=m_cmetrics.end()) {
     cmetric_n=CMiter_n->second;
-    msg_Debugging()<<" found metric in list : "<<pname_n<<" -> "<<cmetric_n<<std::endl;
+    msg_Debugging()<<" found metric in list : "<<pname_n<<" -> "<<cmetric_n<<"\n";
   }
   else {
     //initial bases calc 

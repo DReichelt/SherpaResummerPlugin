@@ -172,7 +172,10 @@ public:
 
   
   
-  friend std::ostream& operator<< (std::ostream& stream, const Matrix<T>& matrix);
+  friend std::ostream& operator<< (std::ostream& stream, const Matrix<T>& matrix) {
+      matrix.print(stream);
+      return stream;
+  }
   
 
 };
@@ -220,15 +223,12 @@ inline Matrix<T> operator/(Matrix<T> lhs, T rhs)
   return lhs;
 }
 
-template <typename T>
-std::ostream& operator<< (std::ostream& stream, const Matrix<T>& matrix) {
-  matrix.print(stream);
-  return stream;
-}
 
+
+// usefull typedef
 typedef Matrix<double> MatrixD;
 
-
+// specialisation for complex matrices
 class MatrixC: public Matrix<std::complex<double> > {
 public:
   using Matrix::Matrix;
@@ -237,7 +237,6 @@ public:
     for(int i=0; i<data.size(); i++) data[i] = m_data[i].real();
     return MatrixD(data, m_dim);
   }
-
   MatrixD imag() {
     valarray<double> data(m_data.size());
     for(int i=0; i<data.size(); i++) data[i] = m_data[i].imag();
