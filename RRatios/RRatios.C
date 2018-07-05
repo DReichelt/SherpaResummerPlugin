@@ -369,10 +369,11 @@ bool RRatios::PrepareShower
   for(size_t i=0;i<p_ampl_n->Legs().size();i++) {
     msg_Debugging()<<"Set leg "<<i<<" "<<*p_ampl_n<<"\n";
     if(i==leg_soft) {
-      p_ampl_n->Leg(i)->SetMom({100,-100,0,0});
+      p_ampl_n->Leg(i)->SetMom({100.,100, 0,0.});
       p_emit_n = p_ampl_n->Leg(i);
-      p_ampl_n->Leg(i+1)->SetMom({100,100,0,0});
+      p_ampl_n->Leg(i+1)->SetMom({100.,-100, 0,0.});
       p_spect_n = p_ampl_n->Leg(i+1);
+
     }
     p_ampl_n->Leg(i)->SetId(pow(2,i));
     msg_Out()<<*p_ampl_n<<"\n";
