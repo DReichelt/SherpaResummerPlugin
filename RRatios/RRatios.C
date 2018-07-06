@@ -28,15 +28,10 @@ using namespace MODEL;
 
 RRatios::RRatios(ISR_Handler *const isr,
 	     Model_Base *const model):
-  Shower_Base("RRatios"), p_ampl(NULL)
+  Shower_Base("RRatios")
 {
-  p_comix = new Comix_Interface();
-  p_clus = new Cluster_Definitions();
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
-  p_pdf = new PDF_Base*[2];
-  for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
-
   Data_Reader read(" ",";","#","=");
   m_amode=read.GetValue<int>("RESUM_MODE",0);
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
@@ -45,11 +40,6 @@ RRatios::RRatios(ISR_Handler *const isr,
 
 RRatios::~RRatios()
 {
-  if (p_ampl) p_ampl->Delete();
-  delete p_comix;
-  delete p_clus;
-  delete [] p_pdf;
-
   while (m_cmetrics.size()>0) {
     delete m_cmetrics.begin()->second;
     m_cmetrics.erase(m_cmetrics.begin());
@@ -109,9 +99,9 @@ int RRatios::PerformShowers()
   
 
   
-    MatrixD H_np1 = MatrixC(p_comix->ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
+    MatrixD H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
-    MatrixD H_n = MatrixC(p_comix->ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
+    MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, 0).real();
   
     msg_Debugging() << "Tr()c_n+1 * H_n+1):\n"<< (metric_np1*H_np1).trace()<<"\n";
@@ -195,9 +185,7 @@ bool RRatios::ExtractPartons(Blob_List *const bl)
 
 void RRatios::CleanUp()
 {
-  p_comix->Reset();
-  if (p_ampl) p_ampl->Delete();
-  p_ampl=NULL;  
+  m_comix.Reset();
 }
 
 Cluster_Definitions_Base *RRatios::GetClusterDefinitions()
@@ -214,8 +202,7 @@ bool RRatios::PrepareShower
 
 
   p_ampl_np1=ampl->Copy();
-  p_ampl=p_ampl_np1;
-  //p_ampl = p_ampl_np1;
+
 
   // if we want we can reset momenta here
   // Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.};

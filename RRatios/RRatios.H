@@ -9,19 +9,19 @@
 #include "Tools/CBasis.C"
 #include "ATOOLS/Math/Matrix.H"
 
+
 namespace RESUM {
 
   class RRatios: public PDF::Shower_Base {
   private:
 
-    Comix_Interface *p_comix;
+    Comix_Interface m_comix;
 
-    Cluster_Definitions *p_clus;
 
     ATOOLS::Cluster_Amplitude *p_ampl_np1;
     ATOOLS::Cluster_Amplitude *p_ampl_n;
     // TODO: have this to keep some unused functions happy
-    ATOOLS::Cluster_Amplitude *p_ampl;
+    // ATOOLS::Cluster_Amplitude *p_ampl;
 
     
     ATOOLS::Cluster_Leg* p_emit = nullptr;
@@ -32,7 +32,6 @@ namespace RESUM {
 
     vector<size_t> m_ordered_ids;
         
-    PDF::PDF_Base    ** p_pdf;
     
     MODEL::Running_AlphaS *p_as;
     
