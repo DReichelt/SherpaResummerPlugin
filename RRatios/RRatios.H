@@ -1,13 +1,8 @@
 #include "PDF/Main/Shower_Base.H"
 #include "MODEL/Main/Running_AlphaS.H"
 #include "Main/Comix_Interface.H"
-#include "Main/Cluster_Definitions.H"
 #include "Math/Matrix.H"
-#include "Analysis/Observable_Base.H"
 #include "Tools/CMetric_Base.H"
-#include "Tools/CBasis.H"
-#include "Tools/CBasis.C"
-#include "ATOOLS/Math/Matrix.H"
 
 
 namespace RESUM {
@@ -30,7 +25,7 @@ namespace RESUM {
     ATOOLS::Cluster_Leg* p_emit_n = nullptr;
     ATOOLS::Cluster_Leg* p_spect_n = nullptr;
 
-    vector<size_t> m_ordered_ids;
+    std::vector<size_t> m_ordered_ids;
         
     
     MODEL::Running_AlphaS *p_as;
@@ -42,7 +37,6 @@ namespace RESUM {
     CMetric_Base * p_cmetric;
     CMetric_Base * p_cmetric_np1;
     
-    std::vector<Observable_Base*>     m_obss;
     std::vector<ATOOLS::Histogram*>   m_hist;
     std::vector<std::vector<double> > m_ress;
 

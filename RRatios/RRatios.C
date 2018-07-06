@@ -1,29 +1,16 @@
 #include "RRatios/RRatios.H"
 
-#include "PHASIC++/Process/Single_Process.H"
-#include "ATOOLS/Math/Random.H"
-#include "ATOOLS/Org/Run_Parameter.H"
-#include "ATOOLS/Org/Exception.H"
-#include "ATOOLS/Org/MyStrStream.H"
 #include "ATOOLS/Phys/Blob_List.H"
 #include "ATOOLS/Org/Run_Parameter.H"
-#include "ATOOLS/Math/Matrix.H"
-#include "ATOOLS/Org/Shell_Tools.H"
 #include "MODEL/Main/Model_Base.H"
 #include "ATOOLS/Org/Data_Reader.H"
-#include "ATOOLS/Math/MathTools.H"
-#include "ATOOLS/Math/Poincare.H"
-#include "ATOOLS/Math/Histogram.H"
-#include "Analysis/Observable_Base.H"
-#include "Math/matexp.hpp"
-#include <typeinfo>
 
 using namespace RESUM;
-using namespace PHASIC;
 using namespace PDF;
 using namespace ATOOLS;
 using namespace MODEL;
-
+using PHASIC::Process_Base;
+using std::vector;
 
 
 RRatios::RRatios(ISR_Handler *const isr,
@@ -47,6 +34,7 @@ RRatios::~RRatios()
 }
 
 inline kf_code new_flavour(kf_code fl1, kf_code fl2) {
+  // TODO: is this correct in all cases?
   if(fl1==21) return fl2;
   if(fl2==21) return fl1;
   return 21;
@@ -120,7 +108,7 @@ int RRatios::PerformShowers()
 
   
 
-    MatrixD Gamma(Tprods.at(0).numElements(), Tprods.at(0).dim());
+    MatrixD Gamma(Tprods.at(0).dim(), Tprods.at(0).dim());
 
     int r = 0;
     int f = 0;
@@ -172,7 +160,7 @@ int RRatios::PerformDecayShowers()
 bool RRatios::ExtractPartons(Blob_List *const bl)
 {
   Blob *b(bl->FindLast(btp::Shower));
-  if (b==NULL) THROW(fatal_error,"No Shower blob");
+  if (b==nullptr) THROW(fatal_error,"No Shower blob");
   b->SetTypeSpec("RESUM");
   for (int i=0;i<b->NInP();++i) 
     b->InParticle(i)->SetStatus(part_status::decayed);
@@ -190,7 +178,7 @@ void RRatios::CleanUp()
 
 Cluster_Definitions_Base *RRatios::GetClusterDefinitions()
 {
-  return NULL;
+  return nullptr;
 }
 
 
@@ -256,7 +244,7 @@ bool RRatios::PrepareShower
     //Compute metric for process arranged like q...qb...g
     msg_Debugging() << name << "\n";
     cmetric=CMetric_Base::GetCM(CMetric_Key(name,tmp));
-    if (cmetric==NULL) THROW(not_implemented,"No metric for "+name);
+    if (cmetric==nullptr) THROW(not_implemented,"No metric for "+name);
     msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
     m_cmetrics.insert(make_pair(pname,cmetric));
   }
@@ -361,7 +349,7 @@ bool RRatios::PrepareShower
     //initial bases calc 
     //Compute metric for process arranged like q...qb...g
     cmetric_n=CMetric_Base::GetCM(CMetric_Key(name_n,tmp));
-    if (cmetric_n==NULL) THROW(not_implemented,"No metric for "+name_n);
+    if (cmetric_n==nullptr) THROW(not_implemented,"No metric for "+name_n);
     msg_Debugging()<<"Metric for '"<<pname_n<<"' is "<<cmetric_n<<"\n";
     m_cmetrics.insert(make_pair(pname_n,cmetric_n));
   }
