@@ -46,6 +46,7 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 	RPATH=['${sherpa}/lib/SHERPA-MC'],
 	LIBS=['SherpaAnalyses','SherpaAnalysis'])
 
+
 rratiolib = env.SharedLibrary('SherpaRRatios',
 	['Math/r8lib.cpp',
 	'Math/c8lib.cpp',
@@ -59,5 +60,20 @@ rratiolib = env.SharedLibrary('SherpaRRatios',
         'RRatios/RRatios.C',
 	'Main/Cluster_Definitions.C'])
 
-env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
-env.Alias('install', '${sherpa}/lib/SHERPA-MC')
+def replace(target, source, env):
+    share_dir=os.path.join(env.subst('${sherpa}'),'share/RESUM')
+    with open(str(source[0]), "rt") as fin:
+         with open(str(target[0]), "wt") as fout:
+              for line in fin:
+                  fout.write(line.replace('@share_dir',share_dir))
+         
+env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
+            action=replace)
+
+env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,
+                                        analysislib,
+                                        rratiolib])
+env.Install('${sherpa}/share/RESUM',['Bases/pre_calc'])
+env.Alias('install', ['${sherpa}/share/RESUM',
+                     '${sherpa}/lib/SHERPA-MC',
+                     'Tools/Files.H'])

@@ -1,0 +1,36 @@
+(run){
+  EVENTS 10M; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  SHOWER_GENERATOR None;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{sqr(91.188)};
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  ANALYSIS_WRITEOUT_INTERVAL 10000;
+  MATCHING_INFO 1;
+  DIPOLE_AMIN 1e-37;
+}(run);
+(processes){
+  Process 93 93 -> 93 93;
+  NLO_QCD_Mode 1; NLO_QCD_Part RS;
+  ME_Generator Amegic;
+  Order_EW 0;
+  End process;
+}(processes);
+
+(selector){
+  ResumObs Thrust 5e-7;
+  NJetFinder 2 80 0 0.4;
+  NJetFinder 1 100 0 0.4;
+}(selector);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO; PATH_PIECE RS/;
+    MatchResum { FinalState;
+      Thrust 0 1 100 LinErr;
+      Thrust 1e-8 1 80 LogErr;
+      Thrust 1.12535174719e-07 1 80 LnErr;
+    }
+  } END_ANALYSIS;
+}(analysis);

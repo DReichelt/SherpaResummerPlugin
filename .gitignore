@@ -6,3 +6,4 @@ Sherpa_References.tex
 *.os
 .SConstruct
 .sconsign.dblite
+Tools/Files.H

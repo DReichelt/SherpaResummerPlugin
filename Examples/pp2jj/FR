@@ -1,0 +1,29 @@
+(run){
+  EVENTS 2M; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  SHOWER_GENERATOR Resum;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{H_T2/4.}{H_T2/4.}{Abs2(p[0]+p[1])};
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  ANALYSIS_WRITEOUT_INTERVAL 10000;
+}(run);
+(processes){
+  Process 93 93 -> 93 93;
+  Order_EW 0;
+  End process;
+}(processes);
+
+(selector){
+  NJetFinder 2 80 0 0.4;
+  NJetFinder 1 100 0 0.4;
+}(selector);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL Shower; PATH_PIECE FR/;
+    Resum { FinalState;
+      Thrust .00673795 1 25 LnErr;
+    }
+  } END_ANALYSIS;
+}(analysis);
