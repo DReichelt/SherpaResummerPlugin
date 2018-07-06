@@ -1,0 +1,10 @@
+#ifndef FILES_H
+#define FILES_H
+#include <string>
+
+namespace RESUM {
+  namespace FILENAMES {
+    static const std::string SHARE_DIR="@share_dir";
+      }
+}
+#endif

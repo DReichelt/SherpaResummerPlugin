@@ -10,6 +10,8 @@
 #include "ATOOLS/Org/Message.H"
 #include "Math/asa007.hpp"
 
+#include "Tools/Files.H"
+
 using namespace ATOOLS;
 using namespace RESUM;
 
@@ -69,7 +71,7 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   }
   
   m_ntot = m_ng+m_nq+m_naq;
-  m_rpath = "../../Bases/pre_calc/";
+  m_rpath = RESUM::FILENAMES::SHARE_DIR + "/pre_calc";
   m_filename = "";
   for(unsigned i = 0; i < double(m_nq+m_naq)/2.; i++) m_filename = m_filename + "qqb";
   for(unsigned i = 0; i < m_ng; i++) m_filename = m_filename + "g";
