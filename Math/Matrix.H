@@ -16,8 +16,27 @@ protected:
 public:
   // constructors  
   // need that to keep stl containers happy...
-  Matrix() {}
+  Matrix() = default;
 
+  // some standard stuff
+  Matrix<T>(const Matrix<T>& other) = default;
+
+  void swap (Matrix<T>& other) noexcept {
+    std::swap(m_data, other.m_data);
+    std::swap(m_dim, other.m_dim);
+  }
+  
+  Matrix<T>(Matrix<T>&& other) : Matrix<T>() {
+    other.swap(*this);
+  }
+
+  // copy and move assignment
+  Matrix<T>& operator=(Matrix<T> other) {
+    other.swap(*this);
+    return *this;
+  }
+
+  
   // directly provide underlying data and number of cols
   Matrix(const std::valarray<T> d, size_t c) : m_data(d), m_dim(c) {
     assert(d.size()%c == 0);
@@ -35,7 +54,7 @@ public:
     }
     catch(std::out_of_range) {
       THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!")
-    }
+        }
   }
   // build matrix from nested vectors, but fill with zeros to match dim rows and cols
   Matrix(const std::vector<std::vector<T> >& mat, size_t dim, T def) : m_dim(dim), m_data(dim*dim) {
@@ -51,7 +70,7 @@ public:
     }
   }
 
-  static Matrix<T> diagonal(const T& diag, const T& offdiag, size_t dim) {
+  static Matrix<T> diagonal(const T& diag, size_t dim, const T& offdiag=T()) {
     Matrix<T> ret(dim,dim);
     for(size_t i=0;i<dim;++i) {
       for(size_t j=0;j<dim;j++) {
@@ -102,7 +121,6 @@ public:
     }
   }
   
-
   // basic operations
   Matrix<T>& operator+=(const Matrix<T>& rhs)
   {
@@ -145,14 +163,14 @@ public:
   
   // accessors
   T& operator()(size_t r, size_t c) {return element(r,c);}
-  const T& operator()(size_t r, size_t c) const {return element(r,c);}
+  T& operator()(size_t r, size_t c) const {return element(r,c);}
   inline T& element(size_t r, size_t c) {return m_data[r*m_dim + c];}
   inline const T& element(size_t r, size_t c) const  {return m_data[r*m_dim + c];}
 
 
   
   // properties of the matrix
-  T trace() const {
+   T trace() const {
     return m_data[std::slice(0, m_dim, m_dim+1)].sum();
   }
 
@@ -224,8 +242,13 @@ inline Matrix<T> operator/(Matrix<T> lhs, T rhs)
 }
 
 
+template <typename T>
+void swap(Matrix<T> a, Matrix<T> b) {
+  a.swap(b);
+}
 
-// usefull typedef
+
+// usefull typedefs
 typedef Matrix<double> MatrixD;
 
 // specialisation for complex matrices
@@ -243,7 +266,5 @@ public:
     return MatrixD(data, m_dim);
   }
 };
-
-
 
 #endif
