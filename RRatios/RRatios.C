@@ -85,8 +85,9 @@ int RRatios::PerformShowers()
   Vec4D emit = p_emit_n->Mom();
   Vec4D spect = p_spect_n->Mom();
 
-  double lambda = 0.001;
-  Vec4D soft = lambda*p_soft->Mom();
+  // double lambda = 0.001;
+  // Vec4D soft = lambda*p_soft->Mom();
+  Vec4D soft = {140.0, 126.13564150633869, 60.743723476458136, 0.0};//p_soft->Mom();
   double eps = emit*soft/(spect*(emit-soft));
   Vec4D p1 = emit-soft + eps * spect;
   Vec4D p3 = (1.-eps)*spect;
@@ -114,7 +115,10 @@ int RRatios::PerformShowers()
                           dim_np1, 0).real();
   MatrixD H_n = MatrixC(p_comix->ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                         dim_n, 0).real();
- 
+
+  double g =  sqrt(4.*M_PI*0.118);
+  msg_Out()<<H_n/4./g/g/g/g<<"\n";
+  
   // TODO: this currently only exists to create debugging output
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
@@ -145,8 +149,9 @@ int RRatios::PerformShowers()
   double TrcH = cH_np1.trace();
   double TrcH_n = cH_n.trace();
   
-  msg_Out()<< "Tr c_n+1 *H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
-  msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  msg_Out()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
+  // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  msg_Out()<< "Tr c_n * H_n = " << TrcH_n/4/g/g/g/g<< "\n";
 
 
   
@@ -181,28 +186,33 @@ int RRatios::PerformShowers()
   size_t i=0;
   for(size_t f=0; f<p_ampl_n->Legs().size(); f++){ 
     for(size_t r=f+1; r<p_ampl_n->Legs().size(); r++) {
-      msg_Out()<<f<<" "<<r<<"\n";
-      Vec4D pt = p_ampl_n->Leg(f)->Mom();
-      Vec4D pr = p_ampl_n->Leg(r)->Mom();
-      if(f < p_ampl_n->NIn()) pt *= -1;
-      if(r < p_ampl_n->NIn()) pr *= -1;
+      msg_Out()<<"Insertion between legs "<<f<<" -> "<<ID(m_ordered_ids.at(f))<<", "<<r<<" -> "<< ID(m_ordered_ids.at(r))<<".\n";
+      Vec4D pt = p_ampl_n->IdLeg(m_ordered_ids.at(f))->Mom();
+      Vec4D pr = p_ampl_n->IdLeg(m_ordered_ids.at(r))->Mom();
+      if(pt[0]<0) pt *= -1;
+      if(pr[0]<0) pr *= -1;
       double eikonal = pt*pr / ((pt*soft)*(pr*soft));
-      msg_Out()<<Tprods.at(i)<<"\n";
-      msg_Out()<<pt<<"\n";
-      msg_Out()<<pr<<"\n";
-      msg_Out()<<eikonal<<"\n";
-      Gamma += eikonal*Tprods.at(i);
+      msg_Out()<<"T-product: \n"<<Tprods.at(i)<<"\n";
+      msg_Out()<<"p_t = "<<pt<<"\n";
+      msg_Out()<<"p_r = "<<pr<<"\n";
+      msg_Out()<<"p_soft = "<<soft<<"\n";
+      msg_Out()<<"eikonal = "<<eikonal<<"\n\n";
+      // TODO: urgent!! why is this a - and not a +?????????                             
+      Gamma -= eikonal*Tprods.at(i);
       SumTs += Tprods.at(i);
       i++;
     }
   }
-  msg_Out()<<"Sum Cij\n"<<SumTs<<"\n";
-  msg_Out()<<((2.*3.*MatrixD::diagonal(1,0,SumTs.dim())+SumTs));
-  msg_Out()<<"\n";
-  MatrixD chGamma = metric_n*H_n*Gamma;
+    msg_Out()<<"Gamma:\n"<<Gamma<<"\n";
+  // msg_Out()<<"Sum Cij\n"<<SumTs<<"\n";
+  // msg_Out()<<((2.*3.*MatrixD::diagonal(1,0,SumTs.dim())+SumTs));
+  // msg_Out()<<"\n";
+  MatrixD chGamma = H_n*Gamma;
   msg_Out()<<chGamma;
-  double TrcHG = 0.118/M_PI * chGamma.trace();
-  msg_Out()<< "Tr c_n*H_n = " << TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
+  double TrcHG = chGamma.trace();
+  msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
+  // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
+  msg_Out()<<(g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6.)/ (TrcH/1536/0.3302891295379082/0.3302891295379082  * 32)<<"\n";
   exit(1);
   CleanUp();
   return 1;
@@ -254,15 +264,16 @@ bool RRatios::PrepareShower
   //p_ampl = p_ampl_np1;
 
   // if we want we can reset momenta here
-  Vec4D emit = {100,50,50,0};
-  Vec4D spect = {100,50,-50,0};
+  Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.};
+  Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.};
 
   double lambda = 0.001;
-  Vec4D s = {lambda,lambda,0,0};
+  //Vec4D s = {lambda,lambda,0,0};
+  Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0};
   double eps = emit*s/(spect*(emit-s));
-  emit += -s + eps * s;
-  spect *= (1.-eps);
-  SetMomenta(p_ampl_np1, {{100,0,0,100},{100,0,0,-100},emit,s,spect});
+  Vec4D emit_rec = emit -s + eps * s;
+  Vec4D spect_rec = spect*(1.-eps);
+  SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},emit_rec,s,spect_rec});
   msg_Out()<<*p_ampl_np1<<"\n";
 
   ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
@@ -361,22 +372,24 @@ bool RRatios::PrepareShower
   // p_ampl_n->Leg(leg1)->SetMom(p_ampl_n->Leg(leg1)->Mom()-y/(1-y)*p_ampl_np1->Leg(leg3)->Mom());
   // p_ampl_n->Leg(leg3)->SetMom(1./(1.-y) * p_ampl_n->Leg(leg3)->Mom());
   for(size_t i=0;i<p_ampl_n->Legs().size();i++) {
-    msg_Debugging()<<"Set leg "<<i<<" "<<*p_ampl_n<<"\n";
+    msg_Debugging()<<"Set leg "<<i<<" "<<"\n";
     if(i==leg_soft) {
-      p_ampl_n->Leg(i)->SetMom({100.,100, 0,0.});
+      p_ampl_n->Leg(i)->SetMom(emit);
       p_emit_n = p_ampl_n->Leg(i);
-      p_ampl_n->Leg(i+1)->SetMom({100.,-100, 0,0.});
+      p_ampl_n->Leg(i+1)->SetMom(spect);
       p_spect_n = p_ampl_n->Leg(i+1);
-
     }
     p_ampl_n->Leg(i)->SetId(pow(2,i));
-    msg_Out()<<*p_ampl_n<<"\n";
+    msg_Debugging()<<*p_ampl_n<<"\n";
   }
   msg_Debugging()<<"New amplitude for n-parton process: "<<*p_ampl_n<<"\n";
 
   tmp = p_ampl_n->Copy();
   tmp->SetNIn(0);
   Process_Base::SortFlavours(tmp);
+
+
+  
   std::string pname_n = Process_Base::GenerateName(tmp);
 
   msg_Debugging()<<"new process: "<<pname_n<<"\n";
@@ -412,6 +425,11 @@ bool RRatios::PrepareShower
     m_cmetrics.insert(make_pair(pname_n,cmetric_n));
   }
 
+  m_ordered_ids = vector<size_t>(tmp->Legs().size());
+  for(size_t i=0; i<tmp->Legs().size(); i++) {
+    m_ordered_ids.at(i) = tmp->Leg(cmetric_n->Map(i))->Id();
+  }
+  
   p_cmetric_n = cmetric_n;
   tmp->Delete();
   return true;

@@ -29,7 +29,8 @@ namespace RESUM {
     ATOOLS::Cluster_Leg* p_soft = nullptr;
     ATOOLS::Cluster_Leg* p_emit_n = nullptr;
     ATOOLS::Cluster_Leg* p_spect_n = nullptr;
-    
+
+    vector<size_t> m_ordered_ids;
         
     PDF::PDF_Base    ** p_pdf;
     
