@@ -11,11 +11,10 @@ using std::slice;
 template <typename T>
 class Matrix {
 protected:
-  std::valarray<T> m_data;
+  valarray<T> m_data;
   size_t m_dim;
 public:
   // constructors  
-  // need that to keep stl containers happy...
   Matrix() = default;
 
   // some standard stuff
@@ -43,8 +42,9 @@ public:
   }
   // empty matrix with r rows and c cols
   Matrix(size_t r, size_t c) : m_data(r*c), m_dim(c) {}
+
   // build matrix from nested vectors, determine number of rows and cols from vector
-  Matrix(const std::vector<std::vector<T> >& mat) : m_dim(mat.size()), m_data(mat.size()*mat.size()) {
+  Matrix(const std::vector<std::vector<T> >& mat) : m_data(mat.size()*mat.size()), m_dim(mat.size()) {
     try{
       for(size_t i=0; i<m_dim; i++) {
         for(size_t j=0; j<m_dim; j++) {
@@ -79,12 +79,13 @@ public:
     }
     return ret;
   }
+
   
   // same as above but from pointer to nested vector
   Matrix(const std::vector<std::vector<T> >* mat) {
     if(mat) {
-      m_dim = mat->size();
       m_data = valarray<T>(m_dim*m_dim);
+      m_dim = mat->size();
       try{
         for(size_t i=0; i<m_dim; i++) {
           for(size_t j=0; j<m_dim; j++) {
@@ -97,12 +98,12 @@ public:
           }
     }
     else {
-      m_dim = 0;
       m_data = valarray<T>();
+      m_dim = 0;
     }
   }
   // same as above but from pointer to nested vector
-  Matrix(const std::vector<std::vector<T> >* mat, size_t dim, T def) : m_dim(dim), m_data(dim*dim){
+  Matrix(const std::vector<std::vector<T> >* mat, size_t dim, T def) : m_data(dim*dim),  m_dim(dim){
     if(mat) {
       try{
         for(size_t i=0; i<m_dim; i++) {
@@ -116,8 +117,8 @@ public:
           }
     }
     else {
-      m_dim = dim;
       m_data = valarray<T>(def, dim*dim);
+      m_dim = dim;
     }
   }
   
@@ -179,6 +180,21 @@ public:
   inline size_t dim() const { return m_dim; }
   inline size_t numElements() const { return m_dim*m_dim; } 
 
+  Matrix<T> transposeInPlace() {
+    for(size_t i=0; i<m_dim; i++) {
+      for(size_t j=i+1; j<m_dim; j++) {
+        std::swap(element(i,j), element(j,i));
+      }
+    }
+    return *this;
+  }
+
+  Matrix<T> transpose() const {
+    Matrix<T> ret = *this;
+    ret.transposeInPlace();
+    return ret;
+  }
+  
   void print(std::ostream& stream) const {
     for(size_t i=0; i<m_dim; i++) {
       for(size_t j=0; j<m_dim; j++) {
@@ -194,7 +210,14 @@ public:
       matrix.print(stream);
       return stream;
   }
+
+  friend T Trace(const Matrix<T>& a) {
+    return a.trace();
+  }
   
+  friend T Trace(const Matrix<T>& a, const Matrix<T>& b) {
+    return (a.m_data*b.transpose().m_data).sum();
+  }
 
 };
 
@@ -254,6 +277,8 @@ namespace std {
   }
 }
 
+// optimised trace of product of matrices
+
 // usefull typedefs
 typedef Matrix<double> MatrixD;
 
@@ -263,12 +288,12 @@ public:
   using Matrix::Matrix;
   MatrixD real() {
     valarray<double> data(m_data.size());
-    for(int i=0; i<data.size(); i++) data[i] = m_data[i].real();
+    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].real();
     return MatrixD(data, m_dim);
   }
   MatrixD imag() {
     valarray<double> data(m_data.size());
-    for(int i=0; i<data.size(); i++) data[i] = m_data[i].imag();
+    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].imag();
     return MatrixD(data, m_dim);
   }
 };
