@@ -34,7 +34,6 @@ namespace RESUM {
     CMetric_Map    m_cmetrics;
     //suitable basis for actual event
     CMetric_Base * p_cmetric_n;
-    CMetric_Base * p_cmetric;
     CMetric_Base * p_cmetric_np1;
     
     std::vector<ATOOLS::Histogram*>   m_hist;

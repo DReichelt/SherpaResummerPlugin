@@ -247,6 +247,12 @@ void swap(Matrix<T> a, Matrix<T> b) {
   a.swap(b);
 }
 
+namespace std {
+  template <typename T>
+  void swap(Matrix<T> a, Matrix<T> b) {
+    a.swap(b);
+  }
+}
 
 // usefull typedefs
 typedef Matrix<double> MatrixD;

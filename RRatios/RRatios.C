@@ -59,24 +59,24 @@ int RRatios::PerformShowers()
   msg_Debugging()<<*p_ampl_np1<<"\n";  
   
   // now rescale one of the momenta
-  Vec4D emit = p_emit_n->Mom();
-  Vec4D spect = p_spect_n->Mom();
+  const Vec4D& emit = p_emit_n->Mom();
+  const Vec4D& spect = p_spect_n->Mom();
 
-  MatrixD metric_np1 = p_cmetric_np1->CMetric();
-  MatrixD metric_n = p_cmetric_n->CMetric();
-  size_t dim_np1 = metric_np1.dim();  
-  size_t dim_n = p_cmetric_n->CMetric().size();
+  const MatrixD& metric_np1 = p_cmetric_np1->CMetric();
+  const MatrixD& metric_n = p_cmetric_n->CMetric();
+  const size_t dim_np1 = metric_np1.dim();  
+  const size_t dim_n = p_cmetric_n->CMetric().size();
 
 
   double lambda = 0.99;
   for(double cut=lambda; cut>1e-6; cut*=lambda) {
-    Vec4D soft = lambda*p_soft->Mom();  
-    double eps = emit*soft/(spect*(emit-soft));
-    Vec4D p1 = emit-soft + eps * spect;
-    Vec4D p3 = (1.-eps)*spect;
+    const Vec4D& soft = lambda*p_soft->Mom();  
+    const double eps = emit*soft/(spect*(emit-soft));
+    const Vec4D& p1 = emit-soft + eps * spect;
+    const Vec4D& p3 = (1.-eps)*spect;
 
 
-    msg_Debugging()<<"New momenta:\n"<<p1<<"\n"<<soft<<"\n"<<p3<<"\n";
+    msg_Debugging()<<"New momenta:\n"<<p1<<"\n"<<soft<<"\n"<<p3<<"\n\n";
   
     p_emit->SetMom(p1);
     p_soft->SetMom(soft);
@@ -87,13 +87,15 @@ int RRatios::PerformShowers()
   
 
   
-    MatrixD H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
+    const MatrixD& H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
-    MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
+    m_comix.Reset();
+    const MatrixD& H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, 0).real();
-  
-    msg_Debugging() << "Tr()c_n+1 * H_n+1):\n"<< (metric_np1*H_np1).trace()<<"\n";
-    msg_Debugging() << "c_n * H_n:\n"<< (metric_n*H_n).trace()<<"\n";
+    m_comix.Reset(); //TODO: do I need these resets?
+
+    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< (metric_np1*H_np1).trace()<<"\n";
+    msg_Debugging() << "Tr(c_n * H_n) = "<< (metric_n*H_n).trace()/4.<<"\n\n";
   
     // msg_Debugging()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
     // // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
@@ -117,21 +119,24 @@ int RRatios::PerformShowers()
     msg_Debugging()<<"Amplitude for n:"<<*p_ampl_n<<"\n";
   
     size_t i=0;
-    for(size_t f=0; f<p_ampl_n->Legs().size(); f++){ 
-      for(size_t r=f+1; r<p_ampl_n->Legs().size(); r++) {
-        msg_Debugging()<<"Insertion between legs "<<f<<" -> "<<ID(m_ordered_ids.at(f))<<", "
+    for(size_t t=0; t<p_ampl_n->Legs().size(); t++){ 
+      for(size_t r=t+1; r<p_ampl_n->Legs().size(); r++) {
+        msg_Debugging()<<"Insertion between legs "
+                       <<t<<" -> "<<ID(m_ordered_ids.at(t))<<", "
                        <<r<<" -> "<< ID(m_ordered_ids.at(r))<<".\n";
-        Vec4D pt = p_ampl_n->IdLeg(m_ordered_ids.at(f))->Mom();
+        Vec4D pt = p_ampl_n->IdLeg(m_ordered_ids.at(t))->Mom();
         Vec4D pr = p_ampl_n->IdLeg(m_ordered_ids.at(r))->Mom();
+        // incoming legs have negative momentum
+        // TODO: is there a more natural way to detect them?
         if(pt[0]<0) pt *= -1;
         if(pr[0]<0) pr *= -1;
-        double eikonal = pt*pr / ((pt*soft)*(pr*soft));
+        const double eikonal = pt*pr / ((pt*soft)*(pr*soft));
         msg_Debugging()<<"T-product: \n"<<Tprods.at(i)<<"\n";
         msg_Debugging()<<"p_t = "<<pt<<"\n";
         msg_Debugging()<<"p_r = "<<pr<<"\n";
         msg_Debugging()<<"p_soft = "<<soft<<"\n";
         msg_Debugging()<<"eikonal = "<<eikonal<<"\n\n";
-        // TODO: urgent!! why is this a minus and not a plus?????????                             
+        // TODO: urgent!! why is this a minus and not a plus?????????
         Gamma -= eikonal*Tprods.at(i);
         i++;
       }
@@ -140,11 +145,14 @@ int RRatios::PerformShowers()
     
     double g =  sqrt(4.*M_PI*0.118);
     double TrcH_np1 = (metric_np1*H_np1).trace() / 1536/0.3302891295379082/0.3302891295379082  * 32;
+    // we actually want H*metric*colour-change-matrices, but our Tproducts are
+    // inverse_metric*colour-change-matrix, so this is correct
     double TrHG = (H_n*Gamma).trace() /512/0.3611575592573076/0.3611575592573076 * 16 * 4./6.;
 
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
     // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
     msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
+    exit(1);
   }
   CleanUp();
   return 1;
@@ -252,9 +260,6 @@ bool RRatios::PrepareShower
 
   
   p_cmetric_np1=cmetric;
-
-  p_cmetric = p_cmetric_np1;
-
 
   //TODO: choose momenta at random, this probably needs much improvement still
   size_t leg_emit, leg_soft, leg_spect;
