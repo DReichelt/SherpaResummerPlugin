@@ -23,7 +23,7 @@ namespace RESUM {
     
   private:
 
-    int m_ng,m_nq,m_naq,m_ntot;    
+    size_t m_ng,m_nq,m_naq,m_ntot;    
     
   public:
     
@@ -90,7 +90,7 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
 
 void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   msg_Debugging()<<*ampl<<"\n";
-  int size_connected;
+  size_t size_connected;
   
   //Get permutations
   msg_Debugging()<<"Read from "<<(m_rpath+m_filename+"/"+m_filename+"_perms.dat").c_str()<<"\n";
@@ -118,7 +118,7 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
 
 void CM_Generic::CalcMetric(){
  
-  int DIM;
+  size_t DIM;
   msg_Debugging()<<"Read metric from "<<(m_rpath+m_filename+"/"+m_filename+"_met.dat")<<".\n";
   ifstream in( (m_rpath+m_filename+"/"+m_filename+"_met.dat").c_str() );
   in >> DIM;
@@ -147,7 +147,7 @@ void CM_Generic::CalcIMetric(){
 
 void CM_Generic::CalcTs(){
   
-  int DIM;
+  size_t DIM;
   ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() );
   in >> DIM;
   

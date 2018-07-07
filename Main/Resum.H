@@ -47,7 +47,7 @@ namespace RESUM {
     void printMatrix(const Complex rhs[],const size_t dim);
     void matMult(Complex ResMat[],const Complex ArrMat[],
 		 const std::vector<std::vector<double> > VecMat);
-    Complex* H_conjugate(const Complex ResMat[],int dim);
+    Complex* H_conjugate(const Complex ResMat[],size_t dim);
 
     double Value(const double &v);
 
@@ -109,7 +109,7 @@ void Resum::matMult(Complex ResMat[], const Complex ArrMat[], const std::vector<
 }
 
 //Hermition conjugate 
-Complex* Resum::H_conjugate(const Complex ResMat[], int dim) {
+Complex* Resum::H_conjugate(const Complex ResMat[], size_t dim) {
 complex<double> hold;
 Complex *result = new Complex[dim*dim];
 for (size_t i=0;i<dim;i++) {
