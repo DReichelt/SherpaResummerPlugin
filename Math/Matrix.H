@@ -4,6 +4,7 @@
 #include <valarray>
 #include <cassert>
 #include <iostream>
+#include <complex>
 
 using std::valarray;
 using std::slice;
@@ -53,7 +54,7 @@ public:
       }
     }
     catch(std::out_of_range) {
-      THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!")
+      THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
         }
   }
   // build matrix from nested vectors, but fill with zeros to match dim rows and cols
@@ -66,7 +67,7 @@ public:
       }
     }
     catch(std::out_of_range) {
-      THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!")
+      THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
     }
   }
 
@@ -94,7 +95,7 @@ public:
         }
       }
       catch(std::out_of_range) {
-        THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!")
+        THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
           }
     }
     else {
@@ -113,7 +114,7 @@ public:
         }
       }
       catch(std::out_of_range) {
-        THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!")
+        THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
           }
     }
     else {
@@ -190,9 +191,7 @@ public:
   }
 
   Matrix<T> transpose() const {
-    Matrix<T> ret = *this;
-    ret.transposeInPlace();
-    return ret;
+    return Transpose(*this);
   }
   
   void print(std::ostream& stream) const {
@@ -211,12 +210,16 @@ public:
       return stream;
   }
 
-  friend T Trace(const Matrix<T>& a) {
+  friend inline Matrix<T> Transpose(Matrix<T> matrix) {
+    return matrix.transposeInPlace();
+  }
+  
+  friend inline T Trace(const Matrix<T>& a) {
     return a.trace();
   }
   
-  friend T Trace(const Matrix<T>& a, const Matrix<T>& b) {
-    return (a.m_data*b.transpose().m_data).sum();
+  friend inline T Trace(const Matrix<T>& a, Matrix<T> b) {
+    return (a.m_data*b.transposeInPlace().m_data).sum();
   }
 
 };
@@ -276,8 +279,6 @@ namespace std {
     a.swap(b);
   }
 }
-
-// optimised trace of product of matrices
 
 // usefull typedefs
 typedef Matrix<double> MatrixD;

@@ -13,7 +13,7 @@ using PHASIC::Process_Base;
 using std::vector;
 
 
-RRatios::RRatios(ISR_Handler *const isr,
+RRatios::RRatios(ISR_Handler *const /*isr*/,
 	     Model_Base *const model):
   Shower_Base("RRatios")
 {
@@ -82,7 +82,7 @@ int RRatios::PerformShowers()
     p_soft->SetMom(soft);
     p_spect->SetMom(p3);
 
-    msg_Debugging()<<*p_ampl_np1<<"\n";
+
     
   
 
@@ -94,15 +94,18 @@ int RRatios::PerformShowers()
                           dim_n, 0).real();
     m_comix.Reset(); //TODO: do I need these resets?
 
-    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< (metric_np1*H_np1).trace()<<"\n";
-    msg_Debugging() << "Tr(c_n * H_n) = "<< (metric_n*H_n).trace()/4.<<"\n\n";
-  
+    msg_Debugging()<<*p_ampl_np1<<"\n";
+    msg_Debugging()<<*p_ampl_n<<"\n";
+
+    
+    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/1536/0.3302891295379082/0.3302891295379082  * 32<<"\n";
+    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/512/0.3611575592573076/0.3611575592573076 * 16<<"\n\n";
+    //exit(1);
     // msg_Debugging()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
     // // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
     // msg_Debugging()<< "Tr c_n * H_n = " << TrcH_n/4/g/g/g/g<< "\n";
 
-
-  
+    
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
     for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) Tprods.at(i) = p_cmetric_n->Tprods().at(i);
 
@@ -111,9 +114,6 @@ int RRatios::PerformShowers()
   
 
     MatrixD Gamma(Tprods.at(0).dim(), Tprods.at(0).dim());
-
-    int r = 0;
-    int f = 0;
 
     msg_Debugging()<<"Amplitude for n+1:"<<*p_ampl_np1<<"\n";
     msg_Debugging()<<"Amplitude for n:"<<*p_ampl_n<<"\n";
@@ -144,16 +144,16 @@ int RRatios::PerformShowers()
     msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
     
     double g =  sqrt(4.*M_PI*0.118);
-    double TrcH_np1 = (metric_np1*H_np1).trace() / 1536/0.3302891295379082/0.3302891295379082  * 32;
+    double TrcH_np1 = Trace(metric_np1*H_np1) /0.3302891295379082/0.3302891295379082  * 32;
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
-    double TrHG = (H_n*Gamma).trace() /512/0.3611575592573076/0.3611575592573076 * 16 * 4./6.;
+    double TrHG = Trace(H_n*Gamma) /0.3611575592573076/0.3611575592573076 * 16;
 
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
     // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
     msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
-    exit(1);
   }
+  exit(1);
   CleanUp();
   return 1;
 }
@@ -191,7 +191,7 @@ Cluster_Definitions_Base *RRatios::GetClusterDefinitions()
 
 
 bool RRatios::PrepareShower
-(Cluster_Amplitude* ampl,const bool &soft)
+(Cluster_Amplitude* ampl,const bool & /*soft*/)
 {
   DEBUG_FUNC(this);
   DEBUG_VAR(ampl->Proc<Process_Base>());
@@ -370,9 +370,9 @@ bool RRatios::PrepareShower
 } 
   
 
-double RRatios::CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
-		    const ATOOLS::Flavour &flk,const int type,
-		    const int cpl,const double &mu2) const
+double RRatios::CplFac(const ATOOLS::Flavour &/*fli*/,const ATOOLS::Flavour &/*flj*/,
+                       const ATOOLS::Flavour &/*flk*/,const int /*type*/,
+                       const int /*cpl*/,const double &/*mu2*/) const
 {
   THROW(not_implemented,"");
   return -1.0;
@@ -390,7 +390,7 @@ operator()(const Shower_Key &key) const
 }
 
 void Getter<Shower_Base,Shower_Key,RRatios>::
-PrintInfo(std::ostream &str,const size_t width) const
+PrintInfo(std::ostream &str,const size_t /*width*/) const
 { 
   str<<"The Colorful Resummation"; 
 }
