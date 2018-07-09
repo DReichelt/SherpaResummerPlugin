@@ -41,6 +41,7 @@ namespace RESUM {
 
     int n_g, n_q, n_aq, color_sings, m_amode;
 
+    size_t m_count=0;
 
   public:
 

@@ -6,4 +6,5 @@ Sherpa_References.tex
 *.os
 .SConstruct
 .sconsign.dblite
+*.yoda
 Tools/Files.H

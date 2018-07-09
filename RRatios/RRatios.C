@@ -5,6 +5,11 @@
 #include "MODEL/Main/Model_Base.H"
 #include "ATOOLS/Org/Data_Reader.H"
 
+// temporary yoda dependence
+#include "YODA/Scatter2D.h"
+#include "YODA/WriterYODA.h" 
+
+
 using namespace RESUM;
 using namespace PDF;
 using namespace ATOOLS;
@@ -67,8 +72,9 @@ int RRatios::PerformShowers()
   const size_t dim_np1 = metric_np1.dim();  
   const size_t dim_n = p_cmetric_n->CMetric().size();
 
-
+  YODA::Scatter2D::Ptr plot= std::make_shared<YODA::Scatter2D>("/line/line","/line/line");
   double lambda = 0.99;
+
   for(double cut=lambda; cut>1e-6; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();  
     const double eps = emit*soft/(spect*(emit-soft));
@@ -81,11 +87,6 @@ int RRatios::PerformShowers()
     p_emit->SetMom(p1);
     p_soft->SetMom(soft);
     p_spect->SetMom(p3);
-
-
-    
-  
-
   
     const MatrixD& H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
@@ -98,8 +99,10 @@ int RRatios::PerformShowers()
     msg_Debugging()<<*p_ampl_n<<"\n";
 
     
-    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/1536/0.3302891295379082/0.3302891295379082  * 32<<"\n";
-    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/512/0.3611575592573076/0.3611575592573076 * 16<<"\n\n";
+    // msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/1536/0.3302891295379082/0.3302891295379082  * 32<<"\n";
+    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4./0.375/0.375 * 8<<"\n";
+    // msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/512/0.3611575592573076/0.3611575592573076 * 16<<"\n\n";
+    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/64./4./0.43301270189221935/0.43301270189221935 * 4<<"\n";
     //exit(1);
     // msg_Debugging()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
     // // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
@@ -144,16 +147,24 @@ int RRatios::PerformShowers()
     msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
     
     double g =  sqrt(4.*M_PI*0.118);
-    double TrcH_np1 = Trace(metric_np1*H_np1) /0.3302891295379082/0.3302891295379082  * 32;
+    // double TrcH_np1 = Trace(metric_np1,H_np1) /0.3302891295379082/0.3302891295379082  * 32;
+
+    double TrcH_np1 = Trace(metric_np1,H_np1)/0.375/0.375 * 8;
+
+    
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
-    double TrHG = Trace(H_n*Gamma) /0.3611575592573076/0.3611575592573076 * 16;
+    // double TrHG = Trace(H_n,Gamma) /0.3611575592573076/0.3611575592573076 * 16;
+    double TrHG = Trace(H_n,Gamma)/0.43301270189221935/0.43301270189221935 * 4;
 
+    
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
     // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
-    msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
+    plot->addPoint(cut, (g*g* TrHG) / (TrcH_np1));
+    // msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
   }
-  exit(1);
+  YODA::WriterYODA::write(std::to_string(m_count)+".yoda",plot);
+  m_count++;
   CleanUp();
   return 1;
 }
