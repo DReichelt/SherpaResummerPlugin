@@ -19,7 +19,7 @@ using std::vector;
 
 
 RRatios::RRatios(ISR_Handler *const /*isr*/,
-	     Model_Base *const model):
+                 Model_Base *const model):
   Shower_Base("RRatios")
 {
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
@@ -72,7 +72,8 @@ int RRatios::PerformShowers()
   const size_t dim_np1 = metric_np1.dim();  
   const size_t dim_n = p_cmetric_n->CMetric().size();
 
-  YODA::Scatter2D::Ptr plot= std::make_shared<YODA::Scatter2D>("/line/line","/line/line");
+  // YODA::Scatter2D::Ptr plot= std::make_shared<YODA::Scatter2D>("/line/line","/line/line");
+  YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.99;
 
   for(double cut=lambda; cut>1e-6; cut*=lambda) {
@@ -160,7 +161,7 @@ int RRatios::PerformShowers()
     
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
     // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
-    plot->addPoint(cut, (g*g* TrHG) / (TrcH_np1));
+    plot.addPoint(cut, (g*g* TrHG) / (TrcH_np1));
     // msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
   }
   YODA::WriterYODA::write(std::to_string(m_count)+".yoda",plot);
