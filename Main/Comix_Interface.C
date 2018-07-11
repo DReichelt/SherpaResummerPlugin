@@ -157,7 +157,7 @@ Process_Base *Comix_Interface::GetProcess
       proc->SetSelector(skey);
       proc->SetScale
 	(Scale_Setter_Arguments
-	 (MODEL::s_model,"VAR{"+ToString(rpa->gen.CplScale())+"}","Alpha_QCD 1"));
+	 (MODEL::s_model,"Alpha_QCD 1"));
       proc->SetKFactor(KFactor_Setter_Arguments("NO"));
       proc->Get<COMIX::Process_Base>()->Tests();
       proc->FillProcessMap(&m_pmap);
