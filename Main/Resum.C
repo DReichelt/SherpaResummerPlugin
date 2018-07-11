@@ -360,7 +360,6 @@ double Resum::CalcS(const double L, double &Softexp)
     msg_Debugging() << std::endl;
   }
   msg_Debugging() << std::endl;
-  exit(1);
 
   //Build Gamma
   Complex *Gamma = new Complex[dim*dim];
