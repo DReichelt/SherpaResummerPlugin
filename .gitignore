@@ -2,6 +2,7 @@
 Results.*
 Process/
 Status_*
+YODA/
 Sherpa_References.tex
 *.os
 .SConstruct

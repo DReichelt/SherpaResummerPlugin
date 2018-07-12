@@ -10,7 +10,12 @@
 #include "ATOOLS/Org/Message.H"
 #include "Math/asa007.hpp"
 
+
 #include "Tools/Files.H"
+
+#include <algorithm>
+#include <regex>
+#include <locale>
 
 using namespace ATOOLS;
 using namespace RESUM;
@@ -32,6 +37,8 @@ namespace RESUM {
     void CalcIMetric();
     void CalcTs();
     void ReadPermutations(ATOOLS::Cluster_Amplitude *ampl);
+
+
     std::string m_rpath;
     std::string m_filename;
     
@@ -88,6 +95,15 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   ReadPermutations(args.p_ampl);
 }
 
+std::vector<std::string> split(const string& input, const string& regex) {
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+        first{input.begin(), input.end(), re, -1},
+        last;
+    return {first, last};
+}
+
 void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   msg_Debugging()<<*ampl<<"\n";
   int size_connected;
@@ -97,18 +113,51 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   ifstream in( (m_rpath+m_filename+"/"+m_filename+"_perms.dat").c_str() );
   in >> size_connected;
   msg_Debugging()<<"Expect "<<size_connected<<" permutations.\n";
-  m_perms.resize(size_connected);
-  int temp;
-  for (size_t l = 0; l < size_connected; l++){
-    msg_Debugging()<<"Perm "<<l<<": ";
-    for (size_t m = 0; m < m_ntot; m++){
-      in >> temp;
-      msg_Debugging()<<temp<<" -> "<<Map(temp)<<" -> "<<ID(ampl->Leg(Map(temp))->Id())<<" ";
-      // m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
-      m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
+  m_perms.clear();
+  m_perms.reserve(size_connected);
+  std::string line;
+  size_t l = 0;
+  while(std::getline(in,line)) {
+    if(l >= size_connected) break;
+    if(line.empty()) continue;
+    l++;
+    size_t begin = line.find("(");
+    size_t end = line.find(")");
+    msg_Debugging()<<"Read Line: "<<line<<", perm starts at "<<begin<<" and ends at "<<end<<"\n";
+    if(begin != 0 && begin != std::string::npos) {
+      std::string prefactor = line.substr(0,begin-1);
+      //prefactor.erase(std::remove_if(prefactor.begin(), prefactor.end(), std::isspace), prefactor.end());
+      msg_Debugging()<<"Add prefactor "<<prefactor<<"\n";
+      m_prefactors.push_back(std::stod(prefactor));
+    }
+    else {
+      m_prefactors.push_back(1);
+    }
+    if(begin == std::string::npos) begin=0;
+    else begin += 1;
+    if(end == std::string::npos) end=line.size()+1;
+    msg_Debugging()<<"Perm "<<line.substr(begin,end-begin)<<".\n";
+    std::vector<std::string> tmp = split(line.substr(begin,end-begin)," ");
+    m_perms.emplace_back(PHASIC::Idx_Vector());
+    m_perms.back().reserve(m_ntot);
+    msg_Debugging()<<"Add permutation "<<l<<": ";
+    for(std::string t: tmp) {
+      msg_Debugging()<<std::stoi(t)<<" -> "<<Map(std::stoi(t))<<" -> "<<ID(ampl->Leg(Map(std::stoi(t)))->Id()).front()<<"; ";
+      m_perms.back().emplace_back(ID(ampl->Leg(Map(std::stoi(t)))->Id()).front());
     }
     msg_Debugging()<<"\n";
   }
+  
+  // int temp;
+  // for (size_t l = 0; l < size_connected; l++){
+  //   msg_Debugging()<<"Perm "<<l<<": ";
+  //   for (size_t m = 0; m < m_ntot; m++){
+  //     in >> temp;
+  //     msg_Debugging()<<temp<<" -> "<<Map(temp)<<" -> "<<ID(ampl->Leg(Map(temp))->Id())<<" ";
+  //     m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
+  //   }
+  //   msg_Debugging()<<"\n";
+  // }
   
   msg_Debugging()<<"Repeat permutations read in:\n";
   for(size_t n = 0; n < m_perms.size(); n++){

@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "ATOOLS/Org/Exception.H"
 #include <valarray>
 #include <cassert>
 #include <iostream>
@@ -168,8 +169,9 @@ public:
   T& operator()(size_t r, size_t c) const {return element(r,c);}
   inline T& element(size_t r, size_t c) {return m_data[r*m_dim + c];}
   inline const T& element(size_t r, size_t c) const  {return m_data[r*m_dim + c];}
-
-
+  inline valarray<T>& data() { return m_data; }
+  inline const valarray<T>& data() const { return m_data; }
+  
   
   // properties of the matrix
    T trace() const {

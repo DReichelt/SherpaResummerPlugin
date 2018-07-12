@@ -76,6 +76,9 @@ int RRatios::PerformShowers()
   YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.99;
 
+  const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
+  const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
+  
   for(double cut=lambda; cut>1e-6; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();  
     const double eps = emit*soft/(spect*(emit-soft));
@@ -89,11 +92,14 @@ int RRatios::PerformShowers()
     p_soft->SetMom(soft);
     p_spect->SetMom(p3);
   
-    const MatrixD& H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,p_cmetric_np1->Perms()),
+    MatrixD H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,
+                                                      p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
+    H_np1.data() *= pref_np1.data();
     m_comix.Reset();
-    const MatrixD& H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
+    MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, 0).real();
+    H_n.data() *= pref_n.data();
     m_comix.Reset(); //TODO: do I need these resets?
 
     msg_Debugging()<<*p_ampl_np1<<"\n";
@@ -150,13 +156,13 @@ int RRatios::PerformShowers()
     double g =  sqrt(4.*M_PI*0.118);
     // double TrcH_np1 = Trace(metric_np1,H_np1) /0.3302891295379082/0.3302891295379082  * 32;
 
-    double TrcH_np1 = Trace(metric_np1,H_np1)/0.375/0.375 * 8;
+    double TrcH_np1 = Trace(metric_np1,H_np1);///0.375/0.375 * 8;
 
     
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
     // double TrHG = Trace(H_n,Gamma) /0.3611575592573076/0.3611575592573076 * 16;
-    double TrHG = Trace(H_n,Gamma)/0.43301270189221935/0.43301270189221935 * 4;
+    double TrHG = Trace(H_n,Gamma);///0.43301270189221935/0.43301270189221935 * 4;
 
     
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
