@@ -37,6 +37,7 @@ Resum::Resum(ISR_Handler *const isr,
 
   Data_Reader read(" ",";","#","=");
   m_amode=read.GetValue<int>("RESUM_MODE",0);
+  rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES","VAR{sqr(91.188)}"));
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
 }

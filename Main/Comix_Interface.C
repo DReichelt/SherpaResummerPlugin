@@ -162,10 +162,9 @@ Process_Base *Comix_Interface::GetProcess
       m_procs.push_back(proc);
       Selector_Key skey(NULL,NULL,true);
       proc->SetSelector(skey);
-      // TODO: this is not working with 2.2.5
       proc->SetScale
         (Scale_Setter_Arguments
-         (MODEL::s_model,"VAR{"+std::to_string(91.188*91.188)+"}","Alpha_QCD 1"));
+         (MODEL::s_model,rpa->gen.Variable("SCALES"),"Alpha_QCD 1"));
       proc->SetKFactor(KFactor_Setter_Arguments("NO"));
       proc->Get<COMIX::Process_Base>()->Tests();
       proc->FillProcessMap(&m_pmap);

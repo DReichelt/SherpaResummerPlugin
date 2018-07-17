@@ -16,7 +16,7 @@ using namespace ATOOLS;
 using namespace MODEL;
 using PHASIC::Process_Base;
 using std::vector;
-
+using std::string;
 
 RRatios::RRatios(ISR_Handler *const /*isr*/,
                  Model_Base *const model):
@@ -26,6 +26,7 @@ RRatios::RRatios(ISR_Handler *const /*isr*/,
   
   Data_Reader read(" ",";","#","=");
   m_amode=read.GetValue<int>("RESUM_MODE",0);
+  rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
 }
@@ -237,21 +238,21 @@ bool RRatios::PrepareShower
 
 
   // if we want we can reset momenta here
-  Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.};
-  Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.};
+  /* Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.}; */
+  /* Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.}; */
 
-  double lambda = 0.001;
-  //Vec4D s = {lambda,lambda,0,0};
-  Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0};
-  double eps = emit*s/(spect*(emit-s));
-  Vec4D emit_rec = emit -s + eps * spect;
-  Vec4D spect_rec = spect*(1.-eps);
-  SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},s,emit_rec,spect_rec});
-  msg_Out()<<*p_ampl_np1<<"\n";
+  /* double lambda = 0.001; */
+  /* //Vec4D s = {lambda,lambda,0,0}; */
+  /* Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0}; */
+  /* double eps = emit*s/(spect*(emit-s)); */
+  /* Vec4D emit_rec = emit -s + eps * spect; */
+  /* Vec4D spect_rec = spect*(1.-eps); */
+  /* SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},s,emit_rec,spect_rec}); */
+  /* msg_Out()<<*p_ampl_np1<<"\n"; */
 
   ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
   tmp->SetNIn(0);  
-  std::string pname=Process_Base::GenerateName(tmp);
+  string pname=Process_Base::GenerateName(tmp);
 
   
   Process_Base::SortFlavours(tmp);
@@ -273,7 +274,7 @@ bool RRatios::PrepareShower
   //number of color singlets
   color_sings = tmp->Legs().size() - (n_g + n_aq + n_q);
    
-  std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
+  string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   
   msg_Debugging()<<" Found process with "<<n_g<<" Gluons, "<<n_q<<" Quarks and "<<n_aq<<" Anti-Quarks : "<<name<<"\n";
 
@@ -367,7 +368,7 @@ bool RRatios::PrepareShower
 
 
   
-  std::string pname_n = Process_Base::GenerateName(tmp);
+  string pname_n = Process_Base::GenerateName(tmp);
 
   msg_Debugging()<<"new process: "<<pname_n<<"\n";
   msg_Debugging()<<*tmp<<"\n";
@@ -387,7 +388,7 @@ bool RRatios::PrepareShower
 
   CMetric_Base* cmetric_n;
   CMetric_Map::const_iterator CMiter_n=m_cmetrics.find(pname_n);
-  std::string name_n= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
+  string name_n= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   msg_Debugging()<<"Found process "<<name_n<<"\n";
   if (CMiter_n!=m_cmetrics.end()) {
     cmetric_n=CMiter_n->second;
