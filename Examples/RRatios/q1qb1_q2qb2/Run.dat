@@ -11,8 +11,7 @@
 }(run);
 (processes){
   Process 1 -1 -> 2 -2 21;
-  #Order_QCD 2;
-  Order_EW 0;
+  Order (*,0)
   End Process;
 }(processes);
 

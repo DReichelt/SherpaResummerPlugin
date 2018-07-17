@@ -12,6 +12,7 @@ namespace RESUM {
 
     Comix_Interface m_comix;
 
+    bool skip = false;
 
     ATOOLS::Cluster_Amplitude *p_ampl_np1;
     ATOOLS::Cluster_Amplitude *p_ampl_n;
@@ -26,6 +27,7 @@ namespace RESUM {
     ATOOLS::Cluster_Leg* p_spect_n = nullptr;
 
     std::vector<size_t> m_ordered_ids;
+    std::vector<size_t> m_ordered_ids_np1;
         
     
     MODEL::Running_AlphaS *p_as;

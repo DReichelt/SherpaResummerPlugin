@@ -34,9 +34,11 @@ Comix_Interface::~Comix_Interface()
   if (p_h) delete p_h;
 }
 
+
 Hard_Matrix *Comix_Interface::ComputeHardMatrix
 (ATOOLS::Cluster_Amplitude *const ampl,
- const std::vector<PHASIC::Idx_Vector> &perms)
+ const std::vector<PHASIC::Idx_Vector>& perms
+ )
 {
   COMIX::Single_Process *xs=
     GetProcess(ampl)->Get<COMIX::Single_Process>();
@@ -102,6 +104,7 @@ Hard_Matrix *Comix_Interface::ComputeHardMatrix
   return p_h;
 }
 
+
 Process_Base *Comix_Interface::GetProcess
 (ATOOLS::Cluster_Amplitude *const ampl)
 {
@@ -131,6 +134,8 @@ Process_Base *Comix_Interface::GetProcess
       MakeDir(rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process",true);
       My_In_File::OpenDB
 	(rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Comix/");
+      My_In_File::OpenDB
+	(rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Sherpa/");
       Process_Info pi;
       pi.m_megenerator="Comix";
       for (size_t i(0);i<ampl->NIn();++i) {
@@ -149,15 +154,18 @@ Process_Base *Comix_Interface::GetProcess
       if (proc==NULL) {
 	My_In_File::CloseDB
 	  (rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Comix/");
+        My_In_File::CloseDB
+	  (rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Sherpa/");
 	(*pm)[name]=NULL;
 	return NULL;
       }
       m_procs.push_back(proc);
       Selector_Key skey(NULL,NULL,true);
       proc->SetSelector(skey);
+      // TODO: this is not working with 2.2.5
       proc->SetScale
-	(Scale_Setter_Arguments
-	 (MODEL::s_model,"VAR{"+ToString(rpa->gen.CplScale())+"}","Alpha_QCD 1"));
+        (Scale_Setter_Arguments
+         (MODEL::s_model,"VAR{"+std::to_string(91.188*91.188)+"}","Alpha_QCD 1"));
       proc->SetKFactor(KFactor_Setter_Arguments("NO"));
       proc->Get<COMIX::Process_Base>()->Tests();
       proc->FillProcessMap(&m_pmap);

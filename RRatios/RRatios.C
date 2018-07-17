@@ -47,6 +47,7 @@ inline kf_code new_flavour(kf_code fl1, kf_code fl2) {
 
 int RRatios::PerformShowers()
 {
+  if(skip) return 1;
   DEBUG_FUNC(this);
   // first check we got everything we need
   if(p_ampl_np1==nullptr) THROW(fatal_error,"No process info for n+1.");
@@ -79,7 +80,7 @@ int RRatios::PerformShowers()
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
   
-  for(double cut=lambda; cut>1e-6; cut*=lambda) {
+  for(double cut=lambda; cut>1e-10; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();  
     const double eps = emit*soft/(spect*(emit-soft));
     const Vec4D& p1 = emit-soft + eps * spect;
@@ -96,26 +97,31 @@ int RRatios::PerformShowers()
                                                       p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
     H_np1.data() *= pref_np1.data();
+
     m_comix.Reset();
     MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, 0).real();
     H_n.data() *= pref_n.data();
     m_comix.Reset(); //TODO: do I need these resets?
 
+    msg_Debugging().precision(20);
     msg_Debugging()<<*p_ampl_np1<<"\n";
     msg_Debugging()<<*p_ampl_n<<"\n";
 
     
     // msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/1536/0.3302891295379082/0.3302891295379082  * 32<<"\n";
-    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4./0.375/0.375 * 8<<"\n";
+    /* msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4./0.375/0.375 * 8<<"\n"; */
     // msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/512/0.3611575592573076/0.3611575592573076 * 16<<"\n\n";
-    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/64./4./0.43301270189221935/0.43301270189221935 * 4<<"\n";
+    /* msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/64./4./0.43301270189221935/0.43301270189221935 * 4<<"\n"; */
     //exit(1);
     // msg_Debugging()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
     // // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
     // msg_Debugging()<< "Tr c_n * H_n = " << TrcH_n/4/g/g/g/g<< "\n";
 
-    
+    msg_Debugging() << p_ampl_np1->Leg(3)->Mom().Mass()<<"\n";
+    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4.<<"\n";
+    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)/64./4.<<"\n";
+
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
     for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) Tprods.at(i) = p_cmetric_n->Tprods().at(i);
 
@@ -168,10 +174,16 @@ int RRatios::PerformShowers()
     //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
     // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
     plot.addPoint(cut, (g*g* TrHG) / (TrcH_np1));
-    // msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<"\n";
+    msg_Debugging()<<g*g*TrHG/64./4./2.<<"\n";
+    msg_Debugging()<<TrcH_np1/64./4./2.<<"\n";
+    msg_Out()<<*p_ampl_np1<<"\n";
+    msg_Out()<<*p_ampl_n<<"\n";
+    msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<" "<<cut<<" "<<(g*g* TrHG)<<" "<<(TrcH_np1)<<"\n";
   }
-  YODA::WriterYODA::write(std::to_string(m_count)+".yoda",plot);
+  // YODA::WriterYODA::write(std::to_string(m_count)+".yoda",plot);
+  msg_Out()<<"Write out yoda.\n";
   m_count++;
+  //exit(1);
   CleanUp();
   return 1;
 }
@@ -214,28 +226,36 @@ bool RRatios::PrepareShower
   DEBUG_FUNC(this);
   DEBUG_VAR(ampl->Proc<Process_Base>());
 
-
+  // if(ampl->Legs().size() != 5) {
+  //   skip = true;
+  //   return skip;
+  // }
+  // else {
+  //   skip = false;
+  // }
   p_ampl_np1=ampl->Copy();
 
 
   // if we want we can reset momenta here
-  // Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.};
-  // Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.};
+  Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.};
+  Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.};
 
-  // double lambda = 0.001;
-  // //Vec4D s = {lambda,lambda,0,0};
-  // Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0};
-  // double eps = emit*s/(spect*(emit-s));
-  // Vec4D emit_rec = emit -s + eps * s;
-  // Vec4D spect_rec = spect*(1.-eps);
-  // SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},emit_rec,s,spect_rec});
-  // msg_Out()<<*p_ampl_np1<<"\n";
+  double lambda = 0.001;
+  //Vec4D s = {lambda,lambda,0,0};
+  Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0};
+  double eps = emit*s/(spect*(emit-s));
+  Vec4D emit_rec = emit -s + eps * spect;
+  Vec4D spect_rec = spect*(1.-eps);
+  SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},s,emit_rec,spect_rec});
+  msg_Out()<<*p_ampl_np1<<"\n";
 
   ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
   tmp->SetNIn(0);  
   std::string pname=Process_Base::GenerateName(tmp);
 
+  
   Process_Base::SortFlavours(tmp);
+
   CMetric_Base* cmetric;
 
   n_g=0;
@@ -273,6 +293,11 @@ bool RRatios::PrepareShower
     if (cmetric==nullptr) THROW(not_implemented,"No metric for "+name);
     msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
     m_cmetrics.insert(make_pair(pname,cmetric));
+  }
+
+  m_ordered_ids_np1 = vector<size_t>(tmp->Legs().size());
+  for(size_t i=0; i<tmp->Legs().size(); i++) {
+    m_ordered_ids_np1.at(i) = tmp->Leg(cmetric->Map(i))->Id();
   }
 
 

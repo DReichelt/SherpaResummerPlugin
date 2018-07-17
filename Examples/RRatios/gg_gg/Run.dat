@@ -1,3 +1,4 @@
+
 (run){
   EVENTS 2; EVENT_GENERATION_MODE W;  
   FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
@@ -12,7 +13,7 @@
 }(run);
 (processes){
   Process 21 21 -> 21 21 21;
-  Order_EW 0;
+  Order (*,0);
   End Process;
 }(processes);
 

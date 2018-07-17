@@ -12,7 +12,7 @@
 }(run);
 (processes){
   Process 21 21 -> 1 -1 21;
-  Order_EW 0;
+  Order (*,0);
   End Process;
 }(processes);
 
