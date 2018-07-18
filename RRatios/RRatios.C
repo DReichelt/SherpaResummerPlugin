@@ -74,14 +74,13 @@ int RRatios::PerformShowers()
   const size_t dim_np1 = metric_np1.dim();  
   const size_t dim_n = p_cmetric_n->CMetric().size();
 
-  // YODA::Scatter2D::Ptr plot= std::make_shared<YODA::Scatter2D>("/line/line","/line/line");
   YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.99;
 
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
   
-  for(double cut=lambda; cut>1e-10; cut*=lambda) {
+  for(double cut=lambda; cut>1e-5; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();  
     const double eps = emit*soft/(spect*(emit-soft));
     const Vec4D& p1 = emit-soft + eps * spect;
@@ -105,35 +104,20 @@ int RRatios::PerformShowers()
     H_n.data() *= pref_n.data();
     m_comix.Reset(); //TODO: do I need these resets?
 
-    msg_Debugging().precision(20);
-    msg_Debugging()<<*p_ampl_np1<<"\n";
-    msg_Debugging()<<*p_ampl_n<<"\n";
+    msg_Debugging()<<"Amplitude for n+1:"<<*p_ampl_np1<<"\n";
+    msg_Debugging()<<"Amplitude for n:"<<*p_ampl_n<<"\n";
 
     
-    // msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/1536/0.3302891295379082/0.3302891295379082  * 32<<"\n";
-    /* msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4./0.375/0.375 * 8<<"\n"; */
-    // msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/512/0.3611575592573076/0.3611575592573076 * 16<<"\n\n";
-    /* msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n*H_n)/64./4./0.43301270189221935/0.43301270189221935 * 4<<"\n"; */
-    //exit(1);
-    // msg_Debugging()<< "Tr c_n+1 * H _n+1  = " << TrcH/1536/0.3302891295379082/0.3302891295379082  * 32 << "\n";
-    // // msg_Out()<< "Tr c_n * H_n = " << TrcH_n/512/0.3611575592573076/0.3611575592573076 * 16 << "\n";
-    // msg_Debugging()<< "Tr c_n * H_n = " << TrcH_n/4/g/g/g/g<< "\n";
-
-    msg_Debugging() << p_ampl_np1->Leg(3)->Mom().Mass()<<"\n";
-    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)/64./4.<<"\n";
-    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)/64./4.<<"\n";
-
+    msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
+    msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
+    
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
-    for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) Tprods.at(i) = p_cmetric_n->Tprods().at(i);
-
-
-
-  
+    for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
+      Tprods.at(i) = p_cmetric_n->Tprods().at(i);
+    }
 
     MatrixD Gamma(Tprods.at(0).dim(), Tprods.at(0).dim());
 
-    msg_Debugging()<<"Amplitude for n+1:"<<*p_ampl_np1<<"\n";
-    msg_Debugging()<<"Amplitude for n:"<<*p_ampl_n<<"\n";
   
     size_t i=0;
     for(size_t t=0; t<p_ampl_n->Legs().size(); t++){ 
@@ -153,7 +137,6 @@ int RRatios::PerformShowers()
         msg_Debugging()<<"p_r = "<<pr<<"\n";
         msg_Debugging()<<"p_soft = "<<soft<<"\n";
         msg_Debugging()<<"eikonal = "<<eikonal<<"\n\n";
-        // TODO: urgent!! why is this a minus and not a plus?????????
         Gamma -= eikonal*Tprods.at(i);
         i++;
       }
@@ -161,30 +144,19 @@ int RRatios::PerformShowers()
     msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
     
     double g =  sqrt(4.*M_PI*0.118);
-    // double TrcH_np1 = Trace(metric_np1,H_np1) /0.3302891295379082/0.3302891295379082  * 32;
 
-    double TrcH_np1 = Trace(metric_np1,H_np1);///0.375/0.375 * 8;
+    double TrcH_np1 = Trace(metric_np1,H_np1);
 
     
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
-    // double TrHG = Trace(H_n,Gamma) /0.3611575592573076/0.3611575592573076 * 16;
-    double TrHG = Trace(H_n,Gamma);///0.43301270189221935/0.43301270189221935 * 4;
-
-    
-    //msg_Out()<< "Tr c_n*H_n = " << g*g* TrcHG/512/0.3611575592573076/0.3611575592573076 * 16 * 4./6. << "\n";
-    // msg_Out()<< "Tr c_n*H_n = " << TrcHG/4./pow(g,4)<< "\n";
-    plot.addPoint(cut, (g*g* TrHG) / (TrcH_np1));
-    msg_Debugging()<<g*g*TrHG/64./4./2.<<"\n";
-    msg_Debugging()<<TrcH_np1/64./4./2.<<"\n";
-    msg_Out()<<*p_ampl_np1<<"\n";
-    msg_Out()<<*p_ampl_n<<"\n";
-    msg_Out()<<(g*g* TrHG)/ (TrcH_np1)<<" "<<cut<<" "<<(g*g* TrHG)<<" "<<(TrcH_np1)<<"\n";
+    double TrHG = Trace(H_n,Gamma);
+    double ratio = (g*g* TrHG) / (TrcH_np1);
+    msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n"
+    plot.addPoint(cut, ratio);
   }
-  // YODA::WriterYODA::write(std::to_string(m_count)+".yoda",plot);
-  msg_Out()<<"Write out yoda.\n";
+  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
   m_count++;
-  //exit(1);
   CleanUp();
   return 1;
 }
