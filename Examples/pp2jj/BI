@@ -10,8 +10,8 @@
   RESUM_MODE 3;
 }(run);
 (processes){
-  Process 93 93 -> 93 93;
-  Order_EW 0;
+  Process 21 21 -> 21 21;
+  Order (*,0);
   End process;
 }(processes);
 

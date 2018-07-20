@@ -9,8 +9,15 @@
 #include "ATOOLS/Phys/Cluster_Amplitude.H"
 #include "ATOOLS/Org/Message.H"
 #include "Math/asa007.hpp"
+#include "ATOOLS/Org/Run_Parameter.H"
+#include "ATOOLS/Org/Data_Reader.H"
+
 
 #include "Tools/Files.H"
+
+#include <algorithm>
+#include <regex>
+#include <locale>
 
 using namespace ATOOLS;
 using namespace RESUM;
@@ -22,8 +29,8 @@ namespace RESUM {
   class CM_Generic : public CMetric_Base  {
     
   private:
-
-    size_t m_ng,m_nq,m_naq,m_ntot;    
+    Data_Reader m_reader = Data_Reader(" ",";","#","=");
+    int m_ng,m_nq,m_naq,m_ntot;    
     
   public:
     
@@ -32,6 +39,8 @@ namespace RESUM {
     void CalcIMetric();
     void CalcTs();
     void ReadPermutations(ATOOLS::Cluster_Amplitude *ampl);
+
+
     std::string m_rpath;
     std::string m_filename;
     
@@ -71,13 +80,31 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   }
   
   m_ntot = m_ng+m_nq+m_naq;
-  m_rpath = RESUM::FILENAMES::SHARE_DIR + "/pre_calc/";
   m_filename = "";
-  for(unsigned i = 0; i < double(m_nq+m_naq)/2.; i++) m_filename = m_filename + "qqb";
+  for(unsigned i = 0; 2*i < m_nq+m_naq; i++) {
+    m_filename = m_filename + "qqb";
+    msg_Debugging()<<m_filename<<"\n";
+  }
   for(unsigned i = 0; i < m_ng; i++) m_filename = m_filename + "g";
   m_map.resize(m_ntot);
   m_pam.resize(m_ntot);
   for (size_t i(0);i<m_ntot;++i) m_pam[m_map[i]=(m_ng+i)%(m_ng+m_naq+m_nq)]=i;
+
+  // TODO: look in more reasonable localtions and terminate properly if
+  //       nothing is found
+  m_rpath = "./"+rpa->gen.Variable("RESUM::pre_calc")+"/";
+  ifstream test((m_rpath+m_filename+".dat").c_str());
+  if(!test.good()){
+    m_rpath = RESUM::FILENAMES::SHARE_DIR + "/" + rpa->gen.Variable("RESUM::pre_calc")+"/";
+  }
+
+  
+  m_reader.SetAddCommandLine(false);
+  m_reader.AddComment("//");
+  m_reader.SetInputPath(m_rpath+m_filename+"/",0);
+  m_reader.SetInputFile(m_filename+".dat",0);
+
+  
   msg_Debugging()<<"map: "<<m_map<<"\n";
   msg_Debugging()<<"pam: "<<m_pam<<"\n";
 
@@ -88,50 +115,114 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   ReadPermutations(args.p_ampl);
 }
 
+std::vector<std::string> split(const string& input, const string& regex) {
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+        first{input.begin(), input.end(), re, -1},
+        last;
+    return {first, last};
+}
+
 void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   msg_Debugging()<<*ampl<<"\n";
-  size_t size_connected;
+
   
   //Get permutations
   msg_Debugging()<<"Read from "<<(m_rpath+m_filename+"/"+m_filename+"_perms.dat").c_str()<<"\n";
-  ifstream in( (m_rpath+m_filename+"/"+m_filename+"_perms.dat").c_str() );
-  in >> size_connected;
-  msg_Debugging()<<"Expect "<<size_connected<<" permutations.\n";
-  m_perms.resize(size_connected);
-  int temp;
-  for (size_t l = 0; l < size_connected; l++){
-    msg_Debugging()<<"Perm "<<l<<": ";
-    for (size_t m = 0; m < m_ntot; m++){
-      in >> temp;
-      msg_Debugging()<<temp<<" -> "<<Map(temp)<<" -> "<<ID(ampl->Leg(Map(temp))->Id())<<" ";
-      // m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
-      m_perms[l].push_back(ID(ampl->Leg(Map(temp))->Id()).front());
+
+
+  int size_connected = m_reader.GetValue<int>("SIZE_CONNECTED",-1);
+  msg_Debugging()<<size_connected<<"\n";
+
+  if (size_connected < 0) {
+    msg_Debugging()<<"Still old format.\n";
+    ifstream in( (m_rpath+m_filename+"/"+m_filename+"_perms.dat").c_str() );
+    in >> size_connected;
+    
+    msg_Debugging()<<"Expect "<<size_connected<<" permutations.\n";
+    m_perms.clear();
+    m_perms.reserve(size_connected);
+    std::string line;
+    size_t l = 0;
+    while(std::getline(in,line)) {
+      if(l >= size_connected) break;
+      if(line.empty()) continue;
+      l++;
+      size_t begin = line.find("(");
+      size_t end = line.find(")");
+      msg_Debugging()<<"Read Line: "<<line<<", perm starts at "<<begin<<" and ends at "<<end<<"\n";
+      if(begin != 0 && begin != std::string::npos) {
+      std::string prefactor = line.substr(0,begin-1);
+      //prefactor.erase(std::remove_if(prefactor.begin(), prefactor.end(), std::isspace), prefactor.end());
+      msg_Debugging()<<"Add prefactor "<<prefactor<<"\n";
+      m_prefactors.push_back(std::stod(prefactor));
+      }
+      else {
+        m_prefactors.push_back(1);
+      }
+      if(begin == std::string::npos) begin=0;
+      else begin += 1;
+      if(end == std::string::npos) end=line.size()+1;
+      msg_Debugging()<<"Perm "<<line.substr(begin,end-begin)<<".\n";
+      std::vector<std::string> tmp = split(line.substr(begin,end-begin)," ");
+      m_perms.emplace_back(PHASIC::Idx_Vector());
+      m_perms.back().reserve(m_ntot);
+      msg_Debugging()<<"Add permutation "<<l<<": ";
+      for(std::string t: tmp) {
+        msg_Debugging()<<std::stoi(t)<<" -> "<<Map(std::stoi(t))<<" -> "<<ID(ampl->Leg(Map(std::stoi(t)))->Id()).front()<<"; ";
+        m_perms.back().emplace_back(ID(ampl->Leg(Map(std::stoi(t)))->Id()).front());
+      }
+      msg_Debugging()<<"\n";
     }
-    msg_Debugging()<<"\n";
   }
+  else {
+    for(int i=0; i<size_connected; i++) {
+      string pref = "a"+std::to_string(i);
+      string amp = "A"+std::to_string(i);
+      double prefactor = m_reader.GetValue<double>(pref,1);
+      msg_Debugging()<<"Add prefactor "<<pref<<" = "<<prefactor<<"\n";
+      m_prefactors.push_back(prefactor);
+      std::vector<int> tmp(m_ntot);
+      m_reader.VectorFromFile(tmp,amp);
+      msg_Debugging()<<"Add permutation "<<amp<<" = "<<tmp<<"\n";
+      m_perms.emplace_back(PHASIC::Idx_Vector());
+      for(const int t: tmp) {
+        msg_Debugging()<<t<<" -> "<<Map(t)<<" -> "<<ID(ampl->Leg(Map(t))->Id()).front()<<"; ";
+        m_perms.back().emplace_back(ID(ampl->Leg(Map(t))->Id()).front());
+      }
+      msg_Debugging()<<"\n";
+    }
+  }
+    
   
   msg_Debugging()<<"Repeat permutations read in:\n";
   for(size_t n = 0; n < m_perms.size(); n++){
-    msg_Debugging() << "Perm: " << m_perms[n] << std::endl; 
+    msg_Debugging() <<"Prefactor = "<<m_prefactors.at(n)<< ", Perm = " << m_perms.at(n) << std::endl; 
   }
 }
 
 void CM_Generic::CalcMetric(){
  
-  size_t DIM;
-  msg_Debugging()<<"Read metric from "<<(m_rpath+m_filename+"/"+m_filename+"_met.dat")<<".\n";
-  ifstream in( (m_rpath+m_filename+"/"+m_filename+"_met.dat").c_str() );
-  in >> DIM;
-  
-  m_metric.resize(DIM);
-  for (size_t i = 0; i < DIM; i++) {
-       m_metric[i].resize(DIM);   
-       for (size_t j = 0; j < DIM; j++) {
-	    in >> m_metric[i][j];
-	  }
-        }
+  int DIM = m_reader.GetValue<int>("DIM",-1);
 
-  in.close();
+  if(DIM < 0) {
+    ifstream in( (m_rpath+m_filename+'/'+m_filename+"_met.dat").c_str() );
+    in >> DIM;
+    
+    m_metric.resize(DIM);
+    for (size_t i = 0; i < DIM; i++) {
+      m_metric[i].resize(DIM);   
+      for (size_t j = 0; j < DIM; j++) {
+        in >> m_metric[i][j];
+      }
+    }
+    in.close();
+  }
+  else {
+    m_metric.clear();
+    m_reader.MatrixFromFile(m_metric, "METRIC");
+  }
 }
 
 
@@ -147,30 +238,41 @@ void CM_Generic::CalcIMetric(){
 
 void CM_Generic::CalcTs(){
   
-  size_t DIM;
-  ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() );
-  in >> DIM;
-  
-  for (size_t i=0;i<m_Tprods.size();i++)
-  m_Tprods[i].clear();
-  m_Tprods.clear();
-  
-  for(size_t i = 1; i<=m_ntot; i++){
-      for(size_t j = i+1; j<=m_ntot; j++){
-
-     std::vector< std::vector< double > > tmp_tp;
-  
-     tmp_tp.resize(DIM);
-     for (size_t l = 0; l < DIM; l++) {
-       tmp_tp[l].resize(DIM);   
-       for (size_t m = 0; m < DIM; m++) {
+  int DIM = m_reader.GetValue<int>("DIM", -1);
+  if(DIM < 0) {
+    ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() );
+    in >> DIM;
+    
+    for (size_t i=0;i<m_Tprods.size();i++)
+    m_Tprods[i].clear();
+    m_Tprods.clear();
+    
+    for(int i = 1; i<=m_ntot; i++){
+      for(int j = i+1; j<=m_ntot; j++){
+        
+        std::vector< std::vector< double > > tmp_tp;
+        
+        tmp_tp.resize(DIM);
+        for (int l = 0; l < DIM; l++) {
+          tmp_tp[l].resize(DIM);   
+          for (int m = 0; m < DIM; m++) {
 	    in >> tmp_tp[l][m];
 	  }
         }
 	m_Tprods.push_back(tmp_tp);
       }
     }
-
+  }
+  else {
+    m_Tprods.clear();
+    for(int i=0; i<DIM; i++) {
+      for(int j=i+1; j<DIM; j++) {
+        m_Tprods.emplace_back(std::vector< std::vector< double > >());
+        string mat = "C_"+std::to_string(i)+std::to_string(j);
+        m_reader.MatrixFromFile(m_Tprods.back(),mat);
+      }
+    }
+  }
 }
 
 
