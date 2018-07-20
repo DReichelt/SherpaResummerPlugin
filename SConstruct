@@ -4,8 +4,9 @@ vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
+vars.Add(PathVariable('include','directories that will be passed to the compiler with the -I option.','.'))
 env = Environment(variables=vars,
-    CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd()])
+    CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
 vars.Add('CXX','The C++ Compiler',
     os.popen(env['sherpa']+'/bin/Sherpa-config --cxx').read().rstrip())
 vars.Add('CXXFLAGS','The C++ Flags',['-g','-O2','-std=c++11'])
