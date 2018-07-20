@@ -100,7 +100,7 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
 
   
   m_reader.SetAddCommandLine(false);
-  m_reader.AddComment("//");
+  m_reader.SetComment({"#","%","//"});
   m_reader.SetInputPath(m_rpath+m_filename+"/",0);
   m_reader.SetInputFile(m_filename+".dat",0);
 
@@ -178,8 +178,8 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   }
   else {
     for(int i=0; i<size_connected; i++) {
-      string pref = "a"+std::to_string(i);
-      string amp = "A"+std::to_string(i);
+      string pref = "a_"+std::to_string(i);
+      string amp = "A_"+std::to_string(i);
       double prefactor = m_reader.GetValue<double>(pref,1);
       msg_Debugging()<<"Add prefactor "<<pref<<" = "<<prefactor<<"\n";
       m_prefactors.push_back(prefactor);
