@@ -9,7 +9,7 @@
 #include "ATOOLS/Phys/Cluster_Amplitude.H"
 #include "ATOOLS/Org/Message.H"
 #include "Math/asa007.hpp"
-
+#include "ATOOLS/Org/Run_Parameter.H"
 
 #include "Tools/Files.H"
 
@@ -78,13 +78,21 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   }
   
   m_ntot = m_ng+m_nq+m_naq;
-  m_rpath = RESUM::FILENAMES::SHARE_DIR + "/pre_calc/";
   m_filename = "";
   for(unsigned i = 0; i < double(m_nq+m_naq)/2.; i++) m_filename = m_filename + "qqb";
   for(unsigned i = 0; i < m_ng; i++) m_filename = m_filename + "g";
   m_map.resize(m_ntot);
   m_pam.resize(m_ntot);
   for (size_t i(0);i<m_ntot;++i) m_pam[m_map[i]=(m_ng+i)%(m_ng+m_naq+m_nq)]=i;
+
+  // TODO: look in more reasonable localtions and terminate properly if
+  //       nothing is found
+  m_rpath = "./"+rpa->gen.Variable("RESUM::pre_calc")+"/";
+  ifstream test((m_rpath+m_filename+".dat").c_str());
+  if(!test.good()){
+    m_rpath = RESUM::FILENAMES::SHARE_DIR + "/" + rpa->gen.Variable("RESUM::pre_calc")+"/";
+  }
+
   msg_Debugging()<<"map: "<<m_map<<"\n";
   msg_Debugging()<<"pam: "<<m_pam<<"\n";
 
