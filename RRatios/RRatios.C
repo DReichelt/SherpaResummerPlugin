@@ -27,6 +27,7 @@ RRatios::RRatios(ISR_Handler *const /*isr*/,
   Data_Reader read(" ",";","#","=");
   m_amode=read.GetValue<int>("RESUM_MODE",0);
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
+  rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
 }
@@ -104,13 +105,14 @@ int RRatios::PerformShowers()
     H_n.data() *= pref_n.data();
     m_comix.Reset(); //TODO: do I need these resets?
 
-    msg_Debugging()<<"Amplitude for n+1:"<<*p_ampl_np1<<"\n";
-    msg_Debugging()<<"Amplitude for n:"<<*p_ampl_n<<"\n";
+
+    msg_Debugging()<<"Amplitude for n+1: "<<*p_ampl_np1<<"\n";
+    msg_Debugging()<<"Amplitude for n: "<<*p_ampl_n<<"\n";
 
     
     msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
     msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
-    
+
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
     for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
       Tprods.at(i) = p_cmetric_n->Tprods().at(i);
@@ -142,17 +144,17 @@ int RRatios::PerformShowers()
       }
     }
     msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
-    
-    double g =  sqrt(4.*M_PI*0.118);
 
+    // TODO: is that always the scale we want?
+    double g =  sqrt(4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2()));
     double TrcH_np1 = Trace(metric_np1,H_np1);
 
-    
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
     double TrHG = Trace(H_n,Gamma);
     double ratio = (g*g* TrHG) / (TrcH_np1);
-    msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n"
+    msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n";
+    //msg_Out()<<ratio<<"\n";
     plot.addPoint(cut, ratio);
   }
   YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
