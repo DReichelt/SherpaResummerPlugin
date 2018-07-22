@@ -17,8 +17,9 @@ namespace RESUM {
     Observable_Base(args) {}
 
     Obs_Params Parameters
-    (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
+      (const std::vector<Vec4D>& p,
+       const std::vector<Flavour>& fl,
+       const size_t &l) {
       double d=log(1.0/(2.0*p[2].PPerp2()/(p[0]*p[1])));
       d+=-2.0*log(2.0);
       return Obs_Params(1.0,1.0,d,0.0);
@@ -56,12 +57,14 @@ namespace RESUM {
       return a.Sqr()>b.Sqr();
     }
 
-    double Value(const Vec4D *ip,const Flavour *fl,
-		 const size_t &n,const size_t &nin)
+    double Value(const std::vector<Vec4D>& ip,
+                 const std::vector<Flavour>& fl,
+		 const size_t &nin)
     {
+      size_t n = ip.size();
       // need boost to match resummation at small \tau (~1e-4)
       Vec4D sum;
-      Vec4D_Vector p(ip,&ip[n]);
+      Vec4D_Vector p(&ip[0],&ip[n]);
       for (size_t i(nin);i<n;++i) sum+=p[i];
       Poincare cms(sum);
       for (size_t i(0);i<n;++i) cms.Boost(p[i]);

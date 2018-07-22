@@ -33,16 +33,44 @@ namespace RESUM {
 
     virtual ~Observable_Base();
 
-    virtual Obs_Params Parameters
+    Obs_Params Parameters
     (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) = 0;
+     const size_t &n,const size_t &l) {
+      std::vector<ATOOLS::Vec4D> moms;
+      std::vector<ATOOLS::Flavour> flavs;
+      for(size_t i=0; i<n; i++) {
+        moms.push_back(p[i]);
+        flavs.push_back(fl[i]);
+      }
+      return Parameters(moms,flavs,l);};
 
+    virtual Obs_Params Parameters
+    (const std::vector<ATOOLS::Vec4D>& p,
+     const std::vector<ATOOLS::Flavour>& fl,
+     const size_t &l) = 0;
+   
+    
     virtual double Shift(ATOOLS::NLO_subevt *sub);
 
-    virtual double Value
+    double Value
     (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &nin=2) = 0;
+     const size_t &n,const size_t &nin=2) {
+      std::vector<ATOOLS::Vec4D> moms;
+      std::vector<ATOOLS::Flavour> flavs;
+      for(size_t i=0; i<n; i++) {
+        moms.push_back(p[i]);
+        flavs.push_back(fl[i]);
+      }
+      return Value(moms, flavs, nin);
+    }
 
+
+    virtual double Value
+    (const std::vector<ATOOLS::Vec4D>& p,
+     const std::vector<ATOOLS::Flavour>& fl,
+     const size_t &nin=2) = 0;
+
+    
     double Value(ATOOLS::Particle_List *const pl);
 
     inline const std::string Name() { return m_name; }
