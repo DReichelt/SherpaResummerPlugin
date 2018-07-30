@@ -5,6 +5,7 @@
 #include "ATOOLS/Phys/Cluster_Amplitude.H"
 #include "ATOOLS/Phys/Particle_List.H"
 #include "ATOOLS/Phys/NLO_Subevt.H"
+#include "Observables/Algorithms/Algorithm.H"
 
 namespace RESUM {
   
@@ -65,10 +66,18 @@ namespace RESUM {
     }
 
 
-    virtual double Value
+    virtual double Value(const std::vector<ATOOLS::Vec4D>& p,
+                         const std::vector<ATOOLS::Flavour>& fl,
+                         const size_t &nin=2) = 0;
+
+    
+    double Value
     (const std::vector<ATOOLS::Vec4D>& p,
      const std::vector<ATOOLS::Flavour>& fl,
-     const size_t &nin=2) = 0;
+     std::map<std::string, Algorithm::Ptr> algorithms,
+     const size_t &nin=2) {
+      return Value(p, fl, nin);
+    }
 
     
     double Value(ATOOLS::Particle_List *const pl);

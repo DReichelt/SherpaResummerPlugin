@@ -27,6 +27,7 @@
       Thrust 0 1 100 LinErr;
       Thrust 1e-8 1 80 LogErr;
       Thrust 1.12535174719e-07 1 80 LnErr;
+      HeavyJetMass 0 1 100 LinErr;
     }
   } END_ANALYSIS;
 }(analysis);
