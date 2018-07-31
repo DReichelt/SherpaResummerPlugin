@@ -29,6 +29,19 @@ resumlib = env.SharedLibrary('SherpaResum',
 	'Main/Resum.C',
 	'Main/Cluster_Definitions.C'])
 
+ffunctionlib = env.SharedLibrary('SherpaFFunction',
+             ['Math/r8lib.cpp',
+              'Math/c8lib.cpp',
+	      'Math/matexp.cpp',
+	      'Math/asa007.cpp',
+	      'Tools/CBasis.C',
+	      'Tools/CMetric_Base.C',
+	      'Tools/Hard_Matrix.C',
+	      'Bases/QCD_Generic.C',
+	      'Main/Comix_Interface.C',
+	      'Main/Resum.C',
+	      'Main/Cluster_Definitions.C'])
+
 analysislib = env.SharedLibrary('ResumAnalysis',
 	['Analysis/Analysis.C',
 	'Analysis/Observable_Base.C',
@@ -56,7 +69,7 @@ def replace(target, source, env):
          
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
             action=replace)
-env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib])
+env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,ffunctionlib,analysislib])
 env.Install('${sherpa}/share/RESUM',['Bases/pre_calc'])
 env.Alias('install', ['Tools/Files.H',
                       '${sherpa}/share/RESUM',
