@@ -30,6 +30,7 @@ namespace RESUM {
                  const std::vector<Flavour>& flavs,
                  std::map<std::string, Algorithm::Ptr>& algorithms,
                  const size_t& nin) {
+      // TODO: actually implment anything but the default...
       const std::string& name = rpa->gen.Variable("RESUM::HeavyJetMass_JetDefinition","ThrustFinder");
       auto alg = algorithms.find(name);
       if(alg==algorithms.end()) {
