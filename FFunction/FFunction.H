@@ -1,22 +1,20 @@
-#ifndef RESUM_RESUM_H
-#define RESUM_RESUM_H
+#ifndef RESUM_FFUNCTION_H
+#define RESUM_FFUNCTION_H
 
 #include "PDF/Main/Shower_Base.H"
 #include "MODEL/Main/Running_AlphaS.H"
 #include "Main/Comix_Interface.H"
 #include "Main/Cluster_Definitions.H"
 #include "Analysis/Observable_Base.H"
-#include "Tools/CMetric_Base.H"
-#include "Tools/CBasis.H"
-//#include "Tools/CBasis.C"
+#include "Main/Resum.H"
 
-using std::complex;
+#include "FFunction/MultiplePrecision.H"
+#include "FFunction/Observables.H"
 
+using std::vector;
 namespace RESUM {
 
-
-  
-  class Resum: public PDF::Shower_Base {
+  class FFunction: public Resum {
   private:
 
     Comix_Interface *p_comix;
@@ -34,7 +32,7 @@ namespace RESUM {
     //suitable basis for actual event
     CMetric_Base * p_cmetric;
     
-    std::vector<Observable_Base*>     m_obss;
+    std::vector<Observable_Base_MP::Ptr>     m_obss;
     std::vector<ATOOLS::Histogram*>   m_hist;
     std::vector<std::vector<double> > m_ress;
 
@@ -45,25 +43,21 @@ namespace RESUM {
     int n_g, n_q, n_aq, color_sings, m_amode;
     double s_12, m_rn[2];
 
-    double CalcS(const double L,double &Softexp);
-    double CalcF(const double L);
-    double CalcColl(const double L,const int order,
-		    double &Rp,double &Collexp);
-    double CalcPDF(const double L,double &PDFexp);
-    double T(const double x);
-    void printMatrix(const Complex rhs[],const size_t dim);
-    void matMult(Complex ResMat[],const Complex ArrMat[],
-		 const std::vector<std::vector<double> > VecMat);
-    Complex* H_conjugate(const Complex ResMat[],size_t dim);
 
     double Value(const double &v);
 
+    void MakeKinematics(const mpfloat& z, const mpfloat& y, const mpfloat& phi,
+                        unsigned int ij, unsigned int k, vector<Vec4MP>& event);
+
+    void GenerateEvent(double v, double Q2,
+                       double epsilon, const mpfloat& rho,
+                       vector<Vec4MP>& event);
   public:
 
-    Resum(PDF::ISR_Handler *const isr,
+    FFunction(PDF::ISR_Handler *const isr,
 	  MODEL::Model_Base *const model);
 
-    ~Resum();
+    ~FFunction();
 
     int  PerformShowers();
     int  PerformDecayShowers();
@@ -80,16 +74,14 @@ namespace RESUM {
 		  const ATOOLS::Flavour &flk,const int type,
 		  const int cpl,const double &mu2) const;
 
-    virtual size_t AddObservable(Observable_Base *const obs,
+    size_t AddObservable(Observable_Base_MP::Ptr const obs,
 			 ATOOLS::Histogram *const h);
 
     const std::vector<double> &Result(int n) const { return m_ress[n]; }
 
 
-  };// end of class Resum
+  };// end of class FFunction
 
-
-  
 }// end of namespace RESUM
 
 #endif

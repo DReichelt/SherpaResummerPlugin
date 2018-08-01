@@ -24,6 +24,43 @@ using namespace PDF;
 using namespace ATOOLS;
 using namespace MODEL;
 
+
+
+const double s_Nc = 3.;
+const double s_CF = (s_Nc*s_Nc-1.)/(2.*s_Nc);
+const double s_CA = s_Nc;
+const double s_TR = 1./2.;
+const double s_eps = .000001;
+
+
+//Print a matrix
+template <typename T>
+void printMat(std::vector< std::vector <T> > &rhs) {
+  msg_Debugging() << std::endl;
+  for (unsigned i=0; i<rhs.size(); i++) {
+    msg_Debugging() << "{";
+    for (unsigned j=0; j<rhs[i].size(); j++) {
+      msg_Debugging() << (fabs(rhs[i][j]) > .0000001 ? rhs[i][j] : 0);
+      if(j<rhs[j].size()-1) msg_Debugging() << ",";
+    }
+    msg_Debugging() << "},";
+    msg_Debugging() << std::endl;
+  }
+  msg_Debugging() << std::endl;
+}
+ 
+ 
+// returns minus a matrix
+inline void Minus(std::vector< std::vector <double> > &ts){
+  for(unsigned i = 0; i<ts.size(); i++){
+    for(unsigned j = 0; j<ts[i].size(); j++){
+    ts[i][j] = -ts[i][j];
+    }
+  }
+}
+
+
+
 Resum::Resum(ISR_Handler *const isr,
 	     Model_Base *const model):
   Shower_Base("Resum"), p_ampl(NULL)
@@ -644,6 +681,47 @@ double Resum::CalcPDF(const double L, double &PDFexp)
 
   return new_pdffac/old_pdffac;
 }
+
+void Resum::printMatrix(const Complex rhs[], const size_t dim){
+    msg_Debugging()<<"{\n";
+    for (size_t i=0;i<dim;i++) {
+      msg_Debugging()<<"  {";
+      for (size_t j=0;j<dim;j++) {
+	 msg_Debugging()<< (fabs(rhs[i*dim+j].real()) > .001 ? rhs[i*dim+j].real() : 0) <<"+"
+		  <<rhs[i*dim+j].imag()<<((j+1<dim)?"I,":"I");
+      }
+      msg_Debugging()<<((i+1==dim)?"}\n":"},\n");
+    }
+    msg_Debugging()<<"}\n";  
+}
+
+
+//Matrix Multiplication
+void Resum::matMult(Complex ResMat[], const Complex ArrMat[], const std::vector< std::vector< double > > VecMat){
+    size_t dim = VecMat.size();
+    for (size_t i=0;i<dim;i++) {
+        for (size_t j=0;j<dim;j++){
+    	   for (size_t k=0;k<dim;k++){
+	     ResMat[i*dim+j] = Complex(ResMat[i*dim+j].real() + VecMat[k][i]*ArrMat[j*dim+k].real(),
+				       ResMat[i*dim+j].imag() + VecMat[k][i]*ArrMat[j*dim+k].imag());
+	   }      
+	}
+    }
+}
+
+//Hermition conjugate 
+Complex* Resum::H_conjugate(const Complex ResMat[], size_t dim) {
+complex<double> hold;
+Complex *result = new Complex[dim*dim];
+for (size_t i=0;i<dim;i++) {
+        for (size_t j=0;j<dim;j++){ 
+	  hold = ResMat[i*dim+j];
+	  result[j*dim+i] = conj(hold);
+	}
+    }
+ return result;
+}
+
 
 
 DECLARE_GETTER(Resum,"Resum",Shower_Base,Shower_Key);

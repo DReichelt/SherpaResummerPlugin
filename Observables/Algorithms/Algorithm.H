@@ -21,11 +21,12 @@ namespace RESUM {
 
 
 namespace RESUM {
+  template <typename T>
   static Algorithm::Ptr GetAlgorithm(const std::string& name,
-                                     const std::vector<ATOOLS::Vec4D>& p,
+                                     const std::vector<ATOOLS::Vec4<T>>& p,
                                      const std::vector<ATOOLS::Flavour>& fl,
                                      const size_t &nin) {
-    if(name=="ThrustFinder") return std::make_shared<ThrustFinder>(p,fl,nin);
+    if(name=="ThrustFinder") return std::make_shared<ThrustFinder<T>>(p,fl,nin);
     else {
       THROW(fatal_error,"Algorithm "+name+" not implemented!");
       return nullptr;

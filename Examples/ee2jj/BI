@@ -2,7 +2,7 @@
   EVENTS 10k; EVENT_GENERATION_MODE W;  
   FRAGMENTATION Off; BEAM_REMNANTS 0;
   BEAM_1 11 45.6; BEAM_2 -11 45.6;
-  SHOWER_GENERATOR Resum;
+  SHOWER_GENERATOR FFunction;
   RESPECT_MASSIVE_FLAG 1;
   SCALES VAR{Abs2(p[0]+p[1])};
   ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
@@ -17,16 +17,14 @@
 (analysis){
   BEGIN_ANALYSIS {
     LEVEL Shower; PATH_PIECE BI/;
-    Resum { FinalState;
-      Thrust_FF 0 1 100 LinErr;
-      Thrust_FF 1e-8 1 80 LogErr;
-      Thrust_FF 1.12535174719e-07 1 80 LnErr;
-      Y3_FF 0 1 100 LinErr;
-      Y3_FF 1e-8 1 80 LogErr;
-      Y3_FF 1.12535174719e-07 1 80 LnErr;
-      TThrust_FF 0 1 100 LinErr;
-      TThrust_FF 1e-8 1 80 LogErr;
-      TThrust_FF 1.12535174719e-07 1 80 LnErr;
-    }
+    FFunction { FinalState;
+          HeavyJetMass 0 1 100 LinErr
+      # Thrust_FF 0 1 100 LinErr;
+    #   Thrust_FF 1e-8 1 80 LogErr;
+    #   Thrust_FF 1.12535174719e-07 1 80 LnErr;
+    #   Y3_FF 0 1 100 LinErr;
+    #   Y3_FF 1e-8 1 80 LogErr;
+    #   Y3_FF 1.12535174719e-07 1 80 LnErr;
+    # }
   } END_ANALYSIS;
 }(analysis);

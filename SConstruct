@@ -5,7 +5,7 @@ vars.Add(PathVariable('sherpa','path to sherpa',
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
 env = Environment(variables=vars,
-    CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd()])
+    CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'/opt/local/include'])
 vars.Add('CXX','The C++ Compiler',
     os.popen(env['sherpa']+'/bin/Sherpa-config --cxx').read().rstrip())
 vars.Add('CXXFLAGS','The C++ Flags',['-g','-O2','-std=c++11'])
@@ -14,7 +14,8 @@ Help(vars.GenerateHelpText(env))
 vars.Save('.SConstruct',env)
 env['ENV']=os.environ
 if env['PLATFORM']=='darwin':
-   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup'])
+   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup','-L/opt/local/lib', '-lgmp', '-lgmpxx',
+                         '-lmpfr'])
 
 resumlib = env.SharedLibrary('SherpaResum',
 	['Math/r8lib.cpp',
@@ -39,11 +40,14 @@ ffunctionlib = env.SharedLibrary('SherpaFFunction',
 	      'Tools/Hard_Matrix.C',
 	      'Bases/QCD_Generic.C',
 	      'Main/Comix_Interface.C',
-	      'Main/Resum.C',
+              'Main/Resum.C',
+              'FFunction/FFunction.C',
 	      'Main/Cluster_Definitions.C'])
 
 analysislib = env.SharedLibrary('ResumAnalysis',
 	['Analysis/Analysis.C',
+        'FFunction/Analysis.C',
+        'FFunction/Observables.C',
 	'Analysis/Observable_Base.C',
 	'Analysis/Matching_Analysis.C',
 	'Analysis/Observable_Selector.C',

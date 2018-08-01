@@ -8,28 +8,30 @@
 using namespace ATOOLS;
 
 namespace RESUM {
-  
+
+  template <typename T>
   class ThrustFinder : public Algorithm {
   public:
     typedef std::shared_ptr<ThrustFinder> Ptr;
-    ThrustFinder(const std::vector<Vec4D>& p,
+    ThrustFinder(const std::vector<Vec4<T>>& p,
                  const std::vector<Flavour>& fl,
                  const size_t &nin)   {
       size_t n = p.size();
-      Vec3D lastaxis, curraxis, thrustaxis, maxaxis;
-      double maxthrust=0., lastthrust , currthrust, thrust;
-      std::vector<Vec3D> vectors(n-nin);
-      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(p[i][1],p[i][2],0.0);
+      Vec3<T> lastaxis, curraxis, thrustaxis, maxaxis;
+      T maxthrust=0., lastthrust , currthrust, thrust;
+      std::vector<Vec3<T>> vectors(n-nin);
+      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3<T>(p[i][1],p[i][2],0.0);
       for (int pass=0;pass<2;++pass) {
         if (pass==1) RotateMoms(vectors,thrustaxis);
         sort(vectors.begin(),vectors.end(),&bigger);
-        std::vector<Vec3D> initialaxes;
+        std::vector<Vec3<T>> initialaxes;
         for(unsigned int i=1;i<=(1<<(vectors.size()-1));++i) {
-	  Vec3D axis;
+	  Vec3<T> axis;
 	  for(unsigned int j=1;j<=vectors.size();++j) {
 	    int addsign=-1;
 	    if ((1<<j)*((i+(1<<(j-1))-1)/(1<<j)) >= i) addsign=1;
-	    axis=axis+addsign*vectors[j-1];
+            // TODO: revise this cast
+	    axis=axis+T(addsign)*vectors[j-1];
 	  }
 	  initialaxes.push_back(axis);
         }
@@ -37,9 +39,9 @@ namespace RESUM {
         for(unsigned int j=0;j<initialaxes.size();j++)
           initialaxes[j]=initialaxes[j]/initialaxes[j].Abs();
         unsigned int ident=0;
-        double sump=SumP(vectors);
+        T sump=SumP(vectors);
         maxthrust=0.;
-        for(unsigned int j=0;(j<initialaxes.size())&&(ident<2);j++) {
+        for(size_t j=0;(j<initialaxes.size())&&(ident<2);j++) {
           curraxis=initialaxes[j];
           currthrust=SumNP(vectors,curraxis)/sump;
           lastthrust=0.0;
@@ -63,50 +65,51 @@ namespace RESUM {
         }
         m_jets = std::vector<std::set<size_t>>(2);
         for(size_t i=0; i<p.size(); i++) {
-          if(Vec3D(p[i])*m_axis < 0) m_jets.at(0).insert(i);
+          if(Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i);
           else m_jets.at(1).insert(i);
         }
       }
     }
 
-    double Thrust() const { return m_thrust; }
-    double Tau() const { return 1.-m_thrust; }
-    const Vec3D& Axis() const { return m_axis; }
+    T Thrust() const { return m_thrust; }
+    T Tau() const { return 1.-m_thrust; }
+    const Vec3<T>& Axis() const { return m_axis; }
       
   private:
 
-    double m_thrust;
-    Vec3D m_axis;
+    T m_thrust;
+    Vec3<T> m_axis;
 
     
-    void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
+    void RotateMoms(std::vector<Vec3<T>>& ps,const Vec3<T> &ref)
     {
-      for(std::vector<Vec3D>::iterator i(p.begin());
-	  i!=p.end();++i) *i=*i-ref*(ref**i);
+      for(Vec3<T>& p: ps) p -= ref*(ref*p);
+      // for(std::vector<Vec3<T>>::iterator i(p.begin());
+      //     i!=p.end();++i) *i=*i-ref*(ref**i);
     }
     
-    Vec3D NewAxis(const std::vector<Vec3D> &p,const Vec3D &ref)
+    Vec3<T> NewAxis(const std::vector<Vec3<T>> &p,const Vec3<T> &ref)
     {
-      Vec3D next(0.,0.,0.);
+      Vec3<T> next(0.,0.,0.);
       for (size_t i(0);i<p.size();++i) next+=(ref*p[i]<0.0)?-p[i]:p[i];
       return next/next.Abs();
     }
     
-    double SumP(const std::vector<Vec3D> &p)
+    T SumP(const std::vector<Vec3<T>> &p)
     { 
-      double sum_p(0.0);
+      T sum_p(0.0);
       for (size_t i(0);i<p.size();++i) sum_p+=p[i].Abs();
       return sum_p;
     }
 
-    double SumNP(const std::vector<Vec3D> &p,const Vec3D &n)
+    T SumNP(const std::vector<Vec3<T>> &p,const Vec3<T> &n)
     { 
-      double sum_np(0.0);
-      for (size_t i(0);i<p.size();++i) sum_np+=dabs(p[i]*n);
+      T sum_np(0.0);
+      for (size_t i(0);i<p.size();++i) sum_np+=abs(p[i]*n);
       return sum_np;
     }
 
-    static bool bigger(const Vec3D &a,const Vec3D &b)
+    static bool bigger(const Vec3<T> &a,const Vec3<T> &b)
     {
       return a.Sqr()>b.Sqr();
     }
