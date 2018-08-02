@@ -37,7 +37,9 @@ Resum::Resum(ISR_Handler *const isr,
 
   Data_Reader read(" ",";","#","=");
   m_amode=read.GetValue<int>("RESUM_MODE",0);
-  rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES","VAR{sqr(91.188)}"));
+  rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
+  rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
+
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
 }
@@ -294,7 +296,7 @@ double Resum::CalcS(const double L, double &Softexp)
   double t = T(lambda/m_a[0]);
   //order a_s expansion of t
   if (m_amode&1) t = 2*as*L/M_PI;
-  int numlegs = n_g + n_q + n_aq;
+  size_t numlegs = n_g + n_q + n_aq;
 
   Hard_Matrix *h(p_comix->ComputeHardMatrix(p_ampl,p_cmetric->Perms()));
   if (h==NULL) msg_Error()<<METHOD<<"(): Error computing H."<<std::endl;
@@ -303,7 +305,7 @@ double Resum::CalcS(const double L, double &Softexp)
   msg_Debugging()<<"color metric yields : "<<std::endl;
   std::vector< std::vector< double > > met = p_cmetric->CMetric(), ICmetric = p_cmetric->Imetric() ;
   printMat(met);
-  int dim = met.size();
+  size_t dim = met.size();
 
   //Inverse metric
   msg_Debugging() << "Inverse Metric" << std::endl;
@@ -312,10 +314,10 @@ double Resum::CalcS(const double L, double &Softexp)
   //Check metric.Inverse = identity
   double value;
   msg_Debugging() << "Check metric.Inverse = identity" << std::endl;
-  for(unsigned i = 0; i<met.size();i++){
-    for(unsigned j = 0; j<met.size();j++){
+  for(size_t i = 0; i<met.size();i++){
+    for(size_t j = 0; j<met.size();j++){
       value = 0.;
-      for(unsigned k=0; k<met.size();k++){
+      for(size_t k=0; k<met.size();k++){
 	value = value + met[i][k]*ICmetric[k][j];
       }
       msg_Debugging() << ( (fabs(value) > .000001 ) ? value : 0 ) << " "; 
@@ -331,18 +333,18 @@ double Resum::CalcS(const double L, double &Softexp)
   //Check color conservation
   double check;
   double Casmir;
-  int k_t,i_t, j_t, loop,count;
-  for(unsigned k = 0; k<numlegs; k++){ 
+  size_t k_t,i_t, j_t, loop,count;
+  for(size_t k = 0; k<numlegs; k++){ 
     msg_Debugging() << "Should be T" << k+1 << ".J = 0" << std::endl;
     k_t = (k < 2 ? k : 2*k-1);
     Casmir = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF;
     msg_Debugging() << "is a " << flavlabels[k_t] << std::endl;
-    for(unsigned i = 0; i<dim; i++){
-      for(unsigned j = 0; j<dim; j++){
+    for(size_t i = 0; i<dim; i++){
+      for(size_t j = 0; j<dim; j++){
 	check = Casmir*met[i][j];
         msg_Debugging()<<"Casimir*met = "<<Casmir<<"*"<<met[i][j]<<" = "<<check<<"\n";
         i_t=0; j_t=0; loop=0; count = 0;
-	for(unsigned l = 0; l<Tprods.size(); l++) {
+	for(size_t l = 0; l<Tprods.size(); l++) {
 	  i_t = loop;
 	  j_t = count+loop+1;
 	  count++;
@@ -471,8 +473,8 @@ double Resum::CalcS(const double L, double &Softexp)
 
      //Print Tprods
      size_t coin = 0;
-     for(unsigned i = 0; i<numlegs;i++){
-     for(unsigned j = i+1; j<numlegs;j++){
+     for(size_t i = 0; i<numlegs;i++){
+     for(size_t j = i+1; j<numlegs;j++){
        double traceHT=0;
        //Calculate trace with Hard
        double traceHS = 0;
