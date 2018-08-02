@@ -6,13 +6,15 @@
   RESPECT_MASSIVE_FLAG 1;
   SCALES VAR{sqr(91.188)};
   SHERPA_LDADD YODA;
+  RESUM::pre_calc .;
+  ME_SIGNAL_GENERATOR Comix;
   # ANALYSIS 1; SHERPA_LDADD;
   # ANALYSIS_WRITEOUT_INTERVAL 10000;
   RESUM_MODE 3;
 }(run);
 (processes){
   Process -1 1 -> -2 2 21;
-  Order (3,0)
+  Order (3,0);
   End Process;
 }(processes);
 

@@ -109,7 +109,6 @@ int RRatios::PerformShowers()
     msg_Debugging()<<"Amplitude for n+1: "<<*p_ampl_np1<<"\n";
     msg_Debugging()<<"Amplitude for n: "<<*p_ampl_n<<"\n";
 
-    
     msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
     msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
 

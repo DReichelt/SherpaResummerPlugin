@@ -26,6 +26,16 @@ using namespace RESUM;
 
 namespace RESUM {
 
+  template <typename T>
+  inline std::vector<std::vector<T>> VectorToMatrix(const std::vector<T>& vec, size_t n) {
+    if(vec.size() != n*n) THROW(fatal_error, "Wrong dimension for vector.");
+    std::vector<std::vector<double>> ret(n);
+    for(size_t row=0; row<ret.size(); row++) {
+      ret[row] = {vec.begin()+n*row, vec.begin()+n*(row+1)};
+    }
+    return ret;
+  }
+  
   class CM_Generic : public CMetric_Base  {
     
   private:
@@ -83,7 +93,6 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   m_filename = "";
   for(unsigned i = 0; 2*i < m_nq+m_naq; i++) {
     m_filename = m_filename + "qqb";
-    msg_Debugging()<<m_filename<<"\n";
   }
   for(unsigned i = 0; i < m_ng; i++) m_filename = m_filename + "g";
   m_map.resize(m_ntot);
@@ -93,15 +102,16 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   // TODO: look in more reasonable localtions and terminate properly if
   //       nothing is found
   m_rpath = "./"+rpa->gen.Variable("RESUM::pre_calc")+"/";
-  ifstream test((m_rpath+m_filename+".dat").c_str());
+  ifstream test((m_filename+".dat").c_str());
   if(!test.good()){
+    msg_Debugging()<<"No file "<<m_filename<<".dat found in "<<m_rpath<<".\n";
     m_rpath = RESUM::FILENAMES::SHARE_DIR + "/" + rpa->gen.Variable("RESUM::pre_calc")+"/";
   }
-
+  msg_Debugging()<<"File "<<m_filename<<".dat found in "<<m_rpath<<".\n";
   
   m_reader.SetAddCommandLine(false);
   m_reader.SetComment({"#","%","//"});
-  m_reader.SetInputPath(m_rpath+m_filename+"/",0);
+  m_reader.SetInputPath(m_rpath+"/",0);
   m_reader.SetInputFile(m_filename+".dat",0);
 
   msg_Debugging()<<"map: "<<m_map<<"\n";
@@ -218,6 +228,7 @@ void CM_Generic::CalcMetric(){
   int DIM = m_reader.GetValue<int>("DIM",-1);
 
   if(DIM < 0) {
+    msg_Debugging()<<"Read old format from "<<m_rpath+m_filename+'/'+m_filename+"_met.dat"<<"\n";
     ifstream in( (m_rpath+m_filename+'/'+m_filename+"_met.dat").c_str() );
     in >> DIM;
     
@@ -231,8 +242,10 @@ void CM_Generic::CalcMetric(){
     in.close();
   }
   else {
-    m_metric.clear();
-    m_reader.MatrixFromFile(m_metric, "METRIC");
+    msg_Debugging()<<"Read in metric.\n";
+    std::vector<double> met;
+    m_reader.VectorFromFile(met, "METRIC");
+    m_metric = VectorToMatrix(met, DIM);
   }
 }
 
@@ -276,11 +289,13 @@ void CM_Generic::CalcTs(){
   }
   else {
     m_Tprods.clear();
-    for(int i=0; i<DIM; i++) {
-      for(int j=i+1; j<DIM; j++) {
-        m_Tprods.emplace_back(std::vector< std::vector< double > >());
+    for(int i=0; i<m_ntot; i++) {
+      for(int j=i+1; j<m_ntot; j++) {
         string mat = "C_"+std::to_string(i)+std::to_string(j);
-        m_reader.MatrixFromFile(m_Tprods.back(),mat);
+        msg_Debugging()<<"Read matrix "<<mat<<".\n";
+        std::vector<double> tprod;
+        m_reader.VectorFromFile(tprod,mat);
+        m_Tprods.push_back(VectorToMatrix(tprod,DIM));
       }
     }
   }
