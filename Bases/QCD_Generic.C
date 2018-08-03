@@ -299,8 +299,15 @@ void CM_Generic::CalcTs(){
         string mat = "C_"+std::to_string(i)+std::to_string(j);
         msg_Debugging()<<"Read matrix "<<mat<<".\n";
         std::vector<double> tprod;
-        m_reader.VectorFromFile(tprod,mat);
-        m_Tprods.push_back(VectorToMatrix(tprod,DIM));
+        if(m_reader.VectorFromFile(tprod,mat) && tprod.size() == DIM*DIM) {
+          m_Tprods.push_back(VectorToMatrix(tprod,DIM));
+        }
+        else {
+          // if not all Tprods are found, it doesnt make sense to have some of
+          // them, and code that uses them can not proceed
+          m_Tprods.clear();
+          return;
+        }
       }
     }
   }
