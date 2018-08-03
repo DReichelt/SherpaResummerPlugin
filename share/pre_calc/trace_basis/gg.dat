@@ -1,0 +1,18 @@
+% number of basis vectors with non-zero coefficient
+SIZE_CONNECTED = 1;
+
+% prefactors of the partial amplitude in total amplitude
+a_0 = 5.65685424949238147;
+
+% permutations defining the partial amplitudes
+A_0 = 0 1;
+
+
+% dimension of the colour space
+DIM = 1
+
+% colour metric aka soft matrix
+METRIC = 0.99999999999999978;
+
+% colour change matrices (not multiplied with inverse colour metric)
+C_01 = -2.99999999999999911;

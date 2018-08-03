@@ -71,7 +71,7 @@ def replace(target, source, env):
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
             action=replace)
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
-env.Install('${sherpa}/share/RESUM',['Bases/pre_calc'])
+env.Install('${sherpa}/share/RESUM',['share/pre_calc'])
 env.Alias('install', ['Tools/Files.H',
                       '${sherpa}/share/RESUM',
                       '${sherpa}/lib/SHERPA-MC'])

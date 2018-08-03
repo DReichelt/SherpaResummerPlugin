@@ -102,11 +102,16 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   // TODO: look in more reasonable localtions and terminate properly if
   //       nothing is found
   m_rpath = "./"+rpa->gen.Variable("RESUM::pre_calc")+"/";
-  ifstream test((m_filename+".dat").c_str());
-  if(!test.good()){
+  ifstream test1((m_rpath+m_filename+".dat").c_str());
+  if(!test1.good()){
     msg_Debugging()<<"No file "<<m_filename<<".dat found in "<<m_rpath<<".\n";
     m_rpath = RESUM::FILENAMES::SHARE_DIR + "/" + rpa->gen.Variable("RESUM::pre_calc")+"/";
   }
+  ifstream test2((m_rpath+m_filename+".dat").c_str());
+  if(!test2.good()){
+    THROW(fatal_error, "Did not find file "+m_filename+".dat in "+m_rpath);
+  }
+
   msg_Debugging()<<"File "<<m_filename<<".dat found in "<<m_rpath<<".\n";
   
   m_reader.SetAddCommandLine(false);
