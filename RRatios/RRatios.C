@@ -80,9 +80,9 @@ int RRatios::PerformShowers()
 
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
-  
+
   for(double cut=lambda; cut>1e-5; cut*=lambda) {
-    const Vec4D& soft = lambda*p_soft->Mom();  
+    const Vec4D& soft = lambda*p_soft->Mom();
     const double eps = emit*soft/(spect*(emit-soft));
     const Vec4D& p1 = emit-soft + eps * spect;
     const Vec4D& p3 = (1.-eps)*spect;
@@ -93,7 +93,8 @@ int RRatios::PerformShowers()
     p_emit->SetMom(p1);
     p_soft->SetMom(soft);
     p_spect->SetMom(p3);
-  
+
+    
     MatrixD H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,
                                                       p_cmetric_np1->Perms()),
                             dim_np1, 0).real();
@@ -111,7 +112,7 @@ int RRatios::PerformShowers()
 
     msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
     msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
-
+    
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
     for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
       Tprods.at(i) = p_cmetric_n->Tprods().at(i);
@@ -138,20 +139,21 @@ int RRatios::PerformShowers()
         msg_Debugging()<<"p_r = "<<pr<<"\n";
         msg_Debugging()<<"p_soft = "<<soft<<"\n";
         msg_Debugging()<<"eikonal = "<<eikonal<<"\n\n";
-        Gamma -= eikonal*Tprods.at(i);
+        // factor 2 due to symmetrisation of sum
+        Gamma -= 2.*eikonal*Tprods.at(i);
         i++;
       }
     }
     msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
 
     // TODO: is that always the scale we want?
-    double g =  sqrt(4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2()));
-    double TrcH_np1 = Trace(metric_np1,H_np1);
+    const double g =  sqrt(4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2()));
+    const double TrcH_np1 = Trace(metric_np1,H_np1);
 
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
-    double TrHG = Trace(H_n,Gamma);
-    double ratio = (g*g* TrHG) / (TrcH_np1);
+    const double TrHG = Trace(H_n,Gamma);
+    const double ratio = (g*g*TrHG) / TrcH_np1;
     msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n";
     //msg_Out()<<ratio<<"\n";
     plot.addPoint(cut, ratio);
