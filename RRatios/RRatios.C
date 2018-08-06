@@ -72,8 +72,8 @@ int RRatios::PerformShowers()
 
   const MatrixD& metric_np1 = p_cmetric_np1->CMetric();
   const MatrixD& metric_n = p_cmetric_n->CMetric();
-  const size_t dim_np1 = metric_np1.dim();  
-  const size_t dim_n = p_cmetric_n->CMetric().size();
+  const size_t dim_np1 = metric_np1.numRows();  
+  const size_t dim_n = metric_n.numRows();
 
   YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.99;
@@ -97,12 +97,12 @@ int RRatios::PerformShowers()
     
     MatrixD H_np1 = MatrixC(m_comix.ComputeHardMatrix(p_ampl_np1,
                                                       p_cmetric_np1->Perms()),
-                            dim_np1, 0).real();
+                            dim_np1, dim_np1, 0).real();
     H_np1.data() *= pref_np1.data();
 
     m_comix.Reset();
     MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
-                          dim_n, 0).real();
+                          dim_n, dim_n, 0).real();
     H_n.data() *= pref_n.data();
     m_comix.Reset(); //TODO: do I need these resets?
 
@@ -118,7 +118,7 @@ int RRatios::PerformShowers()
       Tprods.at(i) = p_cmetric_n->Tprods().at(i);
     }
 
-    MatrixD Gamma(Tprods.at(0).dim(), Tprods.at(0).dim());
+    MatrixD Gamma(Tprods.at(0).numRows(), Tprods.at(0).numCols());
 
   
     size_t i=0;

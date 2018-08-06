@@ -50,7 +50,7 @@ namespace RESUM {
     { return m_prefactors; }
 
     MatrixD PrefMatrix() {
-      MatrixD ret(nullptr, m_metric.size(), 0);
+      MatrixD ret(nullptr, m_metric.size(), m_metric.size(), 0);
       for(size_t i=0; i<m_prefactors.size(); i++) {
         for(size_t j=0; j<m_prefactors.size(); j++) {
           ret(i,j) = m_prefactors.at(i)*m_prefactors.at(j);
