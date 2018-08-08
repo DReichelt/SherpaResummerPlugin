@@ -72,8 +72,6 @@ int RRatios::PerformShowers()
 
   const MatrixD& metric_np1 = p_cmetric_np1->CMetric();
   const MatrixD& metric_n = p_cmetric_n->CMetric();
-  const size_t dim_np1 = metric_np1.numRows();  
-  const size_t dim_n = metric_n.numRows();
 
   YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.99;
@@ -81,6 +79,16 @@ int RRatios::PerformShowers()
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
 
+  const MatrixD& trafo_np1 = p_cmetric_np1->TransformationMatrix();
+  const MatrixD& trafo_n = p_cmetric_n->TransformationMatrix();
+
+  const MatrixD& trafo_np1_T = Transpose(trafo_np1);
+  const MatrixD& trafo_n_T = Transpose(trafo_n);
+
+  const size_t dim_np1 = trafo_np1.numCols();  
+  const size_t dim_n = trafo_n.numCols();
+
+  
   for(double cut=lambda; cut>1e-5; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();
     const double eps = emit*soft/(spect*(emit-soft));
@@ -99,20 +107,24 @@ int RRatios::PerformShowers()
                                                       p_cmetric_np1->Perms()),
                             dim_np1, dim_np1, 0).real();
     H_np1.data() *= pref_np1.data();
-
+    H_np1 = trafo_np1*H_np1*trafo_np1_T;
+    
     m_comix.Reset();
+
     MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, dim_n, 0).real();
     H_n.data() *= pref_n.data();
+    H_n = trafo_n*H_n*trafo_n_T;
     m_comix.Reset(); //TODO: do I need these resets?
 
+    
 
     msg_Debugging()<<"Amplitude for n+1: "<<*p_ampl_np1<<"\n";
     msg_Debugging()<<"Amplitude for n: "<<*p_ampl_n<<"\n";
 
     msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
     msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
-    
+
     std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
     for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
       Tprods.at(i) = p_cmetric_n->Tprods().at(i);

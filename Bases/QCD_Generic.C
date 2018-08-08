@@ -27,15 +27,27 @@ using namespace RESUM;
 namespace RESUM {
 
   template <typename T>
-  inline std::vector<std::vector<T>> VectorToMatrix(const std::vector<T>& vec, size_t n) {
-    if(vec.size() != n*n) THROW(fatal_error, "Wrong dimension for vector.");
-    std::vector<std::vector<double>> ret(n);
+    inline std::vector<std::vector<T>> VectorToMatrix(const std::vector<T>& vec, size_t r, size_t c) {
+    if(vec.size() != r*c) THROW(fatal_error, "Wrong dimension for vector.");
+    std::vector<std::vector<double>> ret(r);
     for(size_t row=0; row<ret.size(); row++) {
-      ret[row] = {vec.begin()+n*row, vec.begin()+n*(row+1)};
+      ret[row] = {vec.begin()+c*row, vec.begin()+c*(row+1)};
     }
     return ret;
   }
+
   
+  template <typename T>
+  inline std::vector<std::vector<T>> VectorToMatrix(const std::vector<T>& vec, size_t n) {
+    /* if(vec.size() != n*n) THROW(fatal_error, "Wrong dimension for vector."); */
+    /* std::vector<std::vector<double>> ret(n); */
+    /* for(size_t row=0; row<ret.size(); row++) { */
+    /*   ret[row] = {vec.begin()+n*row, vec.begin()+n*(row+1)}; */
+    /* } */
+    return VectorToMatrix(vec,n,n);
+  }
+
+
   class CM_Generic : public CMetric_Base  {
     
   private:
@@ -48,6 +60,7 @@ namespace RESUM {
     void CalcMetric();
     void CalcIMetric();
     void CalcTs();
+    void CalcTransformationMatrix();
     void ReadPermutations(ATOOLS::Cluster_Amplitude *ampl);
 
 
@@ -125,6 +138,7 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   CalcMetric();
   CalcIMetric();
   CalcTs();
+  CalcTransformationMatrix();
   msg_Debugging()<<"Read Permutations...\n";
   ReadPermutations(args.p_ampl);
 }
@@ -229,8 +243,10 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
 }
 
 void CM_Generic::CalcMetric(){
- 
-  int DIM = m_reader.GetValue<int>("DIM",-1);
+  msg_Debugging()<<"Start\n";
+  int DIM = m_reader.GetValue<int>("DIM_CS",-1);
+  msg_Debugging()<<DIM<<"\n";
+  if(DIM<0) DIM = m_reader.GetValue<int>("DIM",-1);
 
   if(DIM < 0) {
     msg_Debugging()<<"Read old format from "<<m_rpath+m_filename+'/'+m_filename+"_met.dat"<<"\n";
@@ -267,7 +283,8 @@ void CM_Generic::CalcIMetric(){
 
 void CM_Generic::CalcTs(){
   
-  int DIM = m_reader.GetValue<int>("DIM", -1);
+  int DIM = m_reader.GetValue<int>("DIM_CS", -1);
+  if(DIM < 0) DIM = m_reader.GetValue<int>("DIM", -1);
   if(DIM < 0) {
     ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() );
     in >> DIM;
@@ -313,5 +330,16 @@ void CM_Generic::CalcTs(){
   }
 }
 
+void CM_Generic::CalcTransformationMatrix() {
+  int DIM_BASIS = m_reader.GetValue<int>("DIM_BASIS", -1);
+  int DIM_CS = m_reader.GetValue<int>("DIM_CS", -1);
+  m_trafoMatrix.clear();
+  if(!(DIM_BASIS < 0 || DIM_CS < 0)) {
+    std::vector<double> trafo;
+    if(m_reader.VectorFromFile(trafo,"TRAFO")) {
+      m_trafoMatrix = VectorToMatrix(trafo,DIM_CS,DIM_BASIS);
+    }
+  }
+}
 
 #endif

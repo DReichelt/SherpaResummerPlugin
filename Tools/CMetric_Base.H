@@ -23,6 +23,7 @@ namespace RESUM {
     std::string m_name;
     std::vector< std::vector< double > > m_metric,  m_Imetric;
     std::vector<double> m_prefactors;
+    std::vector<std::vector<double>> m_trafoMatrix;
     std::vector<  std::vector< std::vector< double > > > m_Tprods;
     std::vector< PHASIC::Idx_Vector > m_perms;
     std::vector< size_t > m_map, m_pam;
@@ -33,6 +34,7 @@ namespace RESUM {
     void virtual CalcMetric();
     void virtual CalcTs();
     void virtual CalcIMetric();
+    
     
 
     virtual ~CMetric_Base();
@@ -50,7 +52,10 @@ namespace RESUM {
     { return m_prefactors; }
 
     MatrixD PrefMatrix() {
-      MatrixD ret(nullptr, m_metric.size(), m_metric.size(), 0);
+      size_t dim = -1;
+      if(m_trafoMatrix.empty()) dim = m_metric.size();
+      else dim = m_trafoMatrix.at(0).size();
+      MatrixD ret(nullptr, dim, dim, 0);
       for(size_t i=0; i<m_prefactors.size(); i++) {
         for(size_t j=0; j<m_prefactors.size(); j++) {
           ret(i,j) = m_prefactors.at(i)*m_prefactors.at(j);
@@ -69,7 +74,13 @@ namespace RESUM {
     inline const std::vector< std::vector< std::vector< double > > >& Tprods() 
     { return m_Tprods; }
   
-    
+    const std::vector<std::vector<double>>& TransformationMatrix() {
+      if(m_trafoMatrix.empty()) {
+        m_trafoMatrix = std::vector<std::vector<double>>(m_metric.size(), std::vector<double>(m_metric.size(),0));
+        for(size_t i=0; i<m_trafoMatrix.size(); i++) m_trafoMatrix[i].at(i) = 1;
+      }
+      return m_trafoMatrix;
+    }
 };
   
   typedef std::map<std::string, CMetric_Base*> CMetric_Map;
