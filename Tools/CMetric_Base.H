@@ -73,21 +73,20 @@ namespace RESUM {
 
     inline const std::vector< std::vector< std::vector< double > > >& Tprods() 
     { return m_Tprods; }
-  
-    const std::vector<std::vector<double>>& TransformationMatrix() {
+
+    inline bool hasTrafo() { return !m_trafoMatrix.empty(); }
+    
+    std::vector<std::vector<double>> TransformationMatrix() {
       if(m_trafoMatrix.empty()) {
-        m_trafoMatrix = std::vector<std::vector<double>>(m_metric.size(), std::vector<double>(m_metric.size(),0));
+        std::vector<std::vector<double>> ret = std::vector<std::vector<double>>(m_metric.size(), std::vector<double>(m_metric.size(),0));
         for(size_t i=0; i<m_trafoMatrix.size(); i++) m_trafoMatrix[i].at(i) = 1;
+        return ret;
       }
       return m_trafoMatrix;
     }
-};
+  };
   
   typedef std::map<std::string, CMetric_Base*> CMetric_Map;
   typedef std::map<std::string, std::vector< std::vector<double> > > Tprod_Map;
- 
 }
-
 #endif
-
-

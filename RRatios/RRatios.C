@@ -73,8 +73,6 @@ int RRatios::PerformShowers()
   const MatrixD& metric_np1 = p_cmetric_np1->CMetric();
   const MatrixD& metric_n = p_cmetric_n->CMetric();
 
-  YODA::Scatter2D plot("/line/line","/line/line");
-  double lambda = 0.99;
 
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
@@ -88,7 +86,14 @@ int RRatios::PerformShowers()
   const size_t dim_np1 = trafo_np1.numCols();  
   const size_t dim_n = trafo_n.numCols();
 
-  
+  std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
+  for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
+    Tprods[i] = p_cmetric_n->Tprods().at(i);
+  }
+
+  YODA::Scatter2D plot("/line/line","/line/line");
+  double lambda = 0.95;
+
   for(double cut=lambda; cut>1e-5; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();
     const double eps = emit*soft/(spect*(emit-soft));
@@ -107,16 +112,17 @@ int RRatios::PerformShowers()
                                                       p_cmetric_np1->Perms()),
                             dim_np1, dim_np1, 0).real();
     H_np1.data() *= pref_np1.data();
-    H_np1 = trafo_np1*H_np1*trafo_np1_T;
+    if(p_cmetric_np1->hasTrafo()) H_np1 = trafo_np1*H_np1*trafo_np1_T;
     
     m_comix.Reset();
-
+    msg_Debugging()<<"Read in matrix for n+1 process.\n";
+    
     MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, dim_n, 0).real();
     H_n.data() *= pref_n.data();
-    H_n = trafo_n*H_n*trafo_n_T;
+    if(p_cmetric_n->hasTrafo()) H_n = trafo_n*H_n*trafo_n_T;
     m_comix.Reset(); //TODO: do I need these resets?
-
+    msg_Debugging()<<"Read in matrix for n process.\n";
     
 
     msg_Debugging()<<"Amplitude for n+1: "<<*p_ampl_np1<<"\n";
@@ -125,14 +131,10 @@ int RRatios::PerformShowers()
     msg_Debugging() << "Tr(c_n+1 * H_n+1) = "<< Trace(metric_np1,H_np1)<<"\n";
     msg_Debugging() << "Tr(c_n * H_n) = "<< Trace(metric_n,H_n)<<"\n";
 
-    std::vector<MatrixD> Tprods(p_cmetric_n->Tprods().size());
-    for(size_t i=0; i<p_cmetric_n->Tprods().size(); i++) {
-      Tprods.at(i) = p_cmetric_n->Tprods().at(i);
-    }
+    
 
     MatrixD Gamma(Tprods.at(0).numRows(), Tprods.at(0).numCols());
 
-  
     size_t i=0;
     for(size_t t=0; t<p_ampl_n->Legs().size(); t++){ 
       for(size_t r=t+1; r<p_ampl_n->Legs().size(); r++) {
@@ -146,7 +148,7 @@ int RRatios::PerformShowers()
         if(pt[0]<0) pt *= -1;
         if(pr[0]<0) pr *= -1;
         const double eikonal = pt*pr / ((pt*soft)*(pr*soft));
-        msg_Debugging()<<"T-product: \n"<<Tprods.at(i)<<"\n";
+        msg_Debugging()<<"T-product: \n"<<Tprods[i]<<"\n";
         msg_Debugging()<<"p_t = "<<pt<<"\n";
         msg_Debugging()<<"p_r = "<<pr<<"\n";
         msg_Debugging()<<"p_soft = "<<soft<<"\n";
@@ -156,7 +158,7 @@ int RRatios::PerformShowers()
         i++;
       }
     }
-    msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n";
+    /* msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n"; */
 
     // TODO: is that always the scale we want?
     const double g =  sqrt(4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2()));
