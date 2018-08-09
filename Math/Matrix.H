@@ -1,11 +1,9 @@
-/** \file */
 #ifndef MATRIX_H
 #define MATRIX_H
-
+/** \file */
 #include "ATOOLS/Org/Exception.H"
 #include <valarray>
 #include <cassert>
-#include <iostream>
 #include <complex>
 
 using std::valarray;
@@ -120,7 +118,7 @@ public:
       _init(*mat, rows, cols, def);
     }
     else {
-      m_data = valarray<T>(def, rows*cols);
+      m_data = valarray<T>(def,rows*cols);
       m_dim = cols;
     }
   }
@@ -173,18 +171,19 @@ public:
   }
 
   /// Matrix multiplication.
-  Matrix<T> operator*=(const Matrix<T>& other) {
+  Matrix<T>& operator*=(const Matrix<T>& other) {
     assert(numCols() == other.numRows());
-    size_t cols = numCols();
     size_t rows = numRows();
-    valarray<T> tmp = std::move(m_data);
-    m_data.resize(rows*other.numCols());
-    m_dim = other.numCols();
-    for(size_t r = 0; r < rows; r++) {
-      for(size_t c = 0; c < other.numCols(); c++) {
-        const valarray<T>& row = tmp[slice(cols*r, cols, 1)];
-        const valarray<T>& col = other.m_data[slice(c, other.numRows(), other.numCols())];
-        element(r,c) = (row * col).sum();
+    size_t cols = numCols();
+    size_t ocols = other.numCols();
+    Matrix<T> tmp(rows,ocols,T(0));
+    transposeInPlace();
+    this->swap(tmp);
+    for(size_t k=0; k<cols; k++) {
+      for(size_t i=0; i<rows; i++) {
+        for(size_t j=0; j<ocols; j++) {
+          element(i,j) += tmp(k,i)*other(k,j);
+        }
       }
     }
     return *this;
@@ -214,6 +213,9 @@ public:
   }
 
   /// Transpose the matrix in-place.
+  /**
+     This is really in-place only for square matrices.
+  */
   Matrix<T> transposeInPlace() {
     if(isSquare()) {
       for(size_t r=0; r<numRows(); r++) {
@@ -284,7 +286,7 @@ public:
     return numRows()==other.numRows() && numCols()==other.numCols();
   }
   
-  /// Print the matrix to \p stram.
+  /// Print the matrix to \p stream.
   void print(std::ostream& stream) const {
     for(size_t r=0; r<numRows(); r++) {
       for(size_t c=0; c<numCols(); c++) {
@@ -298,7 +300,7 @@ public:
 private:
 
   /// Does the actual work in corresponding constructors.
-  void _init(const std::vector<std::vector<T> >& mat) {
+  void _init(const std::vector<std::vector<T>>& mat) {
     if(!mat.empty()) {
       m_data.resize(mat.size()*mat.at(0).size());
       m_dim = mat.at(0).size();
@@ -320,7 +322,7 @@ private:
   }
 
   /// Does the actual work in corresponding constructors.
-  void _init(const std::vector<std::vector<T> >& mat, size_t rows, size_t cols, T def=T()) {
+  void _init(const std::vector<std::vector<T>>& mat, size_t rows, size_t cols, T def=T()) {
     m_dim = cols;
     m_data.resize(rows*cols);
     try{
@@ -336,6 +338,7 @@ private:
   }
 
 public:
+  /// Stream output.
   friend std::ostream& operator<<(std::ostream& stream, const Matrix<T>& matrix) {
       matrix.print(stream);
       return stream;
