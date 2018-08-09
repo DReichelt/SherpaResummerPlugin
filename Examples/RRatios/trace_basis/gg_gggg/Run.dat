@@ -1,0 +1,21 @@
+(run){
+  EVENTS 100; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  SHOWER_GENERATOR RRatios;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{sqr(91.188)};
+  SHERPA_LDADD YODA
+  RESUM_MODE 3;
+  RESUM::pre_calc = pre_calc/trace_basis;
+}(run);
+(processes){
+  Process 21 21 -> 21 21 21 21 21;
+  Order (*,0);
+  End Process;
+}(processes);
+
+(selector){
+  NJetFinder 5 80 0 0.4;
+  NJetFinder 1 100 0 0.4;
+}(selector);
