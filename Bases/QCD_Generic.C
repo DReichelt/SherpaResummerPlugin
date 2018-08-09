@@ -11,8 +11,10 @@
 #include "Math/asa007.hpp"
 #include "ATOOLS/Org/Run_Parameter.H"
 
-#include "ATOOLS/Org/Data_Reader.H"
+//#include "ATOOLS/Org/Data_Reader.H"
 
+
+#include "Tools/Reader.H"
 #include "Tools/Files.H"
 
 #include <algorithm>
@@ -51,7 +53,7 @@ namespace RESUM {
   class CM_Generic : public CMetric_Base  {
     
   private:
-    Data_Reader m_reader = Data_Reader(" ",";","#","=");
+    Reader m_reader;
     int m_ng,m_nq,m_naq,m_ntot;    
     
   public:
@@ -126,11 +128,10 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   }
 
   msg_Debugging()<<"File "<<m_filename<<".dat found in "<<m_rpath<<".\n";
-  
-  m_reader.SetAddCommandLine(false);
-  m_reader.SetComment({"#","%","//"});
-  m_reader.SetInputPath(m_rpath+"/",0);
-  m_reader.SetInputFile(m_filename+".dat",0);
+
+  m_reader.comments = {"#","%","//"};
+  m_reader.file_path = {m_rpath+"/"+m_filename+".dat"};
+  m_reader.read();
 
   msg_Debugging()<<"map: "<<m_map<<"\n";
   msg_Debugging()<<"pam: "<<m_pam<<"\n";
@@ -143,14 +144,6 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   ReadPermutations(args.p_ampl);
 }
 
-std::vector<std::string> split(const string& input, const string& regex) {
-    // passing -1 as the submatch index parameter performs splitting
-    std::regex re(regex);
-    std::sregex_token_iterator
-        first{input.begin(), input.end(), re, -1},
-        last;
-    return {first, last};
-}
 
 void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
   msg_Debugging()<<*ampl<<"\n";
@@ -212,8 +205,7 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
       double prefactor = m_reader.GetValue<double>(pref,1);
       msg_Debugging()<<"Add prefactor "<<pref<<" = "<<prefactor<<"\n";
       m_prefactors.push_back(prefactor);
-      std::vector<int> tmp(m_ntot);
-      m_reader.VectorFromFile(tmp,amp);
+      std::vector<int> tmp = m_reader.GetVector<int>(amp);
       msg_Debugging()<<"Add permutation "<<amp<<" = "<<tmp<<"\n";
       m_perms.emplace_back(PHASIC::Idx_Vector());
       for(const int t: tmp) {
@@ -243,7 +235,6 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
 }
 
 void CM_Generic::CalcMetric(){
-  msg_Debugging()<<"Start\n";
   int DIM = m_reader.GetValue<int>("DIM_CS",-1);
   msg_Debugging()<<DIM<<"\n";
   if(DIM<0) DIM = m_reader.GetValue<int>("DIM",-1);
@@ -264,8 +255,7 @@ void CM_Generic::CalcMetric(){
   }
   else {
     msg_Debugging()<<"Read in metric.\n";
-    std::vector<double> met;
-    m_reader.VectorFromFile(met, "METRIC");
+    std::vector<double> met = m_reader.GetVector<double>("METRIC");
     m_metric = VectorToMatrix(met, DIM);
   }
 }
@@ -315,12 +305,11 @@ void CM_Generic::CalcTs(){
       for(int j=i+1; j<m_ntot; j++) {
         string mat = "C_"+std::to_string(i)+std::to_string(j);
         msg_Debugging()<<"Read matrix "<<mat<<".\n";
-        std::vector<double> tprod;
-        if(m_reader.VectorFromFile(tprod,mat) && tprod.size() == DIM*DIM) {
-          m_Tprods.push_back(VectorToMatrix(tprod,DIM));
-        }
-        else {
-          // if not all Tprods are found, it doesnt make sense to have some of
+        m_Tprods.push_back(m_reader.GetMatrix<double>(mat,DIM));
+        if(m_Tprods.back().empty() || m_Tprods.back().size()!=DIM ||
+           m_Tprods.back().back().size()!=DIM) {
+          // if not all Tprods are found, or they are not complete,
+          // it doesnt make sense to have some of
           // them, and code that uses them can not proceed
           m_Tprods.clear();
           return;
@@ -335,9 +324,10 @@ void CM_Generic::CalcTransformationMatrix() {
   int DIM_CS = m_reader.GetValue<int>("DIM_CS", -1);
   m_trafoMatrix.clear();
   if(!(DIM_BASIS < 0 || DIM_CS < 0)) {
-    std::vector<double> trafo;
-    if(m_reader.VectorFromFile(trafo,"TRAFO")) {
-      m_trafoMatrix = VectorToMatrix(trafo,DIM_CS,DIM_BASIS);
+    m_trafoMatrix = m_reader.GetMatrix<double>("TRAFO",DIM_CS); 
+    if(m_trafoMatrix.size()!=DIM_BASIS || m_trafoMatrix.back().size()!=DIM_CS) {
+      // if the matrix was not complete, treat as if none was found
+      m_trafoMatrix.clear();
     }
   }
 }
