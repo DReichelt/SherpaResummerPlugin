@@ -17,6 +17,8 @@
 #include "Analysis/Observable_Base.H"
 #include "Math/matexp.hpp"
 
+// for debugging
+#include "Thrust.H"
 
 
 #include <typeinfo>
@@ -86,6 +88,8 @@ void FFunction::MakeKinematics(const mpfloat& z, const mpfloat& y, const mpfloat
   mpfloat rkt = mp::sqrt(Q.Abs2()*y*z*(1.-z));
   Vec4MP kt1 = Cross(pijt, pkt);
   if(kt1.P() < 1.e-6) kt1 =  Cross(pijt, Vec4MP(0.,1.,0.,0.));
+  if(kt1.P() < 1.e-6) kt1 =  Cross(pijt, Vec4MP(0.,0.,1.,0.));
+  if(kt1.P() < 1.e-6) kt1 =  Cross(pijt, Vec4MP(0.,0.,0.,1.));
   kt1 *= rkt*mp::cos(phi)/kt1.P();
   Vec4MP kt2cms =  Cross(Boost(Q,pijt), kt1);
   kt2cms *= rkt*mp::sin(phi)/kt2cms.P();
@@ -101,14 +105,11 @@ void FFunction::MakeKinematics(const mpfloat& z, const mpfloat& y, const mpfloat
   event.emplace_back(oneMz*pij + zy*pk - kt1 - kt2);
 }
 
-
-
 void FFunction::GenerateEvent(double v, double Q2,
                               double epsilon, const mpfloat& rho,
                               vector<Vec4MP>& event) {
   
   if(v < 1) {
-  
     double CF = 4./3.;
   
     double L = -std::log(v);
@@ -117,6 +118,7 @@ void FFunction::GenerateEvent(double v, double Q2,
     mpfloat Q = std::sqrt(Q2);
   
     double t = v*Q2;
+    
     while(t > epsilon*v*Q2) {
       t *= std::pow(ran->Get(),1./rpMax);
       if(t > epsilon*v*Q2 && t < v*Q2) {
@@ -162,31 +164,50 @@ int FFunction::PerformShowers()
   
 
   if(m_obss.size()>0) {
-msg_Debugging()<<"Observable: "<<m_obss.at(0)->Name()<<"\n";
+    msg_Debugging()<<"Observable: "<<m_obss.at(0)->Name()<<"\n";
     m_weight=1.0;
-  vector<Vec4MP> moms_born(p_ampl->Legs().size());
-  vector<Flavour> flavs_born(p_ampl->Legs().size());
-  for (size_t i(0);i<p_ampl->Legs().size();++i) {
-    moms_born[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
-    flavs_born[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
-  }
+    vector<Vec4MP> moms_born(p_ampl->Legs().size());
+    vector<Flavour> flavs_born(p_ampl->Legs().size());
+    for (size_t i(0);i<p_ampl->Legs().size();++i) {
+      moms_born[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
+      flavs_born[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
+    }
 
-  //TODO: loop over observables
-  vector<Obs_Params> params(moms.size());
-  for(size_t l=0; l<params.size(); l++) {
-    params[l] = m_obss.at(0)->Parameters(moms, flavs, l);
-  }
+    //TODO: loop over observables
+    vector<Obs_Params> params(moms_born.size());
+    for(size_t l=0; l<params.size(); l++) {
+      params[l] = m_obss.at(0)->Parameters(moms_born, flavs_born, l);
+    }
 
-  //TODO: why choose only one bin at random?
-  /* size_t i=1+m_hist.at(0)->Nbin()*ran->Get(); */
-  /* double v = m_hist.at(0)->HighEdge(i); */
+    //TODO: why choose only one bin at random?
+    /* size_t i=1+m_hist.at(0)->Nbin()*ran->Get(); */
+    /* double v = m_hist.at(0)->HighEdge(i); */
+    
+    for(size_t i=0; i<m_hist.at(0)->Nbin(); i++) {
+      double v = m_hist.at(0)->HighEdge(i);
+      /* vector<Vec4MP> moms = moms_born; */
+      vector<Vec4MP> moms = {{45.6,0,0,45.6},{45.6,0,0,-45.6},{45.6,45.6,0,0},{45.6,-45.6,0,0}};
+      vector<Flavour> flavs = flavs_born;
+      msg_Out() <<"Bin v = "<<v<<"\n";
+      GenerateEvent(v, 91.2*91.2, epsilon, rho, moms);
+      msg_Out()<<"Finished v = "<<v<<".\n";
+      for(auto& m: moms) msg_Out()<<m<<"\n";
+      while(flavs.size()<moms.size()) flavs.push_back(21);
+      msg_Out()<<"Added flavs.\n";
+      mpfloat val =  m_obss.at(0)->Value(moms,flavs,p_ampl->NIn());
+      msg_Out()<<"Observable value is val = "<<val<<".\n";
+      Thrust Thrust;
 
-  for(size_t i=0; i<m_hist.at(0)->Nbin(); i++) {
-    vector<Vec4MP> moms = moms_born;
-    vector<Flavour> flavs = flavs_born;
-    GenerateEvent(v, 91.2*91.2, epsilon, rho, moms);
-    while(flavs.size()<moms.size()) flavs.push_back(21);
-    m_obss.at(0)->Value(moms,flavs,p_ampl->NIn());
+      //msg_Out().precision(600);
+      vector<Vec4<mpfloat>> ms = {moms.begin()+p_ampl->NIn(), moms.end()};
+      msg_Out()<<"or val = "<<(mpfloat("1")-Thrust(ms))<<".\n";
+      //msg_Out().precision(5);
+      if(m_weights.find(v) == m_weights.end()) m_weights[v] = 0;
+      msg_Out()<<"bla\n";
+      if(val/rho < mpfloat(v)) m_weights.at(v) += 1;
+      msg_Out()<<"Added weight.\n";
+    }
+    msg_Out()<<"Finished shower.\n";
   }
   CleanUp();
   return 1;

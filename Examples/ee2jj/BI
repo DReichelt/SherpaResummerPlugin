@@ -18,7 +18,7 @@
   BEGIN_ANALYSIS {
     LEVEL Shower; PATH_PIECE BI/;
     FFunction { FinalState;
-          HeavyJetMass 0 1 100 LinErr
+        HeavyJetMass 0 1 100 LinErr
       # Thrust_FF 0 1 100 LinErr;
     #   Thrust_FF 1e-8 1 80 LogErr;
     #   Thrust_FF 1.12535174719e-07 1 80 LnErr;

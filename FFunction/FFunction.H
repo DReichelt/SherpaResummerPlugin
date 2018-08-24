@@ -31,6 +31,8 @@ namespace RESUM {
     CMetric_Map    m_cmetrics;
     //suitable basis for actual event
     CMetric_Base * p_cmetric;
+
+    std::map<double, double> m_weights;
     
     std::vector<Observable_Base_MP::Ptr>     m_obss;
     std::vector<ATOOLS::Histogram*>   m_hist;
