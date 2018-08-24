@@ -49,7 +49,6 @@ inline kf_code new_flavour(kf_code fl1, kf_code fl2) {
 
 int RRatios::PerformShowers()
 {
-  if(skip) return 1;
   DEBUG_FUNC(this);
   // first check we got everything we need
   if(p_ampl_np1==nullptr) THROW(fatal_error,"No process info for n+1.");
@@ -216,13 +215,6 @@ bool RRatios::PrepareShower
   DEBUG_FUNC(this);
   DEBUG_VAR(ampl->Proc<Process_Base>());
 
-  // if(ampl->Legs().size() != 5) {
-  //   skip = true;
-  //   return skip;
-  // }
-  // else {
-  //   skip = false;
-  // }
   p_ampl_np1=ampl->Copy();
 
 
