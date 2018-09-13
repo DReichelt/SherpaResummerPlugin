@@ -34,7 +34,7 @@ int main(int argc, char **)
     //basis input parameters
     double Nc = 3.;
     int num_quark_pairs = 0;
-    int num_gluons = 4;
+    int num_gluons = 6;
     //--------------------------------------------
 
     //--------------------------------------------
@@ -61,7 +61,7 @@ int main(int argc, char **)
     //NBasis = cb.manual_Cbasis();
     //--------------------------------------------
     //--------------------------------------------
-    NBasis = auto_Cbasis(num_gluons,num_quark_pairs,false);
+    NBasis = auto_Cbasis(num_gluons,num_quark_pairs,true);
     int bdim = NBasis.size();
     normalize_basis(NBasis, Nc);
     printBasis(NBasis);
@@ -83,56 +83,56 @@ int main(int argc, char **)
     //print to command line
     //--------------------------------------------
     //--------------------------------------------
-    std::cout << "Metric:" << endl;
-    Cmetric.printMat(bdim);
-    std::cout << "Tprods:" << endl;
-    int lin_iterator = 0;
-    for(unsigned i = 0; i<numlegs; i++)
-    {
-        for(unsigned j = i+1; j<numlegs; j++)
-        {
-            cout << "T" << i+1 << ".T" << j+1 << std::endl;
-            Tprods[lin_iterator].printMat(bdim);
-            lin_iterator++;
-        }
-    }
+//    std::cout << "Metric:" << endl;
+//    Cmetric.printMat(bdim);
+//    std::cout << "Tprods:" << endl;
+//    int lin_iterator = 0;
+//    for(unsigned i = 0; i<numlegs; i++)
+//    {
+//        for(unsigned j = i+1; j<numlegs; j++)
+//        {
+//            cout << "T" << i+1 << ".T" << j+1 << std::endl;
+//            Tprods[lin_iterator].printMat(bdim);
+//            lin_iterator++;
+//        }
+//    }
     //--------------------------------------------
     //--------------------------------------------
 
 
     //--------------------------------------------
     //--------------------------------------------
-    check_color_conservation(Tprods,Cmetric,num_gluons,num_quark_pairs,bdim);
-    std::cout << "Dimension of basis: " << bdim << std::endl;
+//    check_color_conservation(Tprods,Cmetric,num_gluons,num_quark_pairs,bdim);
+//    std::cout << "Dimension of basis: " << bdim << std::endl;
     //--------------------------------------------
     //--------------------------------------------
 
 
     //--------------------------------------------
     //--------------------------------------------
-    std::ofstream outfileMetric;
-    outfileMetric.open(filename+"_met.dat", std::ios_base::out);
-    Cmetric.printFile(outfileMetric,bdim);
-    outfileMetric << bdim << std::endl;
-    outfileMetric.close();
+//    std::ofstream outfileMetric;
+//    outfileMetric.open(filename+"_met.dat", std::ios_base::out);
+//    Cmetric.printFile(outfileMetric,bdim);
+//    outfileMetric << bdim << std::endl;
+//    outfileMetric.close();
     //--------------------------------------------
     //--------------------------------------------
 
 
     //--------------------------------------------
     //--------------------------------------------
-    std::ofstream outfile;
-    outfile.open(filename+".dat", std::ios_base::out);
-    for(int i(0); i<numprods ; i++) Tprods[i].printFile(outfile,bdim);
-    outfile << bdim << std::endl;
-    outfile.close();
+//    std::ofstream outfile;
+//    outfile.open(filename+".dat", std::ios_base::out);
+//    for(int i(0); i<numprods ; i++) Tprods[i].printFile(outfile,bdim);
+//    outfile << bdim << std::endl;
+//    outfile.close();
     //--------------------------------------------
     //--------------------------------------------
 
 
     //--------------------------------------------
-    Cmetric.cleanup();
-    for(int i(0); i < numprods; i++) Tprods[i].cleanup();
+//    Cmetric.cleanup();
+//    for(int i(0); i < numprods; i++) Tprods[i].cleanup();
     //--------------------------------------------
 
 
