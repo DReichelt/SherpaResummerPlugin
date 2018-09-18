@@ -90,13 +90,13 @@ int RRatios::PerformShowers()
     Tprods[i] = p_cmetric_n->Tprods().at(i);
   }
 
-  //  YODA::Scatter2D plot("/line/line","/line/line");
+  YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.95;
   
   YODA::Scatter2D plot_n("/line/scale","/line/scale");
   YODA::Scatter2D plot_np1("/line/scale","/line/scale");
 
-  for(double cut=lambda; cut>1e-3; cut*=lambda) {
+  for(double cut=lambda; cut>1e-5; cut*=lambda) {
     const Vec4D& soft = lambda*p_soft->Mom();
     const double eps = emit*soft/(spect*(emit-soft));
     const Vec4D& p1 = emit-soft + eps * spect;
@@ -172,13 +172,13 @@ int RRatios::PerformShowers()
     const double ratio = (g*g*TrHG) / TrcH_np1;
     msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n";
     //msg_Out()<<ratio<<"\n";
-    //    plot.addPoint(cut, ratio);
-    plot_n.addPoint(cut,g*g*TrHG);
+    plot.addPoint(cut, ratio);
+    plot_n.addPoint(cut,TrHG);
     plot_np1.addPoint(cut,TrcH_np1);
   }
-  //plot_n.scaleY(1./plot_n.points().front().y());
-  //plot_np1.scaleY(1./plot_np1.points().front().y());
-//  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
+  plot_n.scaleY(1./plot_n.points().front().y());
+  plot_np1.scaleY(1./plot_np1.points().front().y());
+  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
   YODA::WriterYODA::write(std::to_string(m_count)+"_scale_n.yoda" ,plot_n);
   YODA::WriterYODA::write(std::to_string(m_count)+"_scale_np1.yoda" ,plot_np1);
   m_count++;
@@ -217,15 +217,6 @@ Cluster_Definitions_Base *RRatios::GetClusterDefinitions()
   return nullptr;
 }
 
-void RRatios::MinimallyCollinearFinalState(Cluster_Amplitude* ampl) {
-  double n = (double)(ampl->Legs().size()), E=4000;
-  std::vector<Vec4D> momenta({{E,0.,0.,E},{E,0.,0.,-E}});
-  
-  for (size_t i(0); i<n-2; ++i)
-    momenta.push_back(Vec4D({2*E/(n-2), 2*E/(n-2)*cos(M_PI*(1./8.+i*2./(n-2))), 2*E/(n-2)*sin(M_PI*(1./8.+i*2./(n-2))), 0.}));
-  SetMomenta(ampl,momenta);
-  msg_Out()<<*ampl<<"\n";
-}
 
 bool RRatios::PrepareShower
 (Cluster_Amplitude* ampl,const bool & /*soft*/)
@@ -237,15 +228,17 @@ bool RRatios::PrepareShower
 
 
   // if we want we can reset momenta here
-  MinimallyCollinearFinalState(p_ampl_np1);
+  /* Vec4D emit = {7000.0, 2163.1189606246307, -6657.395614066076, 0.}; */
+  /* Vec4D spect = {7000.0, -2163.11896062463, 6657.395614066076, 0.}; */
 
-  //double lambda = 0.001;
+  /* double lambda = 0.001; */
   /* //Vec4D s = {lambda,lambda,0,0}; */
-  //double eps = emit*s/(spect*(emit-s));
-  //Vec4D emit_rec = emit -s + eps * spect;
-  //Vec4D spect_rec = spect*(1.-eps);
-  //SetMomenta(p_ampl_np1,{{E,0.,0.,E},{E,0.,0.,-E},s,emit,spect,spect2});
-  //msg_Out()<<*p_ampl_np1<<"\n";
+  /* Vec4D s = {140.0, 126.13564150633869, 60.743723476458136, 0.0}; */
+  /* double eps = emit*s/(spect*(emit-s)); */
+  /* Vec4D emit_rec = emit -s + eps * spect; */
+  /* Vec4D spect_rec = spect*(1.-eps); */
+  /* SetMomenta(p_ampl_np1, {{7000.,0.,0.,7000.},{7000.,0.,0.,-7000.},s,emit_rec,spect_rec}); */
+  /* msg_Out()<<*p_ampl_np1<<"\n"; */
 
   ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
   tmp->SetNIn(0);  
