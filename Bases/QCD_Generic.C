@@ -324,8 +324,8 @@ void CM_Generic::CalcTransformationMatrix() {
   int DIM_CS = m_reader.GetValue<int>("DIM_CS", -1);
   m_trafoMatrix.clear();
   if(!(DIM_BASIS < 0 || DIM_CS < 0)) {
-    m_trafoMatrix = m_reader.GetMatrix<double>("TRAFO",DIM_CS); 
-    if(m_trafoMatrix.size()!=DIM_BASIS || m_trafoMatrix.back().size()!=DIM_CS) {
+    m_trafoMatrix = m_reader.GetMatrix<double>("TRAFO",DIM_BASIS); 
+    if(m_trafoMatrix.size()!=DIM_CS || m_trafoMatrix.back().size()!=DIM_BASIS) {
       // if the matrix was not complete, treat as if none was found
       m_trafoMatrix.clear();
     }
