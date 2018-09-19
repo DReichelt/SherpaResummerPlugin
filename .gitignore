@@ -10,3 +10,4 @@ Sherpa_References.tex
 .sconsign.dblite
 *.yoda
 Tools/Files.H
+*.dat~

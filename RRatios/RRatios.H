@@ -78,6 +78,10 @@ namespace RESUM {
     /// Number of events handled so far. Used for names of plots.
     size_t m_count=0;
 
+    /// Set the final state to equally distanced partons in the x-y plane.
+    /// \todo Do not hardcode energy
+    void MinimallyCollinearFinalState(ATOOLS::Cluster_Amplitude* ampl);
+
   public:
 
     /// \name Constructors and Destructors.

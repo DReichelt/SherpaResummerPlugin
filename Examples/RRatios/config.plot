@@ -6,4 +6,7 @@ RatioPlot=0
 LogY=0
 LogX=1
 YMax=2
+XLabel=$\lambda$
+YLabel=$R_{\mathrm{s}}$
 # END PLOT
+
