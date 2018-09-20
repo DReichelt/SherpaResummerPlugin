@@ -19,5 +19,7 @@ makelibs
 *.os
 .SConstruct
 .sconsign.dblite
-
 Tools/Files.H
+
+# file system
+.DS_Store
