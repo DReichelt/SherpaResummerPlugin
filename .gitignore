@@ -14,6 +14,10 @@ Examples/*/Analysis
 Sherpa_References.tex
 *.yoda
 makelibs
+line_line.dat
+line_line.pdf
+line_scale.dat
+line_scale.pdf
 
 # scons local files
 *.os
