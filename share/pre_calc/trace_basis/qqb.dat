@@ -9,10 +9,10 @@ A_0 = 0 1;
 
 
 % dimension of the colour space
-DIM = 1
+DIM = 1;
 
 % colour metric aka soft matrix
 METRIC = 1.00000000000000022;
 
-% colour change matrices (not multiplied with inverse colour metric)
+% colour change matrices
 C_01 = -1.33333333333333370;
