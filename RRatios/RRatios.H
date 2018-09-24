@@ -75,9 +75,27 @@ namespace RESUM {
     /// \todo Do we need this for RRatios?
     int m_amode;
 
+    /// Center of mass Energy (-1 if not set).
+    double m_E = -1;
+
+    /// Multiplicative parameter steering how fast soft limit is approached.
+    double m_lambda = 0.95;
+
+    /// Cutoff for lambda
+    double m_cutoff = 1e-3;
+    
     /// Number of events handled so far. Used for names of plots.
     size_t m_count=0;
 
+    /// Do or do not write ratio plot to file.
+    bool m_plotRatio = true;
+    
+    /// Do or do not write matrix element for n process to file.
+    bool m_plotMEn = true;
+    
+    /// Do or do not write matrix element for n+1 process to file.
+    bool m_plotMEnp1 = true;
+    
     /// Set the final state to equally distanced partons in the x-y plane.
     /// \todo Do not hardcode energy
     void MinimallyCollinearFinalState(ATOOLS::Cluster_Amplitude* ampl);

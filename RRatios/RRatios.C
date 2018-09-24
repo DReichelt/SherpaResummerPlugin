@@ -4,8 +4,8 @@
 #include "ATOOLS/Org/Run_Parameter.H"
 #include "MODEL/Main/Model_Base.H"
 #include "ATOOLS/Org/Data_Reader.H"
+#include <set>
 
-// temporary yoda dependence
 #include "YODA/Scatter2D.h"
 #include "YODA/WriterYODA.h" 
 
@@ -18,6 +18,14 @@ using PHASIC::Process_Base;
 using std::vector;
 using std::string;
 
+
+inline bool StringToBool(const string& val,
+                         const std::set<string>& False = {"0", "False", "false",
+                                                            "FALSE", "Off", "off",
+                                                            "OFF", "No", "no", "NO"}) {
+  return False.find(val)==False.end();
+}
+
 RRatios::RRatios(ISR_Handler *const /*isr*/,
                  Model_Base *const model):
   Shower_Base("RRatios")
@@ -28,8 +36,29 @@ RRatios::RRatios(ISR_Handler *const /*isr*/,
   m_amode=read.GetValue<int>("RESUM_MODE",0);
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
-  if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
+  rpa->gen.SetVariable("RESUM::RRatio_Mode", read.GetValue<string>("RESUM::RRatio_Mode", "Random"));
+  const string& energy = read.GetValue<string>("RESUM::RRatio_Energy", "None");
+  if(energy != "None") {
+    rpa->gen.SetVariable("RESUM::RRatio_Mode", "Starlike");
+    if(energy != "FromAmplitude") {
+      m_E = read.GetValue<double>("RESUM::RRatio_Energy",-1);
+    }
+  }
+  rpa->gen.SetVariable("RESUM::RRatio_Ratio_name",
+                       read.GetValue<string>("RESUM::RRatio_Ratio_name", "Ratio"));
+  rpa->gen.SetVariable("RESUM::RRatio_MEn_name",
+                       read.GetValue<string>("RESUM::RRatio_MEn_name", "MEn"));
+  rpa->gen.SetVariable("RESUM::RRatio_MEnp1_name",
+                       read.GetValue<string>("RESUM::RRatio_MEnp1_name", "MEnp1"));
+  m_plotRatio = StringToBool(read.GetValue<string>("RESUM::RRatio_plotRatio", "True"));
+  m_plotMEn = StringToBool(read.GetValue<string>("RESUM::RRatio_plotMEn", "True"));
+  m_plotMEnp1 = StringToBool(read.GetValue<string>("RESUM::RRatio_plotMEnp1", "True"));
+  
+  m_lambda = read.GetValue<double>("RESUM::RRatio_lambda", 0.95);
+  m_cutoff = read.GetValue<double>("RESUM::RRatio_cutoff", 1e-3);
+  if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
+  }
 }
 
 RRatios::~RRatios()
@@ -90,14 +119,13 @@ int RRatios::PerformShowers()
     Tprods[i] = p_cmetric_n->Tprods().at(i);
   }
 
-   YODA::Scatter2D plot("/line/line","/line/line");
-  double lambda = 0.95;
+  YODA::Scatter2D plot("/ratio/ratio","/ratio/ratio");
   
-  YODA::Scatter2D plot_n("/line/scale","/line/scale");
-  YODA::Scatter2D plot_np1("/line/scale","/line/scale");
+  YODA::Scatter2D plot_n("/ME/ME","/ME/ME");
+  YODA::Scatter2D plot_np1("/ME/ME","/ME/ME");
 
-  for(double cut=lambda; cut>1e-3; cut*=lambda) {
-    const Vec4D& soft = lambda*p_soft->Mom();
+  for(double cut=m_lambda; cut>m_cutoff; cut*=m_lambda) {
+    const Vec4D& soft = m_lambda*p_soft->Mom();
     const double eps = emit*soft/(spect*(emit-soft));
     const Vec4D& p1 = emit-soft + eps * spect;
     const Vec4D& p3 = (1.-eps)*spect;
@@ -163,22 +191,30 @@ int RRatios::PerformShowers()
     /* msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n"; */
 
     // TODO: is that always the scale we want?
-    const double g =  sqrt(4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2()));
+    const double g2 =  4.*M_PI*p_as->AlphaS(p_ampl_np1->MuR2());
     const double TrcH_np1 = Trace(metric_np1,H_np1);
 
     // we actually want H*metric*colour-change-matrices, but our Tproducts are
     // inverse_metric*colour-change-matrix, so this is correct
     const double TrHG = Trace(H_n,Gamma);
-    const double ratio = (g*g*TrHG) / TrcH_np1;
+    const double ratio = (g2*TrHG) / TrcH_np1;
     msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n";
-    //msg_Out()<<ratio<<"\n";
     plot.addPoint(cut, ratio);
-    plot_n.addPoint(cut,g*g*TrHG);
+    plot_n.addPoint(cut,g2*TrHG);
     plot_np1.addPoint(cut,TrcH_np1);
   }
-  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
-  YODA::WriterYODA::write(std::to_string(m_count)+"_scale_n.yoda" ,plot_n);
-  YODA::WriterYODA::write(std::to_string(m_count)+"_scale_np1.yoda" ,plot_np1);
+  if(m_plotRatio) {
+    YODA::WriterYODA::write(rpa->gen.Variable("RESUM::RRatio_Ratio_name")
+                            +"_"+std::to_string(m_count)+".yoda" ,plot);
+  }
+  if(m_plotMEn) {
+    YODA::WriterYODA::write(rpa->gen.Variable("RESUM::RRatio_MEn_name")
+                            +"_"+std::to_string(m_count)+".yoda" ,plot_n);
+  }
+  if(m_plotMEnp1) {
+    YODA::WriterYODA::write(rpa->gen.Variable("RESUM::RRatio_MEnp1_name")
+                            +"_"+std::to_string(m_count)+".yoda" ,plot_np1);
+  }
   m_count++;
   CleanUp();
   return 1;
@@ -216,13 +252,19 @@ Cluster_Definitions_Base *RRatios::GetClusterDefinitions()
 }
 
 void RRatios::MinimallyCollinearFinalState(Cluster_Amplitude* ampl) {
-  double n = (double)(ampl->Legs().size()), E=4000;
-  std::vector<Vec4D> momenta({{E,0.,0.,E},{E,0.,0.,-E}});
+  int n = ampl->Legs().size();
+  double E = m_E>0 ? m_E:(ampl->Leg(0)->Mom()+ampl->Leg(1)->Mom()).Abs()/2.;
   
-  for (size_t i(0); i<n-2; ++i)
-    momenta.push_back(Vec4D({2*E/(n-2), 2*E/(n-2)*cos(M_PI*(1./8.+i*2./(n-2))), 2*E/(n-2)*sin(M_PI*(1./8.+i*2./(n-2))), 0.}));
+  vector<Vec4D> momenta = {{E,0.,0.,E}, {E,0.,0.,-E}};  
+  for (int i=0; i<n-2; ++i) {
+    momenta.push_back({2*E/(n-2),
+          2*E/(n-2)*cos(M_PI*(1./8.+i*2./(n-2))),
+          2*E/(n-2)*sin(M_PI*(1./8.+i*2./(n-2))),
+          0.});
+  }
   SetMomenta(ampl,momenta);
-  msg_Out()<<*ampl<<"\n";
+  msg_Debugging()<<"Amplitude after setting into minimally collinear final state:\n";
+  msg_Debugging()<<*ampl<<"\n";
 }
 
 bool RRatios::PrepareShower
@@ -235,15 +277,9 @@ bool RRatios::PrepareShower
 
 
   // if we want we can reset momenta here
-  MinimallyCollinearFinalState(p_ampl_np1);
-
-  //double lambda = 0.001;
-  /* //Vec4D s = {lambda,lambda,0,0}; */
-  //double eps = emit*s/(spect*(emit-s));
-  //Vec4D emit_rec = emit -s + eps * spect;
-  //Vec4D spect_rec = spect*(1.-eps);
-  //SetMomenta(p_ampl_np1,{{E,0.,0.,E},{E,0.,0.,-E},s,emit,spect,spect2});
-  //msg_Out()<<*p_ampl_np1<<"\n";
+  if(rpa->gen.Variable("RESUM::RRatio_Mode") == "Starlike") {
+    MinimallyCollinearFinalState(p_ampl_np1);
+  }
 
   ATOOLS::Cluster_Amplitude* tmp=p_ampl_np1->Copy();
   tmp->SetNIn(0);  
