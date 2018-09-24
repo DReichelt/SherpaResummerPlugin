@@ -90,7 +90,7 @@ int RRatios::PerformShowers()
     Tprods[i] = p_cmetric_n->Tprods().at(i);
   }
 
-  //  YODA::Scatter2D plot("/line/line","/line/line");
+   YODA::Scatter2D plot("/line/line","/line/line");
   double lambda = 0.95;
   
   YODA::Scatter2D plot_n("/line/scale","/line/scale");
@@ -172,13 +172,11 @@ int RRatios::PerformShowers()
     const double ratio = (g*g*TrHG) / TrcH_np1;
     msg_Debugging()<<"softness: "<<cut<<" -> ratio = "<<ratio<<"\n";
     //msg_Out()<<ratio<<"\n";
-    //    plot.addPoint(cut, ratio);
+    plot.addPoint(cut, ratio);
     plot_n.addPoint(cut,g*g*TrHG);
     plot_np1.addPoint(cut,TrcH_np1);
   }
-  //plot_n.scaleY(1./plot_n.points().front().y());
-  //plot_np1.scaleY(1./plot_np1.points().front().y());
-//  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
+  YODA::WriterYODA::write(std::to_string(m_count)+".yoda" ,plot);
   YODA::WriterYODA::write(std::to_string(m_count)+"_scale_n.yoda" ,plot_n);
   YODA::WriterYODA::write(std::to_string(m_count)+"_scale_np1.yoda" ,plot_np1);
   m_count++;
