@@ -4,8 +4,6 @@
 #include "Tools/CBasis.H"
 #include "Tools/CBasis.C"
 #include "Tools/CMetric_Base.H"
-#include "Bases/Basis_Automate.C"
-#include "Bases/Color_Product.C"
 #include "ATOOLS/Phys/Cluster_Amplitude.H"
 #include "ATOOLS/Org/Message.H"
 #include "Math/asa007.hpp"

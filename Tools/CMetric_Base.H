@@ -1,7 +1,6 @@
 #ifndef RESUM__Tools__CMetric_Base_H
 #define RESUM__Tools__CMetric_Base_H
 
-#include "Tools/CBasis.H"
 #include "PHASIC++/Main/Color_Integrator.H"
 #include "ATOOLS/Org/Getter_Function.H"
 #include "Math/Matrix.H"

@@ -8,6 +8,7 @@
   ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
   ANALYSIS_WRITEOUT_INTERVAL 10000;
   RESUM_MODE 1;
+  RESUM::pre_calc pre_calc/trace_basis
 }(run);
 (processes){
   Process 11 -11 -> 93 93;
