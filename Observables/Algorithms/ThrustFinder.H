@@ -5,6 +5,8 @@
 #include "ATOOLS/Math/Poincare.H"
 #include "ATOOLS/Org/Run_Parameter.H"
 
+#include <algorithm>
+
 using namespace ATOOLS;
 
 namespace RESUM {
