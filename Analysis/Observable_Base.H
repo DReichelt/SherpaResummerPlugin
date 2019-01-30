@@ -39,6 +39,7 @@ namespace RESUM {
 
     virtual ~Observable_Base_Template() {};
 
+    // deprecated
     Obs_Params Parameters
     (const Vec4T *p,const ATOOLS::Flavour *fl,
      const size_t &n,const size_t &l) {
@@ -50,6 +51,7 @@ namespace RESUM {
       }
       return Parameters(moms,flavs,l);};
 
+    // use this
     virtual Obs_Params Parameters
     (const std::vector<Vec4T>& p,
      const std::vector<ATOOLS::Flavour>& fl,
@@ -71,6 +73,7 @@ namespace RESUM {
     }
     
 
+    // deprecated
     T Value
     (const Vec4T *p,const ATOOLS::Flavour *fl,
      const size_t &n,const size_t &nin=2) {
