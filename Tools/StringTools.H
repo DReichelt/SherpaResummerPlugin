@@ -9,6 +9,9 @@
 #include <sstream>
 
 namespace RESUM {
+  /// Check if string \p input is a integer
+  bool is_int(const std::string& input);
+  
   /// Split string \p input into multiple strings
   /**
      \param input The string to be split.

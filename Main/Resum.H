@@ -35,9 +35,21 @@ namespace RESUM {
     std::vector<ATOOLS::Flavour> flavlabels;
     std::vector<double> m_Qij, m_a, m_b, m_logdbar;
     std::vector<int> signlabels;
-    int n_g, n_q, n_aq, color_sings, m_amode;
+    int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
 
+    enum MODE {
+               RESUM = 0,
+               EXPAND = 1    << 0,
+               PDFEXPAND = 1 << 1
+    };
+
+    const map<string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
+                                           {"EXPAND", MODE::EXPAND},
+                                           {"PDFEXPAND", MODE::PDFEXPAND}};
+    
+    MODE m_amode = MODE::RESUM;
+    
     double CalcS(const double L,double &Softexp);
     double CalcF(const double L);
     double CalcColl(const double L,const int order,
@@ -81,7 +93,7 @@ namespace RESUM {
 
   };// end of class Resum
 
-    void Resum::printMatrix(const Complex rhs[], const size_t dim){
+  void Resum::printMatrix(const Complex rhs[], const size_t dim){
     msg_Debugging()<<"{\n";
     for (size_t i=0;i<dim;i++) {
       msg_Debugging()<<"  {";

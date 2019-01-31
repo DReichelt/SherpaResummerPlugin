@@ -7,6 +7,12 @@ using std::set;
 using std::string;
 using std::vector;
 
+#include <iostream>
+
+bool RESUM::is_int(const std::string& input) {
+  return std::regex_match(input, std::regex("[+-]?[0-9]+"));
+}
+
 vector<string> RESUM::split(const string& input, const string& regex) {
   // passing -1 as the submatch index parameter performs splitting
   std::regex re(regex);
