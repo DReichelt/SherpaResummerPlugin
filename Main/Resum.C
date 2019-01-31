@@ -16,6 +16,7 @@
 #include "ATOOLS/Math/Histogram.H"
 #include "Analysis/Observable_Base.H"
 #include "Math/matexp.hpp"
+#include "Tools/StringTools.H"
 #include <typeinfo>
 
 using namespace RESUM;
@@ -36,7 +37,15 @@ Resum::Resum(ISR_Handler *const isr,
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
 
   Data_Reader read(" ",";","#","=");
-  m_amode=read.GetValue<int>("RESUM_MODE",0);
+  const string& mode = read.GetValue<string>("RESUM_MODE","RESUM");
+  if(is_int(mode)) {
+    m_amode = static_cast<MODE>(to_type<int>(mode));
+  }
+  else {
+    for(const string& m: split(mode,"\\|")) {
+      m_amode = static_cast<MODE>(m_amode | m_ModeToEnum.at(m));
+    }
+  }
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
 
@@ -94,11 +103,11 @@ int Resum::PerformShowers()
   return 1;
 }
 
-double Resum::Value(const double &v)
+double Resum::Value(const double& v)
 {
   DEBUG_FUNC(v);
-  double L=log(1.0/v);
-  double Rp=0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
+  const double L = log(1.0/v);
+  double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
   double weight=CalcS(L,Softexp);
   //weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
@@ -107,11 +116,10 @@ double Resum::Value(const double &v)
   //calc collinear piece
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
   weight*=CalcF(Rp);	
-  if (m_amode) {
+  if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight=0.0;
-    if (m_amode&1) weight+=Collexp+Softexp;
-    if (m_amode&2) weight+=PDFexp;
-    return weight;
+    if ((m_amode & MODE::EXPAND) != 0) weight+=Collexp+Softexp;
+    if ((m_amode & MODE::PDFEXPAND) != 0) weight+=PDFexp;
   }
   return weight;
 }
@@ -292,10 +300,10 @@ double Resum::CalcS(const double L, double &Softexp)
 
   double as = (*p_as)(p_ampl->MuR2());
   double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
-  double lambda=as*beta0*L; 
+  double lambda = as*beta0*L; 
   double t = T(lambda/m_a[0]);
   //order a_s expansion of t
-  if (m_amode&1) t = 2*as*L/M_PI;
+  if ((m_amode & MODE::EXPAND) != 0) t = 2*as*L/M_PI;
   size_t numlegs = n_g + n_q + n_aq;
 
   Hard_Matrix *h(p_comix->ComputeHardMatrix(p_ampl,p_cmetric->Perms()));
@@ -520,7 +528,7 @@ double Resum::CalcF(const double Rp)
   return F;
 }
 
-double Resum::CalcColl(const double L,const int order,double &Rp, double &Collexp) 
+double Resum::CalcColl(const double L, const int order, double &Rp, double &Collexp) 
 {
 
   const double nf = double(p_as->Nf(p_ampl->MuR2()));
@@ -533,21 +541,19 @@ double Resum::CalcColl(const double L,const int order,double &Rp, double &Collex
 
   Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
   
-  for(size_t i =0;i<p_ampl->Legs().size();i++) 
+  for(size_t i =0; i<p_ampl->Legs().size(); i++) 
     {
     
       double colfac = 0.;
-      double hardcoll=0.;
-      double as;
-      double El;
+      double hardcoll = 0.;
 
-      as = (*p_as)(p_ampl->MuR2());
+      const double as = (*p_as)(p_ampl->MuR2());
       Vec4D pl(p_ampl->Leg(i)->Mom());
       cms.Boost(pl);
-      El = dabs(pl[0]);
+      const double El = dabs(pl[0]);
 
-      if (p_ampl->Leg(i)->Flav().StrongCharge()==8) {colfac = s_CA; hardcoll=-M_PI*beta0/s_CA;}
-      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge())==3) {colfac = s_CF; hardcoll=-3./4.;} 
+      if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {colfac = s_CA; hardcoll=-M_PI*beta0/s_CA;}
+      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {colfac = s_CF; hardcoll=-3./4.;} 
       else continue;
 
       double t_scale = 0.5*(sqrt(pow(p_ampl->Leg(2)->Mom()[1],2) + pow(p_ampl->Leg(2)->Mom()[2],2)+
