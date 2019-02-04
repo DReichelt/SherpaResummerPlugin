@@ -1,9 +1,29 @@
+# emacs stuff
+*~
+\#*\#
+
+
 *.dylib
+
+# Sherpa and plugin generated files
 Results.*
 Process/
 Status_*
+YODA/
+Examples/*/Analysis
 Sherpa_References.tex
+*.yoda
+makelibs
+line_line.dat
+line_line.pdf
+line_scale.dat
+line_scale.pdf
+
+# scons local files
 *.os
 .SConstruct
 .sconsign.dblite
 Tools/Files.H
+
+# file system
+.DS_Store
