@@ -7,7 +7,7 @@
   SCALES VAR{Abs2(p[0]+p[1])};
   ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
   ANALYSIS_WRITEOUT_INTERVAL 10000;
-  RESUM_MODE 1;
+  RESUM_MODE RESUM;
   RESUM::pre_calc pre_calc/trace_basis
 }(run);
 (processes){
