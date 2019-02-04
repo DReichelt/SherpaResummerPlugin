@@ -88,8 +88,8 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
 	    action=partial(make_exe,
                            cp=partial(replace,
                                       old="-*- mode: python-*-",
-		                      new=subprocess.check_output(['which',
-                                                                   'python']))))
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc'])
 env.Alias('install', ['Tools/Files.H',
