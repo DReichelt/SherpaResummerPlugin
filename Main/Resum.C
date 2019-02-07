@@ -49,8 +49,9 @@ Resum::Resum(ISR_Handler *const isr,
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
 
-  if (rpa->gen.Variable("SHOWER_GENERATOR")=="")
+  if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
+  }
 }
 
 Resum::~Resum()
@@ -80,23 +81,31 @@ int Resum::PerformShowers()
   }
   m_rn[0]=ran->Get();
   m_rn[1]=ran->Get();
-  for (size_t n(0);n<m_obss.size();++n) {
+  // loop over observables
+  for (size_t n = 0; n<m_obss.size(); n++) {
     DEBUG_FUNC(m_obss[n]->Name());
     m_a.clear();
     m_b.clear();
     m_logdbar.clear();
     for (size_t i(0);i<moms.size();++i) {
-      Obs_Params ps=m_obss[n]->Parameters
-	(&moms.front(),&flavs.front(),moms.size(),i);
+      Obs_Params ps = m_obss[n]->Parameters(&moms.front(),
+                                            &flavs.front(),
+                                            moms.size(),i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
+      /// @TODO we have ps.m_d and ps.m_g, in CAESAR notation
+      /// logdbar = log (d*average(g))
+      /// but we just use logdbar = ps.m_d
       m_logdbar.push_back(ps.m_d);
     }
-    size_t i=1+m_hist[n]->Nbin()*ran->Get();
-    double xl=m_hist[n]->LowEdge(i), yl=Value(xl);
-    double xh=m_hist[n]->HighEdge(i), yh=Value(xh);
-    m_ress[n][0]=i+1;
-    m_ress[n][1]=m_weight*(yh-yl)*m_hist[n]->Nbin();
+    // select a random bin
+    size_t i = 1+m_hist[n]->Nbin()*ran->Get();
+    double xl = m_hist[n]->LowEdge(i), yl=Value(xl);
+    double xh = m_hist[n]->HighEdge(i), yh=Value(xh);
+    // bin to fill
+    m_ress[n][0] = i+1;
+    // weight for bin
+    m_ress[n][1] = m_weight*(yh-yl)*m_hist[n]->Nbin();
     msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<"\n";
   }  
   CleanUp();
@@ -117,9 +126,9 @@ double Resum::Value(const double& v)
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
   weight*=CalcF(Rp);	
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
-    weight=0.0;
-    if ((m_amode & MODE::EXPAND) != 0) weight+=Collexp+Softexp;
-    if ((m_amode & MODE::PDFEXPAND) != 0) weight+=PDFexp;
+    weight = 0.0;
+    if ((m_amode & MODE::EXPAND) != 0) weight += Collexp+Softexp;
+    if ((m_amode & MODE::PDFEXPAND) != 0) weight += PDFexp;
   }
   return weight;
 }

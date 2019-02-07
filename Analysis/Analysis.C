@@ -41,50 +41,52 @@ using namespace RESUM;
 using namespace ANALYSIS;
 using namespace ATOOLS;
 
-Analysis::Analysis(const Argument_Matrix &params):
+Analysis::Analysis(const Argument_Matrix& params):
   Analysis_Base(params[0][0]), m_params(params)
 {
   DEBUG_FUNC(this);
   m_name+="_Resum";
   Data_Reader reader(",",";","!","=");
-  Algebra_Interpreter *ip=reader.Interpreter();
+  Algebra_Interpreter* ip = reader.Interpreter();
   p_resum=(Resum*)ToType<void*>(rpa->gen.Variable("SHOWER_GENERATOR"));
-  if (dynamic_cast<Resum*>(p_resum)==NULL)
+  if (dynamic_cast<Resum*>(p_resum) == nullptr) {
     THROW(fatal_error,"Resummer plugin not loaded");
-  for (size_t i(1);i<params.size();++i) {
+  }
+  for (size_t i=1; i<params.size(); i++) {
     if (params[i].size()<5) continue;
-    double xmin(ToType<double>(ip->Interprete(params[i][1])));
-    double xmax(ToType<double>(ip->Interprete(params[i][2])));
-    size_t nbin(ToType<size_t>(ip->Interprete(params[i][3])));
-    int tp(HistogramType(params[i][4]));
+    double xmin = ToType<double>(ip->Interprete(params[i][1]));
+    double xmax = ToType<double>(ip->Interprete(params[i][2]));
+    size_t nbin = ToType<size_t>(ip->Interprete(params[i][3]));
+    int tp = HistogramType(params[i][4]);
     msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp
 		   <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
     m_obss.push_back(Observable_Getter::GetObject
 		     (params[i][0],Observable_Key(params[i][0])));
-    if (m_obss.back()==NULL)
+    if (m_obss.back() == nullptr)
       THROW(not_implemented,"No such observable: "+params[i][0]);
     m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,params[i][0]));
     p_resum->AddObservable(m_obss.back(),m_histos.back());
   }
 }
 
-void Analysis::Evaluate(const ATOOLS::Blob_List &blobs,
-			double weight,double ncount)
+void Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
+			double weight, double ncount)
 {
   DEBUG_FUNC("");
-  Particle_List *all(p_ana->GetParticleList(m_listname));
-  if (all==NULL) AddZero(ncount,0);
-  Blob *sb(blobs.FindFirst(btp::Shower));
-  if (sb==NULL || sb->TypeSpec()!="RESUM") {
+  Particle_List* all = p_ana->GetParticleList(m_listname);
+  if (all == nullptr) AddZero(ncount,0);
+  Blob* sb = blobs.FindFirst(btp::Shower);
+  if (sb == nullptr || sb->TypeSpec()!="RESUM") {
+    /// @TODO: what is that good for?
     static int mess(true);
     if (mess) msg_Error()<<METHOD<<"(): Invalid shower. Skip.\n";
     mess=false;
     AddZero(ncount,0);
   }
-  for (size_t n(0);n<m_obss.size();++n) {
-    const std::vector<double> &res(p_resum->Result(n));
+  for (size_t n=0; n<m_obss.size(); n++) {
+    const std::vector<double>& res = p_resum->Result(n);
     msg_Debugging()<<"Fill '"<<m_obss[n]<<"' -> "<<res<<"\n";
-    FillHisto(n,int(res[0]),weight*res[1],ncount,0);
+    FillHisto(n, int(res[0]), weight*res[1], ncount, 0);
   }
 }
 
