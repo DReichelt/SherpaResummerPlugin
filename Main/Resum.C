@@ -118,11 +118,11 @@ int Resum::PerformShowers()
 	(&moms.front(),&flavs.front(),moms.size(),i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
-      m_logdbar.push_back(ps.m_d);
+      m_logdbar.push_back(ps.m_logdbar);
     }
     size_t i=1+m_hist[n]->Nbin()*ran->Get();
-    double xl=m_hist[n]->LowEdge(i), yl=Value(xl);
-    double xh=m_hist[n]->HighEdge(i), yh=Value(xh);
+    double xl=m_hist[n]->LowEdge(i), yl=Value(xl,n);
+    double xh=m_hist[n]->HighEdge(i), yh=Value(xh,n);
     m_ress[n][0]=i+1;
     m_ress[n][1]=m_weight*(yh-yl)*m_hist[n]->Nbin();
     msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<"\n";
@@ -131,7 +131,7 @@ int Resum::PerformShowers()
   return 1;
 }
 
-double Resum::Value(const double &v)
+double Resum::Value(const double &v, const int n)
 {
   DEBUG_FUNC(v);
   double L=log(1.0/v);
@@ -143,7 +143,7 @@ double Resum::Value(const double &v)
   weight*=CalcPDF(L, PDFexp); 
   //calc collinear piece
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
-  weight*=CalcF(Rp);	
+  weight*=m_obss[n]->CalcF(Rp);
   if (m_amode) {
     weight=0.0;
     if (m_amode&1) weight+=Collexp+Softexp;
@@ -613,7 +613,6 @@ double Resum::CalcColl(const double L,const int order,double &Rp, double &Collex
 							 +m_a[i]*log(1-2.*lambda/m_a[i])
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1);
-
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;

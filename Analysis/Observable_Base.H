@@ -21,11 +21,11 @@ namespace RESUM {
   };
 
   struct Obs_Params {
-    double m_a, m_b, m_d, m_g;
+    double m_a, m_b, m_logdbar, m_g;
     Obs_Params() = default;
     inline Obs_Params(const double &a,const double &b,
-		      const double &d,const double &g):
-      m_a(a), m_b(b), m_d(d), m_g(g) {}
+		      const double &logdbar,const double &g):
+      m_a(a), m_b(b), m_logdbar(logdbar), m_g(g) {}
   };
 
   template <typename T>
@@ -42,6 +42,10 @@ namespace RESUM {
     Observable_Base_Template(const Observable_Key &args) : m_name(args.m_name) {}
 
     virtual ~Observable_Base_Template() {};
+
+    // F-function for additiv Obs
+    virtual double CalcF(const double Rp){
+      return exp(-GAMMA_E*Rp-Gammln(1.+Rp)); };
 
     // deprecated
     Obs_Params Parameters
@@ -73,7 +77,7 @@ namespace RESUM {
           fl[i] = sub->p_fl[i];
         }
         Obs_Params ps(Parameters(moms,fl,sub->m_ijt));
-        return ps.m_d-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
+        return ps.m_logdbar-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
     }
     
 

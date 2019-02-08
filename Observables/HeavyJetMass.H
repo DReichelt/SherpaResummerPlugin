@@ -19,7 +19,7 @@ namespace RESUM {
     Obs_Params Parameters(const std::vector<Vec4<T>>& moms,
                           const std::vector<Flavour>& flavs,
                           const size_t& l=0) {
-      return {1,1,1,1};
+      return {1,1,0,1};
     }
 
     T Value(const std::vector<Vec4<T>>& moms,
@@ -29,7 +29,12 @@ namespace RESUM {
       return Value(moms, flavs, dummy, nin);
     }
 
-    
+
+    double CalcF(const double Rp){
+      return exp(-GAMMA_E*Rp-2*Gammln(1.+0.5*Rp)); };   
+   
+      
+       
     T Value(const std::vector<Vec4<T>>& moms,
                  const std::vector<Flavour>& flavs,
                  std::map<std::string, Algorithm::Ptr>& algorithms,
