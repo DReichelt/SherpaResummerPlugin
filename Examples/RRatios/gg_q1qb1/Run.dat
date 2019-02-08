@@ -1,0 +1,33 @@
+(run){
+  EVENTS 2; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 4000; BEAM_2 2212 4000;
+  SHOWER_GENERATOR RRatios;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{sqr(91.188)};
+  SHERPA_LDADD YODA
+  # ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  # ANALYSIS_WRITEOUT_INTERVAL 10000;
+  RESUM_MODE 3;
+}(run);
+(processes){
+  Process 21 21 -> 1 -1 21;
+  Order (*,0);
+  End Process;
+}(processes);
+
+(selector){
+  NJetFinder 3 80 0 0.4;
+  NJetFinder 1 100 0 0.4;
+}(selector);
+
+# (analysis){
+#   BEGIN_ANALYSIS {
+#     LEVEL Shower; PATH_PIECE BI/;
+#     Resum { FinalState;
+#       Thrust 0 1 100 LinErr;
+#       Thrust 1e-8 1 80 LogErr;
+#       Thrust 1.12535174719e-07 1 80 LnErr;
+#     }
+#   } END_ANALYSIS;
+# }(analysis);

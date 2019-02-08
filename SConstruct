@@ -1,11 +1,14 @@
-import os, distutils.spawn
+#-*- mode: python-*- 
+import os, distutils.spawn, subprocess
+from functools import partial
 vars = Variables('.SConstruct')
 vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
+vars.Add(PathVariable('include','directories that will be passed to the compiler with the -I option.','.'))
 env = Environment(variables=vars,
-    CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'/opt/local/include'])
+                  CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
 vars.Add('CXX','The C++ Compiler',
     os.popen(env['sherpa']+'/bin/Sherpa-config --cxx').read().rstrip())
 vars.Add('CXXFLAGS','The C++ Flags',['-g','-O2','-std=c++11'])
@@ -25,6 +28,8 @@ resumlib = env.SharedLibrary('SherpaResum',
 	'Tools/CBasis.C',
 	'Tools/CMetric_Base.C',
 	'Tools/Hard_Matrix.C',
+        'Tools/StringTools.C',
+        'Tools/Reader.C',
 	'Bases/QCD_Generic.C',
 	'Main/Comix_Interface.C',
 	'Main/Resum.C',
@@ -50,18 +55,49 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 	RPATH=['${sherpa}/lib/SHERPA-MC'],
 	LIBS=['SherpaAnalyses','SherpaAnalysis'])
 
-def replace(target, source, env):
-    share_dir=os.path.join(env.subst('${sherpa}'),'share/RESUM')
+
+rratiolib = env.SharedLibrary('SherpaRRatios',
+	['Math/r8lib.cpp',
+	'Math/c8lib.cpp',
+	'Math/matexp.cpp',
+	'Math/asa007.cpp',
+	'Tools/CBasis.C',
+	'Tools/CMetric_Base.C',
+	'Tools/Hard_Matrix.C',
+        'Tools/StringTools.C',
+        'Tools/Reader.C',
+        'Bases/QCD_Generic.C',  
+	'Main/Comix_Interface.C',
+        'RRatios/RRatios.C',
+	'Main/Cluster_Definitions.C'])
+
+def replace(target, source, env, old, new):
     with open(str(source[0]), "rt") as fin:
          with open(str(target[0]), "wt") as fout:
               for line in fin:
-                  fout.write(line.replace('@share_dir',share_dir))
-         
+                  fout.write(line.replace(old, new))
+
+def copy(target, source, env):
+   subprocess.check_output(['cp', str(source[0]), str(target[0])])
+                  
+def make_exe(target, source, env, cp=copy):
+   cp(target, source, env)
+   subprocess.check_output(['chmod', 'ug+x', str(target[0])])
+
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
-            action=replace)
-env.Install('${sherpa}/lib/SHERPA-MC', [resumlib, analysislib])
-env.Install('${sherpa}/share/RESUM',['Bases/pre_calc'])
+            action=partial(replace, old='@share_dir',
+	    			    new=os.path.join(env.subst('${sherpa}'),
+							'share/RESUM')))
+env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
+env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
+env.Install('${sherpa}/share/RESUM',['share/pre_calc'])
 env.Alias('install', ['Tools/Files.H',
+		      '${sherpa}/bin/dat2yoda',
                       '${sherpa}/share/RESUM',
                       '${sherpa}/lib/SHERPA-MC'])
 
