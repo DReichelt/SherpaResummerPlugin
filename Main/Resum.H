@@ -46,7 +46,7 @@ namespace RESUM {
     double s_12, m_rn[2];
 
     double CalcS(const double L,double &Softexp);
-    double CalcF(const double L);
+    double CalcF(const double Rp);
     double CalcColl(const double L,const int order,
 		    double &Rp,double &Collexp);
     double CalcPDF(const double L,double &PDFexp);
@@ -56,7 +56,7 @@ namespace RESUM {
 		 const std::vector<std::vector<double> > VecMat);
     Complex* H_conjugate(const Complex ResMat[],size_t dim);
 
-    double Value(const double &v);
+    double Value(const double &v, const int n);
 
   public:
 
