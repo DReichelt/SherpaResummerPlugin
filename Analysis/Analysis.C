@@ -84,9 +84,9 @@ void Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
     AddZero(ncount,0);
   }
   for (size_t n=0; n<m_obss.size(); n++) {
-    const std::vector<double>& res = p_resum->Result(n);
-    msg_Debugging()<<"Fill '"<<m_obss[n]<<"' -> "<<res<<"\n";
-    FillHisto(n, int(res[0]), weight*res[1], ncount, 0);
+    const std::pair<int, double>& res = p_resum->Result(n);
+    msg_Debugging()<<"Fill '"<<m_obss[n]<<"' -> "<<res.first<<" "<<res.second<<"\n";
+    FillHisto(n, res.first, weight*res.second, ncount, 0);
   }
 }
 

@@ -1,24 +1,24 @@
-#include "Main/Resum2.H"
+#include "Main/Resum.H"
 
 #include "PHASIC++/Process/Single_Process.H"
 #include "ATOOLS/Math/Random.H"
 #include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Org/Exception.H"
-#include "ATOOLS/Org/MyStrStream.H"
 #include "ATOOLS/Phys/Blob_List.H"
-#include "ATOOLS/Org/Run_Parameter.H"
-#include "ATOOLS/Org/Shell_Tools.H"
 #include "MODEL/Main/Model_Base.H"
+
+#include "MODEL/Main/Running_AlphaS.H"
+
+#include "Main/Cluster_Definitions.H"
+
 #include "ATOOLS/Org/Data_Reader.H"
-#include "ATOOLS/Math/MathTools.H"
-#include "ATOOLS/Math/Poincare.H"
 #include "ATOOLS/Math/Histogram.H"
 #include "Analysis/Observable_Base.H"
-#include "Math/matexp.hpp"
 #include "Tools/StringTools.H"
-#include <typeinfo>
 #include "Math/Matrix.H"
 
+#include <vector>
+#include <complex>
 
 using namespace RESUM;
 using namespace PHASIC;
@@ -26,11 +26,14 @@ using namespace PDF;
 using namespace ATOOLS;
 using namespace MODEL;
 
+using std::string;
+using std::vector;
+using std::complex;
+
 Resum::Resum(ISR_Handler *const isr,
 	     Model_Base *const model):
   Shower_Base("Resum"), p_ampl(nullptr)
 {
-  p_comix = new Comix_Interface();
   p_clus = new Cluster_Definitions();
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
@@ -58,7 +61,6 @@ Resum::Resum(ISR_Handler *const isr,
 Resum::~Resum()
 {
   if (p_ampl) p_ampl->Delete();
-  delete p_comix;
   delete p_clus;
   delete [] p_pdf;
 
@@ -104,9 +106,9 @@ int Resum::PerformShowers()
     double xl = m_hist[n]->LowEdge(i), yl=Value(xl);
     double xh = m_hist[n]->HighEdge(i), yh=Value(xh);
     // bin to fill
-    m_ress[n][0] = i+1;
+    m_ress[n].first = std::floor(i+1);
     // weight for bin
-    m_ress[n][1] = m_weight*(yh-yl)*m_hist[n]->Nbin();
+    m_ress[n].second = m_weight*(yh-yl)*m_hist[n]->Nbin();
     msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<"\n";
   }  
   CleanUp();
@@ -156,7 +158,7 @@ bool Resum::ExtractPartons(Blob_List *const bl)
 
 void Resum::CleanUp()
 {
-  p_comix->Reset();
+  m_comix.Reset();
   if (p_ampl) p_ampl->Delete();
   p_ampl=nullptr;
   
@@ -289,7 +291,7 @@ size_t Resum::AddObservable(Observable_Base *const obs,
 {
   m_obss.push_back(obs);
   m_hist.push_back(h);
-  m_ress.push_back(std::vector<double>(2));
+  m_ress.push_back({-1,-1});
   return m_ress.size()-1;
 }
 
@@ -349,7 +351,7 @@ double Resum::CalcS(const double L, double &Softexp)
     double Cl = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF;
     Csum += complex<double>(Cl)*met;
   }
-  msg_Debugging()<<(complex<double>(2.)*Tsum+Csum).setFuzzyZeroToZeroInline()<<"\n";
+  msg_Debugging()<<(complex<double>(2.)*Tsum+Csum).setFuzzyZeroToZeroInline()<<std::endl;
 
   /// @TODO: this was actually a more detailed check
   /* double check; */
@@ -405,8 +407,8 @@ double Resum::CalcS(const double L, double &Softexp)
   msg_Debugging()<<"Soft Matrix = \n"<<Soft.setFuzzyZeroToZero()<<"\n";
 
   //Hard Matrix in T-basis
-  const MatrixD& Hard = MatrixC(p_comix->ComputeHardMatrix(p_ampl,
-                                                           p_cmetric->Perms()),
+  const MatrixD& Hard = MatrixC(m_comix.ComputeHardMatrix(p_ampl,
+                                                          p_cmetric->Perms()),
                                 dim, dim, 0).real();
   msg_Debugging()<<"Hard Matrix =\n"<<Hard.setFuzzyZeroToZero()<<"\n";
 
@@ -461,7 +463,7 @@ double Resum::CalcS(const double L, double &Softexp)
   msg_Debugging()<<"==============================================" << std::endl;
   msg_Debugging()<< std::endl;
   
-  p_comix->Reset();
+  m_comix.Reset();
   return traceHS/traceH;
   
 }

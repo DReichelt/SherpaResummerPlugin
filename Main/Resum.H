@@ -1,18 +1,35 @@
 #include "PDF/Main/Shower_Base.H"
-#include "MODEL/Main/Running_AlphaS.H"
+
 #include "Main/Comix_Interface.H"
-#include "Main/Cluster_Definitions.H"
-#include "Analysis/Observable_Base.H"
 #include "Tools/CMetric_Base.H"
-#include "Tools/CBasis.H"
-#include "Tools/CBasis.C"
+#include <map>
+#include <string>
+
+
+namespace MODEL {
+  class Running_AlphaS;
+}
+
+namespace PDF {
+  class PDF_Base;
+}
+
 
 namespace RESUM {
 
+  const double s_Nc = 3.;
+  const double s_CF = (s_Nc*s_Nc-1.)/(2.*s_Nc);
+  const double s_CA = s_Nc;
+  const double s_TR = 1./2.;
+  const double s_eps = .000001;
+  
+  class Cluster_Definitions;
+  class Observable_Base;
+  
   class Resum: public PDF::Shower_Base {
   private:
 
-    Comix_Interface *p_comix;
+    Comix_Interface m_comix;
 
     Cluster_Definitions *p_clus;
 
@@ -29,7 +46,7 @@ namespace RESUM {
     
     std::vector<Observable_Base*>     m_obss;
     std::vector<ATOOLS::Histogram*>   m_hist;
-    std::vector<std::vector<double> > m_ress;
+    std::vector<std::pair<double,double> > m_ress;
 
     std::vector<ATOOLS::Vec4D> m_cms, momlabels;
     std::vector<ATOOLS::Flavour> flavlabels;
@@ -47,9 +64,9 @@ namespace RESUM {
                PDFEXPAND = 1 << 1
     };
 
-    const map<string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
-                                           {"EXPAND", MODE::EXPAND},
-                                           {"PDFEXPAND", MODE::PDFEXPAND}};
+    const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
+                                                     {"EXPAND", MODE::EXPAND},
+                                                     {"PDFEXPAND", MODE::PDFEXPAND}};
     
     MODE m_amode = MODE::RESUM;
     
@@ -91,50 +108,9 @@ namespace RESUM {
     size_t AddObservable(Observable_Base *const obs,
 			 ATOOLS::Histogram *const h);
 
-    const std::vector<double> &Result(int n) const { return m_ress[n]; }
+    const std::pair<int, double>& Result(int n) const { return m_ress[n]; }
 
 
   };// end of class Resum
-
-  void Resum::printMatrix(const Complex rhs[], const size_t dim){
-    msg_Debugging()<<"{\n";
-    for (size_t i=0;i<dim;i++) {
-      msg_Debugging()<<"  {";
-      for (size_t j=0;j<dim;j++) {
-	 msg_Debugging()<< (fabs(rhs[i*dim+j].real()) > .001 ? rhs[i*dim+j].real() : 0) <<"+"
-		  <<rhs[i*dim+j].imag()<<((j+1<dim)?"I,":"I");
-      }
-      msg_Debugging()<<((i+1==dim)?"}\n":"},\n");
-    }
-    msg_Debugging()<<"}\n";  
-}
-
-
-//Matrix Multiplication
-void Resum::matMult(Complex ResMat[], const Complex ArrMat[], const std::vector< std::vector< double > > VecMat){
-    size_t dim = VecMat.size();
-    for (size_t i=0;i<dim;i++) {
-        for (size_t j=0;j<dim;j++){
-    	   for (size_t k=0;k<dim;k++){
-	     ResMat[i*dim+j] = Complex(ResMat[i*dim+j].real() + VecMat[k][i]*ArrMat[j*dim+k].real(),
-				       ResMat[i*dim+j].imag() + VecMat[k][i]*ArrMat[j*dim+k].imag());
-	   }      
-	}
-    }
-}
-
-//Hermition conjugate 
-Complex* Resum::H_conjugate(const Complex ResMat[], size_t dim) {
-complex<double> hold;
-Complex *result = new Complex[dim*dim];
-for (size_t i=0;i<dim;i++) {
-        for (size_t j=0;j<dim;j++){ 
-	  hold = ResMat[i*dim+j];
-	  result[j*dim+i] = conj(hold);
-	}
-    }
- return result;
-}
-
   
 }// end of namespace RESUM
