@@ -82,7 +82,7 @@ namespace RESUM {
 
     virtual size_t AddObservable(Observable_Base *const obs,
 			 ATOOLS::Histogram *const h);
-
+    virtual void ResetObservables();
     const std::vector<double> &Result(int n) const { return m_ress[n]; }
 
 

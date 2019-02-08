@@ -305,6 +305,12 @@ size_t Resum::AddObservable(Observable_Base *const obs,
   return m_ress.size()-1;
 }
 
+void Resum::ResetObservables() {
+  m_obss.clear();
+  m_hist.clear();
+  m_ress.clear();
+}
+
 double Resum::CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
 		    const ATOOLS::Flavour &flk,const int type,
 		    const int cpl,const double &mu2) const
