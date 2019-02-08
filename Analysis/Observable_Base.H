@@ -7,6 +7,10 @@
 #include "ATOOLS/Phys/NLO_Subevt.H"
 #include "Observables/Algorithms/Algorithm.H"
 
+
+using ATOOLS::sqr;
+using ATOOLS::stp;
+
 namespace RESUM {
   
   struct Observable_Key {
@@ -59,8 +63,8 @@ namespace RESUM {
    
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
-        Vec4D p(sub->p_mom[sub->m_ijt]);
-        Poincare cms(sub->p_mom[0]+sub->p_mom[1]);
+        ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);
+        ATOOLS::Poincare cms(sub->p_mom[0]+sub->p_mom[1]);
         cms.Boost(p);
         std::vector<Vec4T> moms(sub->m_n);
         std::vector<ATOOLS::Flavour> fl(sub->m_n);
@@ -103,8 +107,8 @@ namespace RESUM {
     
     T Value(ATOOLS::Particle_List *const pl) {
         //TODO: make this work with T
-      std::vector<Vec4D> p(pl->size());
-      std::vector<Flavour> fl(pl->size());
+      std::vector<ATOOLS::Vec4D> p(pl->size());
+      std::vector<ATOOLS::Flavour> fl(pl->size());
       for (size_t i(0);i<pl->size();++i) {
         p[i]=(*pl)[i]->Momentum();
         fl[i]=(*pl)[i]->Flav();

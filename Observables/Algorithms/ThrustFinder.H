@@ -7,12 +7,11 @@
 
 #include <algorithm>
 
-using namespace ATOOLS;
 
 namespace RESUM {
 
   template <typename T>
-  inline bool mod2Cmp(const Vec3<T>& a, const Vec3<T>& b) {
+  inline bool mod2Cmp(const ATOOLS::Vec3<T>& a, const ATOOLS::Vec3<T>& b) {
     return a.Sqr() > b.Sqr();
   }
 
@@ -33,24 +32,24 @@ namespace RESUM {
 
     typedef std::shared_ptr<ThrustFinder> Ptr;
 
-    ThrustFinder(const std::vector<Vec4<T>>& p,
-                 const std::vector<Flavour>& fl,
+    ThrustFinder(const std::vector<ATOOLS::Vec4<T>>& p,
+                 const std::vector<ATOOLS::Flavour>& fl,
                  const size_t &nin)   {
-      std::vector<Vec4<T>> moms = {p.begin()+nin,p.end()};
+      std::vector<ATOOLS::Vec4<T>> moms = {p.begin()+nin,p.end()};
       _calcThrust(moms,nin);
     }
   
     
     T Thrust() const { return m_t; }
     T Tau() const { return 1.-m_t; }
-    const Vec3<T>& Axis() const { return m_axis; }
+    const ATOOLS::Vec3<T>& Axis() const { return m_axis; }
 
     
   private:
 
-    T _calcThrust(const std::vector<Vec4<T>>& momenta, const size_t nin=2) {
-      std::vector<Vec3<T>> p;
-      Vec4<T> Q = {T(0),T(0),T(0),T(0)};
+    T _calcThrust(const std::vector<ATOOLS::Vec4<T>>& momenta, const size_t nin=2) {
+      std::vector<ATOOLS::Vec3<T>> p;
+      ATOOLS::Vec4<T> Q = {T(0),T(0),T(0),T(0)};
       for(auto&& mom: momenta) {
         p.emplace_back(mom);
         Q += mom;
@@ -59,7 +58,7 @@ namespace RESUM {
         m_t = 1;
         m_axis = p[0]/p[0].Abs();
         return m_t; }
-      std::vector<Vec3<T>> axes(4,{T(0),T(0),T(0)});
+      std::vector<ATOOLS::Vec3<T>> axes(4,{T(0),T(0),T(0)});
       std::vector<T> tval(4,T(0));
       std::sort(p.begin(), p.end(), mod2Cmp<T>);
       for(int i=0; i<4; i++) {
@@ -75,7 +74,7 @@ namespace RESUM {
 
         while(diff>epsilon<T>(T(0))) {
           //Todo: is this relevant for multiple precission??
-          Vec3<T> foo = axes.at(i);
+          ATOOLS::Vec3<T> foo = axes.at(i);
           axes.at(i) = {0,0,0};
           for(auto&& mom: p) {
             foo*mom > 0 ? axes.at(i) += mom : axes.at(i) -= mom;
@@ -102,7 +101,7 @@ namespace RESUM {
       }
       m_jets = std::vector<std::set<size_t>>(2);
       for(size_t i=0; i<p.size(); i++) {
-        if(Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
+        if(ATOOLS::Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
         else m_jets.at(1).insert(i+nin);
       }
       return m_t;
@@ -110,7 +109,7 @@ namespace RESUM {
 
 
     
-    Vec3<T> m_axis = {0,0,0};
+    ATOOLS::Vec3<T> m_axis = {0,0,0};
     T m_t = 1;
   };
 
@@ -122,20 +121,20 @@ namespace RESUM {
   // public:
   //   typedef std::shared_ptr<ThrustFinder> Ptr;
 
-  //   ThrustFinder(const std::vector<Vec4<T>>& p,
-  //                const std::vector<Flavour>& fl,
+  //   ThrustFinder(const std::vector<ATOOLS::Vec4<T>>& p,
+  //                const std::vector<ATOOLS::Flavour>& fl,
   //                const size_t &nin)   {
   //     size_t n = p.size();
-  //     Vec3<T> lastaxis, curraxis, thrustaxis, maxaxis;
+  //     ATOOLS::Vec3<T> lastaxis, curraxis, thrustaxis, maxaxis;
   //     T maxthrust=0., lastthrust , currthrust, thrust;
-  //     std::vector<Vec3<T>> vectors(n-nin);
-  //     for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3<T>(p[i][1],p[i][2],0.0);
+  //     std::vector<ATOOLS::Vec3<T>> vectors(n-nin);
+  //     for (size_t i(nin);i<n;++i) vectors[i-nin]=ATOOLS::Vec3<T>(p[i][1],p[i][2],0.0);
   //     for (int pass=0;pass<2;++pass) {
   //       if (pass==1) RotateMoms(vectors,thrustaxis);
   //       sort(vectors.begin(),vectors.end(),&bigger);
-  //       std::vector<Vec3<T>> initialaxes;
+  //       std::vector<ATOOLS::Vec3<T>> initialaxes;
   //       for(unsigned int i=1;i<=(1<<(vectors.size()-1));++i) {
-  //         Vec3<T> axis;
+  //         ATOOLS::Vec3<T> axis;
   //         for(unsigned int j=1;j<=vectors.size();++j) {
   //           int addsign=-1;
   //           if ((1<<j)*((i+(1<<(j-1))-1)/(1<<j)) >= i) addsign=1;
@@ -174,7 +173,7 @@ namespace RESUM {
   //       }
   //       m_jets = std::vector<std::set<size_t>>(2);
   //       for(size_t i=0; i<p.size(); i++) {
-  //         if(Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i);
+  //         if(ATOOLS::Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i);
   //         else m_jets.at(1).insert(i);
   //       }
   //     }
@@ -182,43 +181,43 @@ namespace RESUM {
 
   //   T Thrust() const { return m_thrust; }
   //   T Tau() const { return 1.-m_thrust; }
-  //   const Vec3<T>& Axis() const { return m_axis; }
+  //   const ATOOLS::Vec3<T>& Axis() const { return m_axis; }
       
   // private:
 
   //   T m_thrust;
-  //   Vec3<T> m_axis;
+  //   ATOOLS::Vec3<T> m_axis;
 
     
-  //   void RotateMoms(std::vector<Vec3<T>>& ps,const Vec3<T> &ref)
+  //   void RotateMoms(std::vector<ATOOLS::Vec3<T>>& ps,const ATOOLS::Vec3<T> &ref)
   //   {
-  //     for(Vec3<T>& p: ps) p -= ref*(ref*p);
-  //     // for(std::vector<Vec3<T>>::iterator i(p.begin());
+  //     for(ATOOLS::Vec3<T>& p: ps) p -= ref*(ref*p);
+  //     // for(std::vector<ATOOLS::Vec3<T>>::iterator i(p.begin());
   //     //     i!=p.end();++i) *i=*i-ref*(ref**i);
   //   }
     
-  //   Vec3<T> NewAxis(const std::vector<Vec3<T>> &p,const Vec3<T> &ref)
+  //   ATOOLS::Vec3<T> NewAxis(const std::vector<ATOOLS::Vec3<T>> &p,const ATOOLS::Vec3<T> &ref)
   //   {
-  //     Vec3<T> next(0.,0.,0.);
+  //     ATOOLS::Vec3<T> next(0.,0.,0.);
   //     for (size_t i(0);i<p.size();++i) next+=(ref*p[i]<0.0)?-p[i]:p[i];
   //     return next/next.Abs();
   //   }
     
-  //   T SumP(const std::vector<Vec3<T>> &p)
+  //   T SumP(const std::vector<ATOOLS::Vec3<T>> &p)
   //   { 
   //     T sum_p(0.0);
   //     for (size_t i(0);i<p.size();++i) sum_p+=p[i].Abs();
   //     return sum_p;
   //   }
 
-  //   T SumNP(const std::vector<Vec3<T>> &p,const Vec3<T> &n)
+  //   T SumNP(const std::vector<ATOOLS::Vec3<T>> &p,const ATOOLS::Vec3<T> &n)
   //   { 
   //     T sum_np(0.0);
   //     for (size_t i(0);i<p.size();++i) sum_np+=abs(p[i]*n);
   //     return sum_np;
   //   }
 
-  //   static bool bigger(const Vec3<T> &a,const Vec3<T> &b)
+  //   static bool bigger(const ATOOLS::Vec3<T> &a,const ATOOLS::Vec3<T> &b)
   //   {
   //     return a.Sqr()>b.Sqr();
   //   }

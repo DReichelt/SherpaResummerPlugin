@@ -24,7 +24,7 @@ using namespace PDF;
 using namespace ATOOLS;
 using namespace MODEL;
 
-
+using std::string;
 
 const double s_Nc = 3.;
 const double s_CF = (s_Nc*s_Nc-1.)/(2.*s_Nc);

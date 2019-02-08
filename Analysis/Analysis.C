@@ -48,7 +48,6 @@ Analysis::Analysis(const Argument_Matrix &params):
   m_name+="_Resum";
   Data_Reader reader(",",";","!","=");
   Algebra_Interpreter *ip=reader.Interpreter();
-  msg_Debugging()<<"Look for SHOWER_GENERATOR: "<<rpa->gen.Variable("SHOWER_GENERATOR")<<".\n";
   p_resum=(Resum*)ToType<void*>(rpa->gen.Variable("SHOWER_GENERATOR"));
   if (dynamic_cast<Resum*>(p_resum)==NULL)
     THROW(fatal_error,"Resummer plugin not loaded");
@@ -65,7 +64,6 @@ Analysis::Analysis(const Argument_Matrix &params):
     if (m_obss.back()==NULL)
       THROW(not_implemented,"No such observable: "+params[i][0]);
     m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,params[i][0]));
-    msg_Debugging()<<"Add "<<m_obss.back()->Name()<<".\n";
     p_resum->AddObservable(m_obss.back(),m_histos.back());
   }
 }
