@@ -1,4 +1,4 @@
-#include "Main/Resum.H"
+#include "Main/Resum2.H"
 
 #include "PHASIC++/Process/Single_Process.H"
 #include "ATOOLS/Math/Random.H"
@@ -7,7 +7,6 @@
 #include "ATOOLS/Org/MyStrStream.H"
 #include "ATOOLS/Phys/Blob_List.H"
 #include "ATOOLS/Org/Run_Parameter.H"
-#include "ATOOLS/Math/Matrix.H"
 #include "ATOOLS/Org/Shell_Tools.H"
 #include "MODEL/Main/Model_Base.H"
 #include "ATOOLS/Org/Data_Reader.H"
@@ -18,6 +17,8 @@
 #include "Math/matexp.hpp"
 #include "Tools/StringTools.H"
 #include <typeinfo>
+#include "Math/Matrix.H"
+
 
 using namespace RESUM;
 using namespace PHASIC;
@@ -27,7 +28,7 @@ using namespace MODEL;
 
 Resum::Resum(ISR_Handler *const isr,
 	     Model_Base *const model):
-  Shower_Base("Resum"), p_ampl(NULL)
+  Shower_Base("Resum"), p_ampl(nullptr)
 {
   p_comix = new Comix_Interface();
   p_clus = new Cluster_Definitions();
@@ -70,8 +71,8 @@ Resum::~Resum()
 int Resum::PerformShowers()
 {
   DEBUG_FUNC(this);
-  if (p_ampl==NULL) THROW(fatal_error,"No process info");
-  msg_Debugging()<<*p_ampl<<"\n";  
+  if (p_ampl==nullptr) THROW(fatal_error,"No process info");
+  msg_Debugging()<<*p_ampl<<"\n";
   m_weight=1.0;
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
@@ -142,7 +143,7 @@ int Resum::PerformDecayShowers()
 bool Resum::ExtractPartons(Blob_List *const bl)
 {
   Blob *b(bl->FindLast(btp::Shower));
-  if (b==NULL) THROW(fatal_error,"No Shower blob");
+  if (b==nullptr) THROW(fatal_error,"No Shower blob");
   b->SetTypeSpec("RESUM");
   for (int i=0;i<b->NInP();++i) 
     b->InParticle(i)->SetStatus(part_status::decayed);
@@ -157,7 +158,7 @@ void Resum::CleanUp()
 {
   p_comix->Reset();
   if (p_ampl) p_ampl->Delete();
-  p_ampl=NULL;
+  p_ampl=nullptr;
   
   m_cms.clear();
   m_Qij.clear();
@@ -172,7 +173,7 @@ void Resum::CleanUp()
 
 Cluster_Definitions_Base *Resum::GetClusterDefinitions()
 {
-  return NULL;
+  return nullptr;
 }
 
 bool Resum::PrepareShower
@@ -224,9 +225,14 @@ bool Resum::PrepareShower
     //Compute metric for process arranged like q...qb...g
     msg_Debugging() << name << std::endl;
     cmetric=CMetric_Base::GetCM(CMetric_Key(name,p_ampl));
-    if (cmetric==NULL) THROW(not_implemented,"No metric for "+name);
+    if (cmetric==nullptr) THROW(not_implemented,"No metric for "+name);
     msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
     m_cmetrics.insert(make_pair(pname,cmetric));
+  }
+
+  m_ordered_ids = vector<size_t>(p_ampl->Legs().size());
+  for(size_t i=0; i<p_ampl->Legs().size(); i++) {
+    m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id();
   }
   
   p_cmetric=cmetric;
@@ -270,6 +276,8 @@ bool Resum::PrepareShower
       }
   }
 
+  
+  
   p_ampl->Delete();
   p_ampl=ampl->Copy();
 
@@ -303,229 +311,158 @@ double Resum::T(const double x)
 
 double Resum::CalcS(const double L, double &Softexp) 
 {
-
+  DEBUG_FUNC(L);
+  const size_t numlegs = n_g + n_q + n_aq;
   //Exception for n_colored = 2
-  if(n_g + n_q + n_aq == 2) return 1.;
+  if(numlegs == 2) return 1.;
 
-  double as = (*p_as)(p_ampl->MuR2());
-  double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
-  double lambda = as*beta0*L; 
-  double t = T(lambda/m_a[0]);
-  //order a_s expansion of t
-  if ((m_amode & MODE::EXPAND) != 0) t = 2*as*L/M_PI;
-  size_t numlegs = n_g + n_q + n_aq;
-
-  Hard_Matrix *h(p_comix->ComputeHardMatrix(p_ampl,p_cmetric->Perms()));
-  if (h==NULL) msg_Error()<<METHOD<<"(): Error computing H."<<std::endl;
+  const double as = (*p_as)(p_ampl->MuR2());
+  const double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
+  const double lambda = as*beta0*L; 
+  const double t = (m_amode & MODE::EXPAND) ? T(lambda/m_a[0]) : 2*as*L/M_PI;
   
-  //Color Metric
-  msg_Debugging()<<"color metric yields : "<<std::endl;
-  std::vector< std::vector< double > > met = p_cmetric->CMetric(), ICmetric = p_cmetric->Imetric() ;
-  printMat(met);
-  size_t dim = met.size();
+  const MatrixC& met = MatrixD(p_cmetric->CMetric());
+  const MatrixC& ICmetric = MatrixD(p_cmetric->Imetric());
+  msg_Debugging()<<"Color Metric = "<<std::endl;
+  msg_Debugging()<<met<<std::endl;
+  msg_Debugging() << "Inverse Metric = " << std::endl;
+  msg_Debugging()<<ICmetric<<std::endl;
 
-  //Inverse metric
-  msg_Debugging() << "Inverse Metric" << std::endl;
-  printMat(ICmetric);
+  const size_t dim = met.numCols();
   
-  //Check metric.Inverse = identity
-  double value;
   msg_Debugging() << "Check metric.Inverse = identity" << std::endl;
-  for(size_t i = 0; i<met.size();i++){
-    for(size_t j = 0; j<met.size();j++){
-      value = 0.;
-      for(size_t k=0; k<met.size();k++){
-	value = value + met[i][k]*ICmetric[k][j];
-      }
-      msg_Debugging() << ( (fabs(value) > .000001 ) ? value : 0 ) << " "; 
-    }
-    msg_Debugging() << std::endl;
-  }
-  msg_Debugging() << std::endl;
-  
+  msg_Debugging()<<(met*ICmetric).setFuzzyZeroToZeroInline()<<std::endl;
  
   //get the t products & calc Gamma
-  std::vector< std::vector< std::vector< double > > > Tprods = p_cmetric->Tprods(); ;
-  
-  //Check color conservation
-  double check;
-  double Casmir;
-  size_t k_t,i_t, j_t, loop,count;
-  for(size_t k = 0; k<numlegs; k++){ 
-    msg_Debugging() << "Should be T" << k+1 << ".J = 0" << std::endl;
-    k_t = (k < 2 ? k : 2*k-1);
-    Casmir = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF;
-    msg_Debugging() << "is a " << flavlabels[k_t] << std::endl;
-    for(size_t i = 0; i<dim; i++){
-      for(size_t j = 0; j<dim; j++){
-	check = Casmir*met[i][j];
-        msg_Debugging()<<"Casimir*met = "<<Casmir<<"*"<<met[i][j]<<" = "<<check<<"\n";
-        i_t=0; j_t=0; loop=0; count = 0;
-	for(size_t l = 0; l<Tprods.size(); l++) {
-	  i_t = loop;
-	  j_t = count+loop+1;
-	  count++;
-	  if(j_t == numlegs-1){ loop++; count = 0; }
-	  if(i_t == k || j_t == k){
-            msg_Debugging()<<"check + T = "<<check<< " + " << Tprods[l][i][j];
-            check += Tprods[l][i][j];
-            msg_Debugging()<<" = "<<check<<"\n";
-          }
-
-	}
-	msg_Debugging() << (fabs(check) > .0001 ? check : 0) << " ";
-      }
-      msg_Debugging() << std::endl;
-    }
-    msg_Debugging() << std::endl;
+  std::vector<MatrixC> Tprods(p_cmetric->Tprods().size());
+  for(size_t i=0; i<p_cmetric->Tprods().size(); i++) {
+    Tprods[i] = MatrixD(p_cmetric->Tprods().at(i));
   }
-  msg_Debugging() << std::endl;
 
-  //Build Gamma
-  Complex *Gamma = new Complex[dim*dim];
-  if (Tprods.size()>0) {
-    Complex entry;
-    msg_Debugging()<<"Gamma = \n";
-    for (size_t i=0;i<dim;i++) {
-      msg_Debugging()<<"  {";
-      for (size_t j=0;j<dim;j++) {
-      	  entry = 0;   
-	  //Sum over dipoles
-          for (size_t k = 0; k < Tprods.size(); k++){
-	    entry += - 2.* log(m_Qij[k]/s_12) * Tprods[k][i][j];
-	    
-	    //Coulomb Gluons 
-	    if(signlabels[2*k]*signlabels[2*k+1] == 1) entry += Complex(0.,M_PI)*(Tprods[k][i][j]);
-	  }
-         
-	  Gamma[i*dim+j] = -(t/2.)*entry;
-	  msg_Debugging()<<Gamma[i*dim+j].real()<<"+"
-	 	         <<Gamma[i*dim+j].imag()<<((j+1<dim)?"I,":"I");
-	  }
-      msg_Debugging()<<((i+1==dim)?"}\n":"},\n");
-    }
-    msg_Debugging()<<"}\n";
-    }
+  /// @TODO: this thing is debugging only and should probably only be done if needed
+  msg_Debugging()<<"Check color conservation: 2 \\sum Tprods + \\sum Casimir*metric = [0].\n";
+  MatrixC Tsum(dim, dim);
+  for(const MatrixC& T: Tprods) Tsum += T;
+  MatrixC Csum(dim, dim);
+  for(size_t k=0; k<numlegs; k++) {
+    size_t k_t = (k < 2 ? k : 2*k-1);
+    double Cl = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF;
+    Csum += complex<double>(Cl)*met;
+  }
+  msg_Debugging()<<(complex<double>(2.)*Tsum+Csum).setFuzzyZeroToZeroInline()<<"\n";
 
-    //exponentiate gamma with inverse metric
-    Complex *GammaI = new Complex[dim*dim];
-    Complex *eGamma;
-    Complex *cGamma = new Complex[dim*dim];
-    matMult(GammaI,Gamma,ICmetric);
-    eGamma = c8mat_expm1 (dim,GammaI);
-    Complex *hconj=H_conjugate(eGamma,dim);
-    matMult(cGamma,hconj,met);
-    
-    //Soft matrix 
-    std::vector< std::vector< double > > Soft(dim);
-    for (size_t i=0;i<dim;i++) {
-      Soft[i].resize(dim);
-      for (size_t j=0;j<dim;j++) {
-	for (size_t k=0;k<dim;k++) {
-	  Soft[i][j] = Soft[i][j] + real(cGamma[i*dim+k]*eGamma[k*dim+j]);  
-	}
-      }
-    }
-    msg_Debugging()<<"Soft  \n";	
-    
-    //Hard Matrix in T-basis
-    std::vector< std::vector< double > > Hard(dim);
-    for(size_t i = 0; i<dim; i++){  
-        Hard[i].resize(dim);
-	for( size_t j = 0; j<dim; j++ ){
-	  Hard[i][j] = (i < p_cmetric->Perms().size() && j < p_cmetric->Perms().size()) ? access(*h,i,j) : 0; 
-	}
-    }
-    msg_Debugging()<<"Hard\n";
-    printMat(Hard);    
+  /// @TODO: this was actually a more detailed check
+  /* double check; */
+  /* double Casmir; */
+  /* size_t k_t,i_t, j_t, loop,count; */
+  /* for(size_t k = 0; k<numlegs; k++){  */
+  /*   msg_Debugging() << "Should be T" << k+1 << ".J = 0" << std::endl; */
+  /*   k_t = (k < 2 ? k : 2*k-1); */
+  /*   Casmir = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF; */
+  /*   msg_Debugging() << "is a " << flavlabels[k_t] << std::endl; */
+  /*   for(size_t i = 0; i<dim; i++){ */
+  /*     for(size_t j = 0; j<dim; j++){ */
+  /*       check = Casmir*met[i][j]; */
+  /*       msg_Debugging()<<"Casimir*met = "<<Casmir<<"*"<<met[i][j]<<" = "<<check<<"\n"; */
+  /*       i_t=0; j_t=0; loop=0; count = 0; */
+  /*       for(size_t l = 0; l<Tprods.size(); l++) { */
+  /*         i_t = loop; */
+  /*         j_t = count+loop+1; */
+  /*         count++; */
+  /*         if(j_t == numlegs-1){ loop++; count = 0; } */
+  /*         if(i_t == k || j_t == k){ */
+  /*           msg_Debugging()<<"check + T = "<<check<< " + " << Tprods[l][i][j]; */
+  /*           check += Tprods[l][i][j]; */
+  /*           msg_Debugging()<<" = "<<check<<"\n"; */
+  /*         } */
 
-    //Trace of hard matrix (Hard Matrix Element)
-    //Note that normalization of H drops out in S
-    double traceH = 0;
-    for(size_t i = 0; i<dim; i++){
-	for(size_t j = 0; j<dim; j++){
-	traceH = traceH + Hard[j][i]*met[i][j];
-        }
-    }
-    
-    //Leading order expansion Tr(-t*H*Gamma);
-    double traceHG = 0;
-    for(size_t i = 0; i<dim; i++){
-	for(size_t j = 0; j<dim; j++){
-	traceHG = traceHG + 2*Hard[j][i]*real(Gamma[i*dim+j]);
-	}
-    }
+  /*       } */
+  /*       msg_Debugging() << (fabs(check) > .0001 ? check : 0) << " "; */
+  /*     } */
+  /*     msg_Debugging() << std::endl; */
+  /*   } */
+  /*   msg_Debugging() << std::endl; */
+  /* } */
+  /* msg_Debugging() << std::endl; */
+
+
+
   
-    Softexp=traceHG/traceH/m_a[0];
-
-    //Hard-soft contraction 
-    double traceHS = 0;
-    for(size_t i = 0 ; i<dim ; i++ ){
-	for( size_t j = 0 ; j<dim ; j++ ){
-	traceHS = traceHS + Hard[j][i]*Soft[i][j];
-        }
+  //Build Gamma
+  MatrixC Gamma(dim, dim);  
+  for(size_t k=0; k<Tprods.size(); k++) {
+    Gamma += complex<double>(-2.*log(m_Qij[k]/s_12))*Tprods[k];
+    if(signlabels[2*k]*signlabels[2*k+1] == 1) {
+      Gamma += complex<double>(0.,M_PI)*Tprods[k];
     }
+  }
+  Gamma *= complex<double>(-t/2.);
+  msg_Debugging()<<"Gamma = \n"<<Gamma<<"\n";
 
-    msg_Debugging()<<"==============================================" << std::endl;
-    msg_Debugging()<<"Soft function:" << std::endl;
-    msg_Debugging()<<"==============================================" << std::endl;
-    
-    msg_Debugging()<< "alpha_s: " << as << std::endl;
-    msg_Debugging()<< "evolution variable t: " << t << std::endl;
-    msg_Debugging()<< "Log(1/v): " << L << std::endl;
-    msg_Debugging()<< std::endl;
-    msg_Debugging()<< "Kinematics" << std::endl;
-    msg_Debugging()<< *p_ampl << std::endl;
-    
-    msg_Debugging()<< "Check energy-momentum conservation: ";
-    Vec4D testEM(0,0,0,0);
-    for(size_t i = 0; i < numlegs; i++){
-      testEM = testEM + p_ampl->Leg(i)->Mom();
+  const MatrixC& eGamma = exp(ICmetric*Transpose(Gamma));
+  const MatrixC& cGamma = met*Transpose(HermitianTranspose(eGamma));
+  const MatrixD& Soft = real(cGamma*eGamma);
+  msg_Debugging()<<"Soft Matrix = \n"<<Soft.setFuzzyZeroToZero()<<"\n";
+
+  //Hard Matrix in T-basis
+  const MatrixD& Hard = MatrixC(p_comix->ComputeHardMatrix(p_ampl,
+                                                           p_cmetric->Perms()),
+                                dim, dim, 0).real();
+  msg_Debugging()<<"Hard Matrix =\n"<<Hard.setFuzzyZeroToZero()<<"\n";
+
+  //Trace of hard matrix (Hard Matrix Element)
+  //Note that normalization of H drops out in S
+  const double traceH = Trace(real(met),Hard);
+  //Leading order expansion Tr(-t*H*Gamma);
+  const double traceHG = 2.*Trace(real(Gamma), Hard);  
+  Softexp=traceHG/traceH/m_a[0];
+  //Hard-soft contraction 
+  const double traceHS = Trace(Soft,Hard);
+
+
+  msg_Debugging()<<"==============================================" << std::endl;
+  msg_Debugging()<<"Soft function:" << std::endl;
+  msg_Debugging()<<"==============================================" << std::endl;  
+  msg_Debugging()<< "alpha_s: " << as << std::endl;
+  msg_Debugging()<< "evolution variable t: " << t << std::endl;
+  msg_Debugging()<< "Log(1/v): " << L << std::endl;
+  msg_Debugging()<< std::endl;
+  msg_Debugging()<< "Kinematics" << std::endl;
+  msg_Debugging()<< *p_ampl << std::endl;
+  msg_Debugging()<< "Check energy-momentum conservation: ";
+  Vec4D testEM(0,0,0,0);
+  for(const auto& l: p_ampl->Legs()) testEM += l->Mom();
+  msg_Debugging()<< testEM << std::endl;
+  msg_Debugging()<<"Tr( c H ): " << traceH << std::endl;
+  msg_Debugging()<<"Softexp: " << Softexp << std::endl;
+  msg_Debugging()<<"Tr( H G Gb ) / Tr( c H ): " << traceHS/traceH << std::endl;
+  msg_Debugging() << std::endl;
+  //Print Tprods
+  size_t k = 0;
+  for(size_t i = 0; i<numlegs; i++){
+    for(size_t j = i+1; j<numlegs; j++){
+      const double traceHT = Trace(real(Tprods[k]),Hard);
+      msg_Debugging() << "T" << i << ".T" << j << "  :  " << std::endl;
+      msg_Debugging() << "T" << i << " Flavour: " << flavlabels[2*k] << ":  four vec: " << momlabels[2*k] << std::endl;
+      msg_Debugging() << "T" << j << " Flavour: " << flavlabels[2*k+1] << ":  four vec: " << momlabels[2*k+1] << std::endl;
+      msg_Debugging() << "log(Qij/Q12): " << log(m_Qij[k]/s_12) << std::endl;
+      msg_Debugging() << "Qij*Qij: " << std::setprecision(9) << m_Qij[k]*m_Qij[k] << std::endl;
+      msg_Debugging() <<  "Tr( T.H )/Tr(c.H): " << traceHT/traceH << std::endl;
+      msg_Debugging() << std::endl;
+      msg_Debugging()<<Tprods[k]<<std::endl;
+      msg_Debugging() << std::endl;
+      k++;
     }
-    msg_Debugging()<< testEM << std::endl;
-    msg_Debugging()<<"Tr( c H ): " << traceH << std::endl;
-    msg_Debugging()<<"Softexp: " << Softexp << std::endl;
-    msg_Debugging()<<"Tr( H G Gb ) / Tr( c H ): " << traceHS/traceH << std::endl;
-    msg_Debugging() << std::endl;
-
-     //Print Tprods
-     size_t coin = 0;
-     for(size_t i = 0; i<numlegs;i++){
-     for(size_t j = i+1; j<numlegs;j++){
-       double traceHT=0;
-       //Calculate trace with Hard
-       double traceHS = 0;
-       for(size_t l = 0 ; l<dim ; l++ ){
-   	 for( size_t m = 0 ; m<dim ; m++ ){
-	   traceHT = traceHT + Hard[m][l]*Tprods[coin][l][m];
-           }
-       }
-
-     msg_Debugging() << "T" << i << ".T" << j << "  :  " << std::endl;
-     msg_Debugging() << "T" << i << " Flavour: " << flavlabels[2*coin] << ":  four vec: " << momlabels[2*coin] << std::endl;
-     msg_Debugging() << "T" << j << " Flavour: " << flavlabels[2*coin+1] << ":  four vec: " << momlabels[2*coin+1] << std::endl;
-     msg_Debugging() << "log(Qij/Q12): " << log(m_Qij[coin]/s_12) << std::endl;
-     msg_Debugging() << "Qij*Qij: " << std::setprecision(9) << m_Qij[coin]*m_Qij[coin] << std::endl;
-     msg_Debugging() <<  "Tr( T.H )/Tr(c.H): " << traceHT/traceH << std::endl;
-     printMat(Tprods[coin]);
-     msg_Debugging() << std::endl;
-     coin++;
-      }
-    }
-
-    msg_Debugging()<<"==============================================" << std::endl;
-    msg_Debugging()<<"end checks" << std::endl;
-    msg_Debugging()<<"==============================================" << std::endl;
-    msg_Debugging()<< std::endl;
- 
-    delete [] eGamma;
-    delete [] hconj;
-    delete [] Gamma;
-    delete [] GammaI;
-    delete [] cGamma;
-    p_comix->Reset();
-    
-    return traceHS/traceH;
+  }
+  msg_Debugging()<<"Going to return traceHS/traceH = "<< traceHS/traceH<<std::endl;
+  msg_Debugging() << std::endl;
+  msg_Debugging()<<"==============================================" << std::endl;
+  msg_Debugging()<<"end checks" << std::endl;
+  msg_Debugging()<<"==============================================" << std::endl;
+  msg_Debugging()<< std::endl;
+  
+  p_comix->Reset();
+  return traceHS/traceH;
   
 }
 
@@ -583,7 +520,7 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 	    R+=((-1.)*colfac*r1);
 	  }
 	  if (order>=1) {	    
-	  //NLL part   //note Lmur term in r2_cmw
+            //NLL part   //note Lmur term in r2_cmw
 	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
 						       -m_a[i]*log(1.-2.*lambda/m_a[i]));
 	    double r2_beta1=beta1/2./M_PI/pow(beta0,3.)*(m_a[i]/2.*pow(log(1-2.*lambda/m_a[i]),2.)
@@ -606,7 +543,7 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 	    R+=(-1.)*colfac*r1;
 	  }
 	  if (order>=1) {	    
-	  //NLL part
+            //NLL part
 	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
 	    double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
@@ -616,7 +553,7 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 	    Rp+=r1p*colfac;
 	  }
 	}
-
+      
       Collexp+= -2./M_PI*as*(colfac) * ( L/2.0/m_a[i]/(m_a[i]+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)) + log(Q12/Q)/m_a[i])*L;
     }
   return R;

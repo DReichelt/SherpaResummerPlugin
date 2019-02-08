@@ -6,6 +6,8 @@
 #include <cassert>
 #include <complex>
 
+#include "Math/matexp.hpp"
+
 using std::valarray;
 using std::slice;
 
@@ -33,6 +35,14 @@ public:
   /// Copy constructor.
   Matrix<T>(const Matrix<T>& other) = default;
 
+  /// Copy constructor for matrix with arbitrary type (that can be cast to T).
+  template <typename OTHER>
+  Matrix<T>(const Matrix<OTHER>& other) {
+    m_dim = other.numCols();
+    m_data = valarray<T>(other.numElements());
+    for(size_t i=0; i<other.numElements(); i++) m_data[i] = T(other.data()[i]);
+  }
+  
   /// Move constructor.
   Matrix<T>(Matrix<T>&& other) : Matrix<T>() {
     other.swap(*this);
@@ -241,6 +251,21 @@ public:
     return Transpose(*this);
   }
 
+  /// Calculate the hermitian transpose of the the matrix in-place.
+  /**
+     This is really in-place only for square matrices.
+  */
+  Matrix<T> hermitianTransposeInPlace() {
+    transposeInPlace();
+    m_data = m_data.apply(std::conj);
+    return *this;
+  }
+
+  /// Return the hermitian transpose of the matrix.
+  Matrix<T> hermitianTranspose() const {
+    return HermitianTranspose(*this);
+  }
+
   
   // \}
   
@@ -284,6 +309,35 @@ public:
   /// Determine whether this matrix and \p other have the same number of rows and columns.
   inline bool sameDim(const Matrix<T>& other) const {
     return numRows()==other.numRows() && numCols()==other.numCols();
+  }
+
+  /// Return a Matrix containing the real part of every element of the matrix.
+  Matrix<double> real() const {
+    valarray<double> data(m_data.size());
+    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].real();
+    return Matrix<double>(data, m_dim);
+  }
+
+  /// Return a Matrix containing the imaginary part of every elemnet of the matrix.
+  Matrix<double> imag() const {
+    valarray<double> data(m_data.size());
+    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].imag();
+    return Matrix<double>(data, m_dim);
+  }
+
+  
+  ///  Sanitize small values to 0.
+  Matrix<T> setFuzzyZeroToZero(T eps=T(1e-12)) const {
+    Matrix<T> ret = *this;
+    return ret.setFuzzyZeroToZeroInline(eps);
+  }
+  
+  /// Sanitize small values to 0 (non-const).
+  Matrix<T>& setFuzzyZeroToZeroInline(T eps=T(1e-12)) {
+    for(T& v: m_data) {
+      if(abs(v)<abs(eps)) v = T(0.);
+    }
+    return *this;
   }
   
   /// Print the matrix to \p stream.
@@ -344,11 +398,20 @@ public:
       return stream;
   }
 
+  friend inline Matrix<double> real(const Matrix<T>& matrix) {
+    return matrix.real();
+  }
+
+  friend inline Matrix<double> imag(const Matrix<T>& matrix) {
+    return matrix.imag();
+  }
+  
   /// Calculate the transpose of \p matrix.
   friend inline Matrix<T> Transpose(Matrix<T> matrix) {
     return matrix.transposeInPlace();
   }
 
+  
   /// Calculate the trace of \p matrix.
   friend inline T Trace(const Matrix<T>& matrix) {
     return matrix.trace();
@@ -364,6 +427,22 @@ public:
     }
   }
 
+  /// Calculate the hermitian transpose of \p matrix.
+  friend inline Matrix<T> HermitianTranspose(Matrix<T> matrix) {
+    return matrix.hermitianTransposeInPlace();
+  }
+  
+  /// Calculate matrix exponential of \p x.
+  friend Matrix<T> exp(Matrix<T> x) {
+    T* result = c8mat_expm1(x.numCols(), &x.data()[0]);
+    valarray<T> ret(x.numElements());
+    for(size_t i=0; i<x.numElements(); i++) {
+      ret[i] = *result;
+      result++;
+    }
+    return Matrix<T>(ret, x.numCols());
+  } 
+  
   /// Determine whether \p a and \p b have the same number of rows and columns
   friend inline bool sameDim(const Matrix<T>& a, const Matrix<T>& b) {
     return a.sameDim(b);
@@ -450,31 +529,6 @@ namespace std {
 // usefull typedefs
 /// Typedef for matrix with real elements.
 typedef Matrix<double> MatrixD;
-
-/// Specialisation of Matrix for complex matrices.
-class MatrixC: public Matrix<std::complex<double> > {
-public:
-  /// \name Standard constructors.
-  // \{
-  using Matrix::Matrix;
-  // \}
-
-  /// \name Special functions for complex matrices.
-  // \{
-  /// Return a MatrixD containing the real part of every element of the matrix.
-  MatrixD real() {
-    valarray<double> data(m_data.size());
-    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].real();
-    return MatrixD(data, m_dim);
-  }
-
-  /// Return a MatrixD containing the imaginary part of every elemnet of the matrix.
-  MatrixD imag() {
-    valarray<double> data(m_data.size());
-    for(size_t i=0; i<data.size(); i++) data[i] = m_data[i].imag();
-    return MatrixD(data, m_dim);
-  }
-  // \}
-};
-
+/// Typedef for matrix with complex elements.
+typedef Matrix<std::complex<double>> MatrixC;
 #endif

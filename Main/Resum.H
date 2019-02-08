@@ -38,6 +38,9 @@ namespace RESUM {
     int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
 
+    /// Leg ids ordered as quarks-antiquarks-gluons in n-parton amplitude.
+    std::vector<size_t> m_ordered_ids;
+    
     enum MODE {
                RESUM = 0,
                EXPAND = 1    << 0,
