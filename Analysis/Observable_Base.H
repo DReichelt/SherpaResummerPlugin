@@ -45,7 +45,7 @@ namespace RESUM {
 
     // F-function for additiv Obs
     virtual double CalcF(const double Rp){
-      return exp(-GAMMA_E*Rp-Gammln(1.+Rp)); };
+      return exp(-GAMMA_E*Rp-ATOOLS::Gammln(1.+Rp)); };
 
     // deprecated
     Obs_Params Parameters
