@@ -31,8 +31,7 @@ namespace RESUM {
 
 
     double CalcF(const double Rp){
-      return exp(-GAMMA_E*Rp-2*Gammln(1.+0.5*Rp)); };   
-   
+      return exp(-GAMMA_E*Rp-2*Gammln(1.+0.5*Rp)); }
       
        
     T Value(const std::vector<Vec4<T>>& moms,
