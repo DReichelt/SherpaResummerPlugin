@@ -49,8 +49,10 @@ Analysis::Analysis(const Argument_Matrix &params):
   Data_Reader reader(",",";","!","=");
   Algebra_Interpreter *ip=reader.Interpreter();
   p_resum=(Resum*)ToType<void*>(rpa->gen.Variable("SHOWER_GENERATOR"));
-  if (dynamic_cast<Resum*>(p_resum)==NULL)
+  if (dynamic_cast<Resum*>(p_resum)==NULL) {
     THROW(fatal_error,"Resummer plugin not loaded");
+  }
+  p_resum->ResetObservables();
   for (size_t i(1);i<params.size();++i) {
     if (params[i].size()<5) continue;
     double xmin(ToType<double>(ip->Interprete(params[i][1])));
