@@ -95,7 +95,7 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
-env.Install('${sherpa}/share/RESUM',['share/pre_calc'])
+env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunctions'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',
                       '${sherpa}/share/RESUM',
