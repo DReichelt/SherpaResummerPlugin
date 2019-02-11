@@ -4,6 +4,7 @@
 
 
 *.dylib
+*.so
 
 # Sherpa and plugin generated files
 Results.*
