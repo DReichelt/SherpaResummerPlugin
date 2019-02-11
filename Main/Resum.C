@@ -130,8 +130,9 @@ double Resum::Value(const double& v)
   weight*=CalcF(Rp);	
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
-    if ((m_amode & MODE::EXPAND) != 0) weight += Collexp+Softexp;
-    if ((m_amode & MODE::PDFEXPAND) != 0) weight += PDFexp;
+    if ((m_amode & MODE::COLLEXPAND) != 0) weight += Collexp;
+    if ((m_amode & MODE::SOFTEXPAND) != 0) weight += Softexp;
+    if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp;
   }
   return weight;
 }

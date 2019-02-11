@@ -60,13 +60,17 @@ namespace RESUM {
     
     enum MODE {
                RESUM = 0,
-               EXPAND = 1    << 0,
-               PDFEXPAND = 1 << 1
+               PDFEXPAND = 1  << 0,
+               COLLEXPAND = 1 << 1,
+               SOFTEXPAND = 1 << 2,
+               EXPAND = COLLEXPAND | SOFTEXPAND
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
-                                                     {"EXPAND", MODE::EXPAND},
-                                                     {"PDFEXPAND", MODE::PDFEXPAND}};
+                                                     {"PDFEXPAND", MODE::PDFEXPAND},
+                                                     {"COLLEXPAND", MODE::COLLEXPAND},
+                                                     {"SOFTEXPAND", MODE::SOFTEXPAND},
+                                                     {"EXPAND", MODE::EXPAND}};
     
     MODE m_amode = MODE::RESUM;
     
