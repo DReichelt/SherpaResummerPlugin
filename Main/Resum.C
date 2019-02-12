@@ -331,10 +331,7 @@ double Resum::CalcS(const double L, double &Softexp)
   
  
   //get the t products & calc Gamma
-  std::vector<MatrixD> Tprods(p_cmetric->Tprods().size());
-  for(size_t i=0; i<p_cmetric->Tprods().size(); i++) {
-    Tprods[i] = MatrixD(p_cmetric->Tprods().at(i));
-  }
+  const std::vector<MatrixD>& Tprods = p_cmetric->Tprods();
 
   if(msg_LevelIsDebugging()) {
     msg_Debugging()<<"Color Metric = "<<std::endl;
