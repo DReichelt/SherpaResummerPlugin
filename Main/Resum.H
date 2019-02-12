@@ -107,7 +107,7 @@ namespace RESUM {
     size_t AddObservable(Observable_Base *const obs,
 			 ATOOLS::Histogram *const h);
 
-    const std::pair<int, double>& Result(int n) const { return m_ress[n]; }
+    std::pair<int, double> Result(int n) const { return m_ress.at(n); }
 
 
   };// end of class Resum
