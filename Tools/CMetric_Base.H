@@ -25,8 +25,8 @@ namespace RESUM {
 
     std::vector<double> m_prefactors;
     
-    std::vector<std::vector<double>> m_trafoMatrix;
-    std::vector<  std::vector< std::vector< double > > > m_Tprods;
+    MatrixD m_trafoMatrix;
+    std::vector<MatrixD> m_Tprods;
     std::vector< PHASIC::Idx_Vector > m_perms;
     std::vector< size_t > m_map, m_pam;
   public:
@@ -55,8 +55,8 @@ namespace RESUM {
 
     MatrixD PrefMatrix() {
       size_t dim = -1;
-      if(m_trafoMatrix.empty()) dim = m_metric.numCols();
-      else dim = m_trafoMatrix.at(0).size();
+      if(hasTrafo()) dim = m_metric.numCols();
+      else dim = m_trafoMatrix.numRows();
       MatrixD ret(nullptr, dim, dim, 0);
       for(size_t i=0; i<m_prefactors.size(); i++) {
         for(size_t j=0; j<m_prefactors.size(); j++) {
@@ -65,34 +65,24 @@ namespace RESUM {
       }
       return ret;
     }
-
     
-    // inline const std::vector< std::vector< double > >& CMetric() 
-    // { return m_metric; }
+    inline const MatrixD& CMetric() const { return m_metric; }
 
-    inline MatrixD CMetric() { return m_metric; }
+    inline const MatrixD& Imetric() const { return m_Imetric; }
     
-    // inline const std::vector< std::vector< double > >& Imetric() 
-    // { return m_Imetric; }
+    inline const std::vector<MatrixD>& Tprods() const { return m_Tprods; }
 
-    inline MatrixD Imetric() { return m_Imetric; }
+    inline bool hasTrafo() const { return m_trafoMatrix.numElements()>0; }
     
-    inline const std::vector< std::vector< std::vector< double > > >& Tprods() 
-    { return m_Tprods; }
-
-    inline bool hasTrafo() { return !m_trafoMatrix.empty(); }
-    
-    std::vector<std::vector<double>> TransformationMatrix() {
-      if(m_trafoMatrix.empty()) {
-        std::vector<std::vector<double>> ret = std::vector<std::vector<double>>(m_metric.numCols(), std::vector<double>(m_metric.numRows(),0));
-        for(size_t i=0; i<m_trafoMatrix.size(); i++) m_trafoMatrix[i].at(i) = 1;
-        return ret;
+    MatrixD TransformationMatrix() {
+      if(!hasTrafo()) {
+        return MatrixD::diagonal(1,m_metric.numCols(),0);
       }
       return m_trafoMatrix;
     }
   };
   
   typedef std::map<std::string, CMetric_Base*> CMetric_Map;
-  typedef std::map<std::string, std::vector< std::vector<double> > > Tprod_Map;
+  //  typedef std::map<std::string, std::vector< std::vector<double> > > Tprod_Map;
 }
 #endif

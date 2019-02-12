@@ -276,28 +276,29 @@ void CM_Generic::CalcTs(){
   int DIM = m_reader.GetValue<int>("DIM_CS", -1);
   if(DIM < 0) DIM = m_reader.GetValue<int>("DIM", -1);
   if(DIM < 0) {
-    ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() );
-    in >> DIM;
+    THROW(fatal_error, "Old format not supported anymore.")
+    /* ifstream in( (m_rpath+m_filename+"/"+m_filename+".dat").c_str() ); */
+    /* in >> DIM; */
     
-    for (size_t i=0;i<m_Tprods.size();i++)
-    m_Tprods[i].clear();
-    m_Tprods.clear();
+    /* for (size_t i=0;i<m_Tprods.size();i++) */
+    /* m_Tprods[i].clear(); */
+    /* m_Tprods.clear(); */
     
-    for(int i = 1; i<=m_ntot; i++){
-      for(int j = i+1; j<=m_ntot; j++){
+    /* for(int i = 1; i<=m_ntot; i++){ */
+    /*   for(int j = i+1; j<=m_ntot; j++){ */
         
-        std::vector< std::vector< double > > tmp_tp;
+    /*     std::vector< std::vector< double > > tmp_tp; */
         
-        tmp_tp.resize(DIM);
-        for (int l = 0; l < DIM; l++) {
-          tmp_tp[l].resize(DIM);   
-          for (int m = 0; m < DIM; m++) {
-	    in >> tmp_tp[l][m];
-	  }
-        }
-	m_Tprods.push_back(tmp_tp);
-      }
-    }
+    /*     tmp_tp.resize(DIM); */
+    /*     for (int l = 0; l < DIM; l++) { */
+    /*       tmp_tp[l].resize(DIM);    */
+    /*       for (int m = 0; m < DIM; m++) { */
+    /*         in >> tmp_tp[l][m]; */
+    /*       } */
+    /*     } */
+    /*     m_Tprods.push_back(tmp_tp); */
+    /*   } */
+    /* } */
   }
   else {
     m_Tprods.clear();
@@ -306,11 +307,11 @@ void CM_Generic::CalcTs(){
         string mat = "C_"+std::to_string(i)+std::to_string(j);
         msg_Debugging()<<"Read matrix "<<mat<<".\n";
         m_Tprods.push_back(m_reader.GetMatrix<double>(mat,DIM));
-        if(m_Tprods.back().empty() || m_Tprods.back().size()!=DIM ||
-           m_Tprods.back().back().size()!=DIM) {
+        if(m_Tprods.back().numCols()!=DIM ||
+           m_Tprods.back().numRows()!=DIM) {
           // if not all Tprods are found, or they are not complete,
           // it doesnt make sense to have some of
-          // them, and code that uses them can not proceed
+          // them, code that requires them can not proceed
           m_Tprods.clear();
           return;
         }
@@ -322,12 +323,12 @@ void CM_Generic::CalcTs(){
 void CM_Generic::CalcTransformationMatrix() {
   int DIM_BASIS = m_reader.GetValue<int>("DIM_BASIS", -1);
   int DIM_CS = m_reader.GetValue<int>("DIM_CS", -1);
-  m_trafoMatrix.clear();
+  m_trafoMatrix = MatrixD();
   if(!(DIM_BASIS < 0 || DIM_CS < 0)) {
     m_trafoMatrix = m_reader.GetMatrix<double>("TRAFO",DIM_BASIS); 
-    if(m_trafoMatrix.size()!=DIM_CS || m_trafoMatrix.back().size()!=DIM_BASIS) {
+    if(m_trafoMatrix.numCols()!=DIM_CS || m_trafoMatrix.numRows()!=DIM_BASIS) {
       // if the matrix was not complete, treat as if none was found
-      m_trafoMatrix.clear();
+      m_trafoMatrix = MatrixD();
     }
   }
 }
