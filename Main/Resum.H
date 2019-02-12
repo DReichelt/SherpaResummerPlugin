@@ -80,11 +80,6 @@ namespace RESUM {
 		    double &Rp,double &Collexp);
     double CalcPDF(const double L,double &PDFexp);
     double T(const double x);
-    void printMatrix(const Complex rhs[],const size_t dim);
-    void matMult(Complex ResMat[],const Complex ArrMat[],
-		 const std::vector<std::vector<double> > VecMat);
-    Complex* H_conjugate(const Complex ResMat[],size_t dim);
-
     double Value(const double &v);
 
   public:
