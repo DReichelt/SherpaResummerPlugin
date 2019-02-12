@@ -7,6 +7,7 @@
 #include <complex>
 
 #include "Math/matexp.hpp"
+#include "Math/asa007.hpp"
 
 using std::valarray;
 using std::slice;
@@ -200,7 +201,8 @@ public:
   }
 
   /// Multiplication with scalar.
-  Matrix<T>& operator*=(T b)
+  template <typename Y>
+  Matrix<T>& operator*=(Y b)
   {
     m_data *= b;
     return *this;
@@ -251,13 +253,28 @@ public:
     return Transpose(*this);
   }
 
+  /// Calculate the conjugate of the the matrix in-place.
+  /**
+     This is really in-place only for square matrices.
+  */
+  Matrix<T> conjugateInPlace() {
+    m_data = m_data.apply(std::conj);
+    return *this;
+  }
+
+  /// Return the hermitian transpose of the matrix.
+  Matrix<T> conjugate() const {
+    return Conjugate(*this);
+  }
+  
+  
   /// Calculate the hermitian transpose of the the matrix in-place.
   /**
      This is really in-place only for square matrices.
   */
   Matrix<T> hermitianTransposeInPlace() {
     transposeInPlace();
-    m_data = m_data.apply(std::conj);
+    conjugateInPlace();
     return *this;
   }
 
@@ -266,6 +283,65 @@ public:
     return HermitianTranspose(*this);
   }
 
+  /// Calculate matrix exponential of this matrix in place;
+  Matrix<T> exponentiateInPlace() {
+    T* result = c8mat_expm1(numCols(), &m_data[0]);
+    m_data = {result, numElements()};
+    delete [] result;
+    return *this;
+  }
+
+  /// Calculate matrix exponential of this matrix;
+  Matrix<T> exponentiate() {
+    return exp(*this);
+  }
+
+  void _toLowTriang() {
+    size_t k = 1;
+    for(size_t i=1; i<m_dim; i++) {
+      for(size_t j=0; j<=i; j++) {
+        std::swap(m_data[k], element(i,j));
+        k++;
+      }
+    }
+  }
+
+  void _fromLowTriang(valarray<T> new_data) {
+    size_t k = 0;
+    for(size_t i=0; i<m_dim; i++) {
+      for(int j=0; j<=i; j++) {
+        std::swap(element(i,j), new_data[k]);
+        if(i!=j) element(j,i) =  element(i,j);
+        k++;
+      }
+    }
+  }
+  
+  Matrix<T> inverseLowerTriangularInPlace() {
+    _toLowTriang();
+    int nullity;
+    int ifault;
+    std::vector<double> W(m_dim);
+    valarray<T> new_data(m_dim*(m_dim+1)/2);
+    syminv(&m_data[0], m_dim, &new_data[0], &W[0],
+           &nullity, &ifault);
+    switch(ifault) {
+    case 0: break;
+    case 1: msg_Error()<<"N < 1.\n"; break;
+    case 2: msg_Error()<<"A is not positive semi-definite.\n"; break;
+    default: msg_Error()<<"Unexpected Error code in syminv.\n"; break;
+    }
+    _fromLowTriang(std::move(new_data));
+    return *this;
+  }
+
+  Matrix<T> inverseLowerTriangular() {
+    return InverseLowerTriangular(*this);
+  }
+
+  friend Matrix<T> InverseLowerTriangular(Matrix<T> matrix) {
+    return matrix.inverseLowerTriangularInPlace();
+  }
   
   // \}
   
@@ -427,6 +503,11 @@ public:
     }
   }
 
+  /// Calculate the conjugate of \p matrix.
+  friend inline Matrix<T> Conjugate(Matrix<T> matrix) {
+    return matrix.conjugateInPlace();
+  }
+
   /// Calculate the hermitian transpose of \p matrix.
   friend inline Matrix<T> HermitianTranspose(Matrix<T> matrix) {
     return matrix.hermitianTransposeInPlace();
@@ -434,13 +515,7 @@ public:
   
   /// Calculate matrix exponential of \p x.
   friend Matrix<T> exp(Matrix<T> x) {
-    T* result = c8mat_expm1(x.numCols(), &x.data()[0]);
-    valarray<T> ret(x.numElements());
-    for(size_t i=0; i<x.numElements(); i++) {
-      ret[i] = *result;
-      result++;
-    }
-    return Matrix<T>(ret, x.numCols());
+    return x.exponentiateInPlace();
   } 
   
   /// Determine whether \p a and \p b have the same number of rows and columns
@@ -476,16 +551,16 @@ inline Matrix<T> operator*(Matrix<T> lhs, const Matrix<T>& rhs)
 }
 
 /// Multiplication of matrix with scalar.
-template <typename T>
-inline Matrix<T> operator*(Matrix<T> lhs, T rhs)
+template <typename T, typename Y>
+inline Matrix<T> operator*(Matrix<T> lhs, Y rhs)
 {
   lhs *= rhs;
   return lhs;
 }
 
 /// Multiplication of scalar with matrix.
-template <typename T>
-inline Matrix<T> operator*(T lhs, Matrix<T> rhs)
+template <typename T, typename Y>
+inline Matrix<T> operator*(Y lhs, Matrix<T> rhs)
 {
   rhs *= lhs;
   return rhs;
