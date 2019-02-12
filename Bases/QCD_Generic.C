@@ -238,18 +238,19 @@ void CM_Generic::CalcMetric(){
   if(DIM<0) DIM = m_reader.GetValue<int>("DIM",-1);
 
   if(DIM < 0) {
-    msg_Debugging()<<"Read old format from "<<m_rpath+m_filename+'/'+m_filename+"_met.dat"<<"\n";
-    ifstream in( (m_rpath+m_filename+'/'+m_filename+"_met.dat").c_str() );
-    in >> DIM;
+    THROW(fatal_error, "Old format not supported anymore.")
+    /* msg_Debugging()<<"Read old format from "<<m_rpath+m_filename+'/'+m_filename+"_met.dat"<<"\n"; */
+    /* ifstream in( (m_rpath+m_filename+'/'+m_filename+"_met.dat").c_str() ); */
+    /* in >> DIM; */
     
-    m_metric.resize(DIM);
-    for (size_t i = 0; i < DIM; i++) {
-      m_metric[i].resize(DIM);   
-      for (size_t j = 0; j < DIM; j++) {
-        in >> m_metric[i][j];
-      }
-    }
-    in.close();
+    /* m_metric.resize(DIM); */
+    /* for (size_t i = 0; i < DIM; i++) { */
+    /*   m_metric[i].resize(DIM);    */
+    /*   for (size_t j = 0; j < DIM; j++) { */
+    /*     in >> m_metric[i][j]; */
+    /*   } */
+    /* } */
+    /* in.close(); */
   }
   else {
     msg_Debugging()<<"Read in metric.\n";
@@ -260,12 +261,13 @@ void CM_Generic::CalcMetric(){
 
 
 void CM_Generic::CalcIMetric(){
+
+  m_Imetric = InverseLowerTriangular(m_metric);
+  /* for (size_t i=0;i<m_Imetric.size();i++) */
+  /* m_Imetric[i].clear(); */
+  /* m_Imetric.clear(); */
   
-  for (size_t i=0;i<m_Imetric.size();i++)
-  m_Imetric[i].clear();
-  m_Imetric.clear();
-  
-  m_Imetric = CalcInverse(m_metric);
+  /* m_Imetric = CalcInverse(m_metric); */
 
 }
 

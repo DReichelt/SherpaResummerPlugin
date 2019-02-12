@@ -201,8 +201,7 @@ public:
   }
 
   /// Multiplication with scalar.
-  template <typename Y>
-  Matrix<T>& operator*=(Y b)
+  Matrix<T>& operator*=(T b)
   {
     m_data *= b;
     return *this;
@@ -296,27 +295,7 @@ public:
     return exp(*this);
   }
 
-  void _toLowTriang() {
-    size_t k = 1;
-    for(size_t i=1; i<m_dim; i++) {
-      for(size_t j=0; j<=i; j++) {
-        std::swap(m_data[k], element(i,j));
-        k++;
-      }
-    }
-  }
-
-  void _fromLowTriang(valarray<T> new_data) {
-    size_t k = 0;
-    for(size_t i=0; i<m_dim; i++) {
-      for(int j=0; j<=i; j++) {
-        std::swap(element(i,j), new_data[k]);
-        if(i!=j) element(j,i) =  element(i,j);
-        k++;
-      }
-    }
-  }
-  
+  /// Calculate the inverse of the symmetric matrix with lower triangular matrix equal to this one in place.
   Matrix<T> inverseLowerTriangularInPlace() {
     _toLowTriang();
     int nullity;
@@ -335,14 +314,10 @@ public:
     return *this;
   }
 
+  /// Calculate the inverse of the symmetric matrix with lower triangular matrix equal to this one.
   Matrix<T> inverseLowerTriangular() {
     return InverseLowerTriangular(*this);
-  }
-
-  friend Matrix<T> InverseLowerTriangular(Matrix<T> matrix) {
-    return matrix.inverseLowerTriangularInPlace();
-  }
-  
+  }  
   // \}
   
   /// \name Element access.
@@ -372,7 +347,7 @@ public:
   // \{
   /// Return the number of columns.
   inline size_t numCols() const { return m_dim; }
-
+  
   /// Return the number of rows.
   inline size_t numRows() const { return numCols()==0 ? 0 : numElements()/numCols(); }
   
@@ -429,6 +404,9 @@ public:
 
 private:
 
+  /// \name Internal.
+  // \{
+
   /// Does the actual work in corresponding constructors.
   void _init(const std::vector<std::vector<T>>& mat) {
     if(!mat.empty()) {
@@ -466,6 +444,46 @@ private:
       THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
     }
   }
+
+  /// Internal helper, place lower triangular matrix in m_data
+  /** Fills the first m_dim*(m_dim+1)/2 entries of m_data with
+      element(0,0)
+      element(1,0) element(1,1)
+      element(2,0) element(2,1) element(2,2)
+      ...
+      Matrix is not valid after that, this is for use with syminv 
+      (and where appropriate). Functions that call this should usually also call
+      _fromLowTriang or replace m_data in some other way...
+   */
+  void _toLowTriang() {
+    size_t k = 1;
+    for(size_t i=1; i<m_dim; i++) {
+      for(size_t j=0; j<=i; j++) {
+        std::swap(m_data[k], element(i,j));
+        k++;
+      }
+    }
+  }
+
+  /// Internal helper, creates m_data from lower triangular matrix \p new_data
+  /** Assumes new_data contains values corresponding to
+      element(0,0)
+      element(1,0) element(1,1)
+      element(2,0) element(2,1) element(2,2)
+      ...
+      and fills m_data correspondingly. Matrix is valid after that.
+   */
+  void _fromLowTriang(valarray<T> new_data) {
+    size_t k = 0;
+    for(size_t i=0; i<m_dim; i++) {
+      for(int j=0; j<=i; j++) {
+        std::swap(element(i,j), new_data[k]);
+        if(i!=j) element(j,i) =  element(i,j);
+        k++;
+      }
+    }
+  }
+  // \}
 
 public:
   /// Stream output.
@@ -517,6 +535,11 @@ public:
   friend Matrix<T> exp(Matrix<T> x) {
     return x.exponentiateInPlace();
   } 
+
+  /// Calculate the inverse of the symmetric matrix with lower triangular matrix equal \p matrix.
+  friend Matrix<T> InverseLowerTriangular(Matrix<T> matrix) {
+    return matrix.inverseLowerTriangularInPlace();
+  }
   
   /// Determine whether \p a and \p b have the same number of rows and columns
   friend inline bool sameDim(const Matrix<T>& a, const Matrix<T>& b) {

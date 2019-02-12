@@ -20,8 +20,11 @@ namespace RESUM {
   class CMetric_Base {
   protected:
     std::string m_name;
-    std::vector< std::vector< double > > m_metric,  m_Imetric;
+    
+    MatrixD m_metric,  m_Imetric;
+
     std::vector<double> m_prefactors;
+    
     std::vector<std::vector<double>> m_trafoMatrix;
     std::vector<  std::vector< std::vector< double > > > m_Tprods;
     std::vector< PHASIC::Idx_Vector > m_perms;
@@ -52,7 +55,7 @@ namespace RESUM {
 
     MatrixD PrefMatrix() {
       size_t dim = -1;
-      if(m_trafoMatrix.empty()) dim = m_metric.size();
+      if(m_trafoMatrix.empty()) dim = m_metric.numCols();
       else dim = m_trafoMatrix.at(0).size();
       MatrixD ret(nullptr, dim, dim, 0);
       for(size_t i=0; i<m_prefactors.size(); i++) {
@@ -64,12 +67,16 @@ namespace RESUM {
     }
 
     
-    inline const std::vector< std::vector< double > >& CMetric() 
-    { return m_metric; }
+    // inline const std::vector< std::vector< double > >& CMetric() 
+    // { return m_metric; }
 
-    inline const std::vector< std::vector< double > >& Imetric() 
-    { return m_Imetric; }
+    inline MatrixD CMetric() { return m_metric; }
+    
+    // inline const std::vector< std::vector< double > >& Imetric() 
+    // { return m_Imetric; }
 
+    inline MatrixD Imetric() { return m_Imetric; }
+    
     inline const std::vector< std::vector< std::vector< double > > >& Tprods() 
     { return m_Tprods; }
 
@@ -77,7 +84,7 @@ namespace RESUM {
     
     std::vector<std::vector<double>> TransformationMatrix() {
       if(m_trafoMatrix.empty()) {
-        std::vector<std::vector<double>> ret = std::vector<std::vector<double>>(m_metric.size(), std::vector<double>(m_metric.size(),0));
+        std::vector<std::vector<double>> ret = std::vector<std::vector<double>>(m_metric.numCols(), std::vector<double>(m_metric.numRows(),0));
         for(size_t i=0; i<m_trafoMatrix.size(); i++) m_trafoMatrix[i].at(i) = 1;
         return ret;
       }

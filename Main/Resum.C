@@ -322,10 +322,10 @@ double Resum::CalcS(const double L, double &Softexp)
   const double as = (*p_as)(p_ampl->MuR2());
   const double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
   const double lambda = as*beta0*L; 
-  const double t = (m_amode & MODE::EXPAND) ? T(lambda/m_a[0]) : 2*as*L/M_PI;
+  const double t = (!(m_amode & MODE::EXPAND)) ? T(lambda/m_a[0]) : 2*as*L/M_PI;
   
-  const MatrixD& met = MatrixD(p_cmetric->CMetric());
-  const MatrixC& ICmetric = MatrixD(p_cmetric->Imetric());
+  const MatrixD& met = p_cmetric->CMetric();
+  const MatrixC& ICmetric = p_cmetric->Imetric();
 
   const size_t dim = met.numCols();
   
