@@ -102,9 +102,11 @@ int Resum::PerformShowers()
       m_logdbar.push_back(ps.m_d);
     }
     // select a random bin
-    size_t i = 1+m_hist[n]->Nbin()*ran->Get();
-    double xl = m_hist[n]->LowEdge(i), yl=Value(xl);
-    double xh = m_hist[n]->HighEdge(i), yh=Value(xh);
+    const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
+    const double xl = m_hist[n]->LowEdge(i);
+    const double xh = m_hist[n]->HighEdge(i);
+    const double yl = Value(xl);
+    const double yh = Value(xh);
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -233,10 +235,10 @@ bool Resum::PrepareShower
     m_cmetrics.insert(make_pair(pname,cmetric));
   }
 
-  m_ordered_ids = vector<size_t>(p_ampl->Legs().size());
-  for(size_t i=0; i<p_ampl->Legs().size(); i++) {
-    m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id();
-  }
+  /* m_ordered_ids = vector<size_t>(p_ampl->Legs().size()); */
+  /* for(size_t i=0; i<p_ampl->Legs().size(); i++) { */
+  /*   m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id(); */
+  /* } */
   
   p_cmetric=cmetric;
  
