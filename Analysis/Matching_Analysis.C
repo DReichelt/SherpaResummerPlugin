@@ -25,6 +25,16 @@ namespace RESUM {
                SKIP_PDFR = 1        << 6   // skip the pdf ratio
     };
 
+    const std::map<std::string,MODE> m_ModeToEnum = {{"DEFAULT", MODE::DEFAULT},
+                                                     {"SKIP_REAL", MODE::SKIP_REAL},
+                                                     {"SKIP_SUBT", MODE::SKIP_SUBT},
+                                                     {"SKIP_SCOL", MODE::SKIP_SCOL},
+                                                     {"SKIP_COLL", MODE::SKIP_COLL},
+                                                     {"SKIP_NORM", MODE::SKIP_NORM},
+                                                     {"SKIP_SOFT", MODE::SKIP_SOFT},
+                                                     {"SKIP_PDFR", MODE::SKIP_PDFR}};
+
+
     
   private:
 
@@ -53,6 +63,7 @@ namespace RESUM {
 #include "ATOOLS/Org/Data_Reader.H"
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Org/Message.H"
+#include "Tools/StringTools.H"
 #include <algorithm>
 
 #ifdef USING__ROOT
@@ -71,7 +82,15 @@ Matching_Analysis::Matching_Analysis(const Argument_Matrix &params):
   DEBUG_FUNC(this);
   m_name+="_Resum";
   Data_Reader reader(",",";","!","=");
-  m_mode=static_cast<MODE>(reader.GetValue<int>("MATCHING_TEST",0));
+  const std::string& mode = reader.GetValue<std::string>("MATCHING_TEST","DEFAULT");
+  if(is_int(mode)) {
+    m_mode = static_cast<MODE>(to_type<int>(mode));
+  }
+  else {
+    for(const std::string& m: split(mode,"\\|")) {
+      m_mode = static_cast<MODE>(m_mode | m_ModeToEnum.at(m));
+    }
+  }
   Algebra_Interpreter *ip=reader.Interpreter();
   for (size_t i(1);i<params.size();++i) {
     if (params[i].size()<5) continue;
@@ -167,11 +186,15 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     double tau = y;
 
     double lrat = 0;
-    if(!(m_mode & MODE::SKIP_COLL)) lrat += sub->m_lt[1]/sub->m_lt[0];
+    if(!(m_mode & MODE::SKIP_COLL)) {
+      lrat += sub->m_lt[1]/sub->m_lt[0];
+    }
     if ((sub->m_i<2 && sub->p_fl[sub->m_ijt]==real->p_fl[sub->m_i]) ||
 	(sub->m_i>=2 && (sub->p_fl[sub->m_ijt]==real->p_fl[sub->m_i] ||
 			 sub->p_fl[sub->m_ijt]==real->p_fl[sub->m_j]))) {
-      if (!(m_mode & MODE::SKIP_NORM)) lrat+=2.0*m_obss[i]->Shift(sub)/sub->m_lt[0]/ps.m_a;
+      if (!(m_mode & MODE::SKIP_NORM)) {
+        lrat+=2.0*m_obss[i]->Shift(sub)/sub->m_lt[0]/ps.m_a;
+      }
       if (!(m_mode & MODE::SKIP_SOFT)) {
 	double sij=dabs(2.0*sub->p_mom[sub->m_ijt]*sub->p_mom[sub->m_kt]);
         lrat+=log(sij/sub->m_mu2[stp::res])/sub->m_lt[0]*(ps.m_a+ps.m_b)/ps.m_a;
@@ -229,7 +252,6 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     ((TH2D*)(*MYROOT::myroot)["yzplot"])->Fill
       (log(tau),log(1.0-z),dabs(weight)*lrat*pdfrat);
 #endif
-    
     FillHisto(i, tau, weight*lrat*pdfrat, ncount, mode);
   }
 }
