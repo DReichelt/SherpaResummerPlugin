@@ -1,0 +1,37 @@
+#-*- mode: python-*- 
+import sys
+import yoda
+
+yodas = []
+for f in sys.argv[1:]:
+    name = f.split(".")[0]
+    xmins = []
+    vals = []
+    errs = []
+    with open(f, "r") as dat:
+        lines = dat.readlines()[1:]
+        Num = len(lines)-1
+        for line in lines:
+            spl = line.split()
+            if len(spl) == 3:
+                xm, v, err = spl
+            elif len(spl) == 2:
+                xm, v = spl
+                err = 0
+            else:
+                raise
+            xmins.append(float(xm))
+            vals.append(float(v))
+            errs.append(float(err))
+    scatter = yoda.Scatter2D(path="Resum/"+name, title="Resum/"+name)
+    for i in range(Num):
+        xmin = xmins[i]
+        xmax = xmins[i+1]
+        xerr = (xmax-xmin)/2.
+        val = vals[i]
+        err = errs[i]
+        scatter.addPoint(xmin+xerr,val,xerrs=xerr,yerrs=err)
+    yodas.append(scatter)
+        
+yoda.core.writeYODA(yodas, "Resum.yoda")
+

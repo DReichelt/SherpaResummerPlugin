@@ -1,7 +1,11 @@
+#ifndef RESUM_RESUM_H
+#define RESUM_RESUM_H
+
 #include "PDF/Main/Shower_Base.H"
 
 #include "Main/Comix_Interface.H"
 #include "Tools/CMetric_Base.H"
+
 #include <map>
 #include <string>
 
@@ -75,11 +79,12 @@ namespace RESUM {
     MODE m_amode = MODE::RESUM;
     
     double CalcS(const double L,double &Softexp);
-    double CalcF(const double L);
+    double CalcF(const double Rp);
     double CalcColl(const double L,const int order,
 		    double &Rp,double &Collexp);
     double CalcPDF(const double L,double &PDFexp);
     double T(const double x);
+
     double Value(const double &v);
 
   public:
@@ -104,12 +109,14 @@ namespace RESUM {
 		  const ATOOLS::Flavour &flk,const int type,
 		  const int cpl,const double &mu2) const;
 
-    size_t AddObservable(Observable_Base *const obs,
+    virtual size_t AddObservable(Observable_Base *const obs,
 			 ATOOLS::Histogram *const h);
 
     std::pair<int, double> Result(int n) const { return m_ress.at(n); }
-
+    virtual void ResetObservables();
 
   };// end of class Resum
   
 }// end of namespace RESUM
+
+#endif

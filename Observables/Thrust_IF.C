@@ -19,14 +19,17 @@ namespace RESUM {
     Observable_Base(args) {}
 
     Obs_Params Parameters
-    (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
+      (const std::vector<Vec4D>& p,
+       const std::vector<Flavour>& fl,
+       const size_t& l) {
       return Obs_Params(1.0,1.0,0.0,0.0);
     }
 
-    double Value(const Vec4D *ip,const Flavour *fl,
-		 const size_t &nn,const size_t &nin)
+    double Value(const std::vector<Vec4D>& ip,
+                 const std::vector<Flavour>& fl,
+		 const size_t &nin)
     {
+      size_t nn = ip.size();
       // identify particles, reconstruct beam
       Vec4D asum;
       Vec4D_Vector moms(1);

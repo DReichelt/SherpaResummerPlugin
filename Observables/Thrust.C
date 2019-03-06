@@ -23,8 +23,9 @@ namespace RESUM {
     Observable_Base(args) {}
 
     Obs_Params Parameters
-    (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
+      (const std::vector<ATOOLS::Vec4D>& p,
+       const std::vector<ATOOLS::Flavour>& fl,
+       const size_t &l) {
       double a=1.0;
       double b=l<2?0.0:1.0;
       double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
@@ -67,9 +68,11 @@ namespace RESUM {
       return a.Sqr()>b.Sqr();
     }
 
-    double Value(const Vec4D *p,const Flavour *fl,
-		 const size_t &n,const size_t &nin)
+    double Value(const std::vector<Vec4D>& p,
+                 const std::vector<Flavour>& fl,
+		 const size_t &nin)
     {
+      size_t n = p.size();
       Vec3D lastaxis, curraxis, thrustaxis;
       double maxthrust=0., lastthrust , currthrust, thrust;
       std::vector<Vec3D> vectors(n-nin);

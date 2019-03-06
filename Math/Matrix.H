@@ -10,13 +10,14 @@
 #include "Math/asa007.hpp"
 
 using std::valarray;
-using std::slice;
+
 
 /// Basic matrix class.
 /**
     Class implementing basic functionality. If you need more, use some
     linear algebra library.
 */
+  
 template <typename T>
 class Matrix {
 

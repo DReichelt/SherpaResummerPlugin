@@ -19,8 +19,9 @@ namespace RESUM {
     Observable_Base(args) {}
 
     Obs_Params Parameters
-    (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
+      (const std::vector<Vec4D>& p,
+       const std::vector<Flavour>& fl,
+       const size_t &l) {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
@@ -29,10 +30,12 @@ namespace RESUM {
       return 2.0*sqr(Min(p1[0],p2[0]))*(1.0-p1.CosTheta(p2));
     }
 
-    double Value(const Vec4D *ip,const Flavour *fl,
-		 const size_t &nn,const size_t &nin)
+    double Value(const std::vector<Vec4D>& ip,
+                 const std::vector<Flavour>& fl,
+		 const size_t &nin)
     {
       Vec4D sum;
+      size_t nn = ip.size();
       Vec4D_Vector p(&ip[nin],&ip[nn]);
       for (size_t i(0);i<p.size();++i) sum+=p[i];
       Poincare cms(sum);

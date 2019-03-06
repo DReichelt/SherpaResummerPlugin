@@ -19,8 +19,9 @@ namespace RESUM {
     Observable_Base(args) {}
 
     Obs_Params Parameters
-    (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
+      (const std::vector<ATOOLS::Vec4D>& p,
+       const std::vector<ATOOLS::Flavour>& fl,
+       const size_t& l) {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
@@ -31,9 +32,11 @@ namespace RESUM {
 	(cosh(p1.Y()-p2.Y())-cos(p1.DPhi(p2)));
     }
 
-    double Value(const Vec4D *ip,const Flavour *fl,
-		 const size_t &nn,const size_t &nin)
+    double Value(const std::vector<Vec4D>& ip,
+                 const std::vector<Flavour>& fl,
+		 const size_t &nin)
     {
+      size_t nn = ip.size();
       Vec4D Q;
       Vec4D_Vector p;
       for (size_t i(nin);i<nn;++i) {

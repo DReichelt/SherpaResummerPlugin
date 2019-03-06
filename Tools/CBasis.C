@@ -1,3 +1,6 @@
+#ifndef RESUM_CBASIS_C
+#define RESUM_CBASIS_C
+
 #include "Tools/CBasis.H"
 #include "ATOOLS/Org/Message.H"
 #include <iostream>
@@ -230,6 +233,6 @@ inline void Minus(std::vector< std::vector <double> > &ts){
   }
 }
 
-
+#endif
 
 

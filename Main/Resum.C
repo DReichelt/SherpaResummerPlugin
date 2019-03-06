@@ -27,6 +27,7 @@ using namespace ATOOLS;
 using namespace MODEL;
 
 using std::string;
+
 using std::vector;
 using std::complex;
 
@@ -96,6 +97,7 @@ int Resum::PerformShowers()
                                             moms.size(),i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
+
       /// @TODO we have ps.m_d and ps.m_g, in CAESAR notation
       /// logdbar = log (d*average(g))
       /// but we just use logdbar = ps.m_d
@@ -117,7 +119,7 @@ int Resum::PerformShowers()
   return 1;
 }
 
-double Resum::Value(const double& v)
+double Resum::Value(const double &v, const int n)
 {
   DEBUG_FUNC(v);
   const double L = log(1.0/v);
@@ -129,6 +131,7 @@ double Resum::Value(const double& v)
   weight*=CalcPDF(L, PDFexp); 
   //calc collinear piece
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
+  weight*=m_obss[n]->CalcF(Rp);
   weight*=CalcF(Rp);	
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
@@ -296,6 +299,12 @@ size_t Resum::AddObservable(Observable_Base *const obs,
   m_hist.push_back(h);
   m_ress.push_back({-1,-1});
   return m_ress.size()-1;
+}
+
+void Resum::ResetObservables() {
+  m_obss.clear();
+  m_hist.clear();
+  m_ress.clear();
 }
 
 double Resum::CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
@@ -545,7 +554,6 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 							 +m_a[i]*log(1-2.*lambda/m_a[i])
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1);
-
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
@@ -616,6 +624,47 @@ double Resum::CalcPDF(const double L, double &PDFexp)
 
   return new_pdffac/old_pdffac;
 }
+
+void Resum::printMatrix(const Complex rhs[], const size_t dim){
+    msg_Debugging()<<"{\n";
+    for (size_t i=0;i<dim;i++) {
+      msg_Debugging()<<"  {";
+      for (size_t j=0;j<dim;j++) {
+	 msg_Debugging()<< (fabs(rhs[i*dim+j].real()) > .001 ? rhs[i*dim+j].real() : 0) <<"+"
+		  <<rhs[i*dim+j].imag()<<((j+1<dim)?"I,":"I");
+      }
+      msg_Debugging()<<((i+1==dim)?"}\n":"},\n");
+    }
+    msg_Debugging()<<"}\n";  
+}
+
+
+//Matrix Multiplication
+void Resum::matMult(Complex ResMat[], const Complex ArrMat[], const std::vector< std::vector< double > > VecMat){
+    size_t dim = VecMat.size();
+    for (size_t i=0;i<dim;i++) {
+        for (size_t j=0;j<dim;j++){
+    	   for (size_t k=0;k<dim;k++){
+	     ResMat[i*dim+j] = Complex(ResMat[i*dim+j].real() + VecMat[k][i]*ArrMat[j*dim+k].real(),
+				       ResMat[i*dim+j].imag() + VecMat[k][i]*ArrMat[j*dim+k].imag());
+	   }      
+	}
+    }
+}
+
+//Hermition conjugate 
+Complex* Resum::H_conjugate(const Complex ResMat[], size_t dim) {
+complex<double> hold;
+Complex *result = new Complex[dim*dim];
+for (size_t i=0;i<dim;i++) {
+        for (size_t j=0;j<dim;j++){ 
+	  hold = ResMat[i*dim+j];
+	  result[j*dim+i] = conj(hold);
+	}
+    }
+ return result;
+}
+
 
 
 DECLARE_GETTER(Resum,"Resum",Shower_Base,Shower_Key);

@@ -11,7 +11,7 @@
 }(run);
 (processes){
   Process 93 93 -> 93 93;
-  Order (*,0)
+  Order (*,0);
   End process;
 }(processes);
 

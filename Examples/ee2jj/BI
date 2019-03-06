@@ -19,15 +19,13 @@
   BEGIN_ANALYSIS {
     LEVEL Shower; PATH_PIECE BI/;
     Resum { FinalState;
+      HeavyJetMass 0 1 100 LinErr;
       Thrust_FF 0 1 100 LinErr;
-      Thrust_FF 1e-8 1 80 LogErr;
-      Thrust_FF 1.12535174719e-07 1 80 LnErr;
-      Y3_FF 0 1 100 LinErr;
-      Y3_FF 1e-8 1 80 LogErr;
-      Y3_FF 1.12535174719e-07 1 80 LnErr;
-      TThrust_FF 0 1 100 LinErr;
-      TThrust_FF 1e-8 1 80 LogErr;
-      TThrust_FF 1.12535174719e-07 1 80 LnErr;
-    }
+    #   Thrust_FF 1e-8 1 80 LogErr;
+    #   Thrust_FF 1.12535174719e-07 1 80 LnErr;
+    #   Y3_FF 0 1 100 LinErr;
+    #   Y3_FF 1e-8 1 80 LogErr;
+    #   Y3_FF 1.12535174719e-07 1 80 LnErr;
+    # }
   } END_ANALYSIS;
 }(analysis);
