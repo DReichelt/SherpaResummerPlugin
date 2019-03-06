@@ -250,9 +250,9 @@ bool Resum::PrepareShower
   std::vector<int> tmp_sig;
   int p_it;
   for (int i = 0 ; i < (n_g + n_aq + n_q) ; i++) {
-    p_it = p_cmetric->Map(i);   
-    Flavour flav = p_ampl->Leg(p_it + color_sings)->Flav();
-    Vec4D tmp = p_ampl->Leg(p_it + color_sings)->Mom();
+    p_it = p_cmetric->Map(i);  
+    Flavour flav = p_ampl->Leg(p_it)->Flav();
+    Vec4D tmp = p_ampl->Leg(p_it)->Mom();
     //Determine color sign
     int sign = (tmp[0] > 0 ? 1 : -1);
     tmp_sig.push_back(sign);

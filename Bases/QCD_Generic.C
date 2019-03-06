@@ -52,7 +52,7 @@ namespace RESUM {
     
   private:
     Reader m_reader;
-    int m_ng,m_nq,m_naq,m_ntot;    
+    int m_ng,m_nq,m_naq,m_ntot,m_nsinglet;    
     
   public:
     
@@ -103,14 +103,22 @@ CM_Generic::CM_Generic(const CMetric_Key &args):
   }
   
   m_ntot = m_ng+m_nq+m_naq;
+  m_nsinglet = args.p_ampl->Legs().size()-m_ntot;
   m_filename = "";
   for(unsigned i = 0; 2*i < m_nq+m_naq; i++) {
     m_filename = m_filename + "qqb";
   }
   for(unsigned i = 0; i < m_ng; i++) m_filename = m_filename + "g";
-  m_map.resize(m_ntot);
-  m_pam.resize(m_ntot);
-  for (size_t i(0);i<m_ntot;++i) m_pam[m_map[i]=(m_ng+i)%(m_ng+m_naq+m_nq)]=i;
+  m_map.resize(m_ntot+m_nsinglet);
+  m_pam.resize(m_ntot+m_nsinglet);
+  for (size_t i=0; i<m_ntot; i++) {
+    m_map[i]= m_nsinglet + (m_ng+i)%(m_ntot);
+    m_pam[m_map[i]]=i;
+  }
+  for(size_t i=m_ntot; i<m_ntot+m_nsinglet; i++) {
+    m_map[i] = i-m_ntot;
+    m_pam[m_map[i]] = i;
+  }
 
   // TODO: look in more reasonable localtions and terminate properly if
   //       nothing is found
@@ -209,6 +217,10 @@ void CM_Generic::ReadPermutations(Cluster_Amplitude *ampl) {
       for(const int t: tmp) {
         msg_Debugging()<<t<<" -> "<<Map(t)<<" -> "<<ID(ampl->Leg(Map(t))->Id()).front()<<"; ";
         m_perms.back().emplace_back(ID(ampl->Leg(Map(t))->Id()).front());
+      }
+      for(int i=m_ntot; i<m_map.size(); i++) {
+        msg_Debugging()<<i<<" -> "<<Map(i)<<" -> "<<ID(ampl->Leg(Map(i))->Id()).front()<<"; ";
+        m_perms.back().emplace_back(ID(ampl->Leg(Map(i))->Id()).front());
       }
       msg_Debugging()<<"\n";
     }
