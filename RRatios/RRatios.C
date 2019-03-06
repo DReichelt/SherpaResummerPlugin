@@ -104,7 +104,7 @@ int RRatios::PerformShowers()
 
   const MatrixD& pref_np1 = p_cmetric_np1->PrefMatrix();
   const MatrixD& pref_n = p_cmetric_n->PrefMatrix(); 
-
+  
   const MatrixD& trafo_np1 = p_cmetric_np1->TransformationMatrix();
   const MatrixD& trafo_n = p_cmetric_n->TransformationMatrix();
 
@@ -203,6 +203,7 @@ int RRatios::PerformShowers()
     plot_n.addPoint(cut,g2*TrHG);
     plot_np1.addPoint(cut,TrcH_np1);
   }
+  msg_Debugging()<<"Writing plots to file...";
   if(m_plotRatio) {
     YODA::WriterYODA::write(rpa->gen.Variable("RESUM::RRatio_Ratio_name")
                             +"_"+std::to_string(m_count)+".yoda" ,plot);
@@ -215,6 +216,7 @@ int RRatios::PerformShowers()
     YODA::WriterYODA::write(rpa->gen.Variable("RESUM::RRatio_MEnp1_name")
                             +"_"+std::to_string(m_count)+".yoda" ,plot_np1);
   }
+  msg_Debugging()<<"done!\n";
   m_count++;
   CleanUp();
   return 1;

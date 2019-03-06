@@ -101,14 +101,14 @@ int Resum::PerformShowers()
       /// @TODO we have ps.m_d and ps.m_g, in CAESAR notation
       /// logdbar = log (d*average(g))
       /// but we just use logdbar = ps.m_d
-      m_logdbar.push_back(ps.m_d);
+      m_logdbar.push_back(ps.m_logdbar);
     }
     // select a random bin
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(xl);
-    const double yh = Value(xh);
+    const double yl = Value(xl, n);
+    const double yh = Value(xh, n);
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -132,7 +132,6 @@ double Resum::Value(const double &v, const int n)
   //calc collinear piece
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
   weight*=m_obss[n]->CalcF(Rp);
-  weight*=CalcF(Rp);	
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
     if ((m_amode & MODE::COLLEXPAND) != 0) weight += Collexp;
@@ -624,47 +623,6 @@ double Resum::CalcPDF(const double L, double &PDFexp)
 
   return new_pdffac/old_pdffac;
 }
-
-void Resum::printMatrix(const Complex rhs[], const size_t dim){
-    msg_Debugging()<<"{\n";
-    for (size_t i=0;i<dim;i++) {
-      msg_Debugging()<<"  {";
-      for (size_t j=0;j<dim;j++) {
-	 msg_Debugging()<< (fabs(rhs[i*dim+j].real()) > .001 ? rhs[i*dim+j].real() : 0) <<"+"
-		  <<rhs[i*dim+j].imag()<<((j+1<dim)?"I,":"I");
-      }
-      msg_Debugging()<<((i+1==dim)?"}\n":"},\n");
-    }
-    msg_Debugging()<<"}\n";  
-}
-
-
-//Matrix Multiplication
-void Resum::matMult(Complex ResMat[], const Complex ArrMat[], const std::vector< std::vector< double > > VecMat){
-    size_t dim = VecMat.size();
-    for (size_t i=0;i<dim;i++) {
-        for (size_t j=0;j<dim;j++){
-    	   for (size_t k=0;k<dim;k++){
-	     ResMat[i*dim+j] = Complex(ResMat[i*dim+j].real() + VecMat[k][i]*ArrMat[j*dim+k].real(),
-				       ResMat[i*dim+j].imag() + VecMat[k][i]*ArrMat[j*dim+k].imag());
-	   }      
-	}
-    }
-}
-
-//Hermition conjugate 
-Complex* Resum::H_conjugate(const Complex ResMat[], size_t dim) {
-complex<double> hold;
-Complex *result = new Complex[dim*dim];
-for (size_t i=0;i<dim;i++) {
-        for (size_t j=0;j<dim;j++){ 
-	  hold = ResMat[i*dim+j];
-	  result[j*dim+i] = conj(hold);
-	}
-    }
- return result;
-}
-
 
 
 DECLARE_GETTER(Resum,"Resum",Shower_Base,Shower_Key);

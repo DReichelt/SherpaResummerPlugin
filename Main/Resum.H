@@ -28,7 +28,9 @@ namespace RESUM {
   const double s_eps = .000001;
   
   class Cluster_Definitions;
-  class Observable_Base;
+  template <typename T>
+  class Observable_Base_Template;
+  typedef Observable_Base_Template<double> Observable_Base;
   
   class Resum: public PDF::Shower_Base {
   private:
@@ -85,7 +87,7 @@ namespace RESUM {
     double CalcPDF(const double L,double &PDFexp);
     double T(const double x);
 
-    double Value(const double &v);
+    double Value(const double &v, const int n);
 
   public:
 

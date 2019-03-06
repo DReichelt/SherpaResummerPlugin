@@ -55,7 +55,7 @@ namespace RESUM {
 
     MatrixD PrefMatrix() {
       size_t dim = -1;
-      if(hasTrafo()) dim = m_metric.numCols();
+      if(!hasTrafo()) dim = m_metric.numCols();
       else dim = m_trafoMatrix.numRows();
       MatrixD ret(nullptr, dim, dim, 0);
       for(size_t i=0; i<m_prefactors.size(); i++) {
