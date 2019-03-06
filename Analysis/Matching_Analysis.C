@@ -136,10 +136,10 @@ Matching_Analysis::~Matching_Analysis()
 double Matching_Analysis::EtaBeam(const Vec4D& p, size_t beamId) {
   double eta = 1./(2.0*rpa->gen.PBeam(beamId)[0]);
   if(beamId == 0) {
-    eta *= p.PMinus();
+    eta *= p.PPlus();
   }
   else if(beamId == 1) {
-    eta *= p.PPlus();
+    eta *= p.PMinus();
   }
   else THROW(fatal_error, "Something went wrong, beamId > 1.");
   return eta;
@@ -205,19 +205,19 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     double pdfrat = 1.0;
     if (sub->m_i<2 && real->p_fl[sub->m_i].Strong()) {
       // Initial + something
-      double eta = abs(EtaBeam(sub->p_mom[sub->m_ijt], sub->m_i));
-      z= (z-eta)/(1.0-eta);
+      const double eta = abs(EtaBeam(sub->p_mom[sub->m_ijt], sub->m_i));
+      z= (z-eta)/(1.0-eta);      
 
       if(!(m_mode & MODE::SKIP_PDFR)) {
         PHASIC::Single_Process *proc=static_cast<PHASIC::Single_Process*>
           ((void*)ToType<long unsigned int>(rpa->gen.Variable("CURPROC")));
-        PDF::PDF_Base *pdf(proc->Integrator()->ISR()->PDF(sub->m_i));
+        PDF::PDF_Base* pdf(proc->Integrator()->ISR()->PDF(sub->m_i));
         pdf->Calculate(eta, sub->m_mu2[stp::fac]);
         pdfrat *= pdf->GetXPDF(sub->p_fl[sub->m_ijt]);
         pdf->Calculate(eta/sub->m_z,sub->m_mu2[stp::fac]);
         pdfrat /= pdf->GetXPDF(real->p_fl[sub->m_i]);
       }
-      
+
       if (sub->m_k<2) {
         // Initial + Initial
         tau /= 1.0-eta;
@@ -228,13 +228,13 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     }
     else if (sub->m_k<2 && real->p_fl[sub->m_k].Strong()) {
       // Final + Initial
-      double eta = abs(EtaBeam(sub->p_mom[sub->m_kt], sub->m_k));
+      const double eta = abs(EtaBeam(sub->p_mom[sub->m_kt], sub->m_k));
       tau /= 1.0-eta;
       
       if(!(m_mode & MODE::SKIP_PDFR)) {
         PHASIC::Single_Process *proc=static_cast<PHASIC::Single_Process*>
           ((void*)ToType<long unsigned int>(rpa->gen.Variable("CURPROC")));
-        PDF::PDF_Base *pdf(proc->Integrator()->ISR()->PDF(sub->m_k));
+        PDF::PDF_Base* pdf(proc->Integrator()->ISR()->PDF(sub->m_k));
         pdf->Calculate(eta,sub->m_mu2[stp::fac]);
         pdfrat*=pdf->GetXPDF(sub->p_fl[sub->m_kt]);
         pdf->Calculate(eta/(1.0-sub->m_y),sub->m_mu2[stp::fac]);
