@@ -42,7 +42,7 @@ namespace RESUM {
 
     std::vector<Observable_Base*> m_obss;
     
-    MODE m_mode;
+    MODE m_mode = MODE::DEFAULT;
 
     double EtaBeam(const ATOOLS::Vec4D& p, size_t beamId);
     
