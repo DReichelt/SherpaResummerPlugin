@@ -3,6 +3,7 @@
 #include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Org/My_Limits.H"
+#include "FFunction/FFunctions.H"
 #include <vector>       
 #include <algorithm>       
 
@@ -25,6 +26,12 @@ namespace RESUM {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
+    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+                                            const std::vector<ATOOLS::Flavour>& fl) {
+      return FFUNCTION::Additive;
+    }
+
+    
     double KT2(const Vec4D &p1, const Vec4D &p2) const
     {
       if (p2.PPerp()==0.0) return 2.0*sqr(p1[0])*(1.0-p1.CosTheta(p2));

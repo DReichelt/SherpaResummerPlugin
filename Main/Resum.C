@@ -103,6 +103,7 @@ int Resum::PerformShowers()
       /// but we just use logdbar = ps.m_d
       m_logdbar.push_back(ps.m_logdbar);
     }
+    m_F = m_obss[n]->FFunction(moms, flavs);
     // select a random bin
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
@@ -131,7 +132,7 @@ double Resum::Value(const double &v, const int n)
   weight*=CalcPDF(L, PDFexp); 
   //calc collinear piece
   weight*=exp(CalcColl(L,1,Rp,Collexp)); 
-  weight*=m_obss[n]->CalcF(Rp);
+  weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
     if ((m_amode & MODE::COLLEXPAND) != 0) weight += Collexp;

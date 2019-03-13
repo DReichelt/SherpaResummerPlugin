@@ -6,7 +6,7 @@
 #include "ATOOLS/Phys/Particle_List.H"
 #include "ATOOLS/Phys/NLO_Subevt.H"
 #include "Observables/Algorithms/Algorithm.H"
-
+#include <functional>
 
 using ATOOLS::sqr;
 using ATOOLS::stp;
@@ -43,10 +43,6 @@ namespace RESUM {
 
     virtual ~Observable_Base_Template() {};
 
-    // F-function for additiv Obs
-    virtual double CalcF(const double Rp){
-      return exp(-GAMMA_E*Rp-ATOOLS::Gammln(1.+Rp)); };
-
     // deprecated
     Obs_Params Parameters
     (const Vec4T *p,const ATOOLS::Flavour *fl,
@@ -57,14 +53,17 @@ namespace RESUM {
         moms.push_back(p[i]);
         flavs.push_back(fl[i]);
       }
-      return Parameters(moms,flavs,l);};
+      return Parameters(moms,flavs,l);
+    }
 
     // use this
     virtual Obs_Params Parameters
     (const std::vector<Vec4T>& p,
      const std::vector<ATOOLS::Flavour>& fl,
      const size_t &l) = 0;
-   
+
+    virtual std::function<double(double)> FFunction(const std::vector<Vec4T>& p,
+                                                    const std::vector<ATOOLS::Flavour>& fl) = 0;
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
         ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);

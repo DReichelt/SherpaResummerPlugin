@@ -26,8 +26,9 @@ namespace RESUM {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
-    double CalcF(const double Rp) {
-      return 1.;
+    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+                                            const std::vector<ATOOLS::Flavour>& fl) {
+      return [](double Rp) {return 1.;};
     }
 
     double KT2(const Vec4D &p1, const Vec4D &p2) const
@@ -42,12 +43,12 @@ namespace RESUM {
     double Value(const std::vector<Vec4D>& ip,
                  const std::vector<Flavour>& fl,
 		 const size_t &nin) {
-      return Value(ip,fl,nin,s_ymax);
+      return _Value(ip,fl,nin,s_ymax);
     }
 
 
-    
-    double Value(const std::vector<Vec4D>& ip,
+  private:
+    double _Value(const std::vector<Vec4D>& ip,
                  const std::vector<Flavour>& fl,
 		 const size_t &nin,
                  const double cut)
@@ -55,7 +56,9 @@ namespace RESUM {
       Vec4D sum;
       size_t nn = ip.size();
       Vec4D_Vector p(&ip[nin],&ip[nn]);
-      for (size_t i(0);i<p.size();++i) sum+=p[i];
+      for (size_t i(0);i<p.size();++i) {
+        sum+=p[i];
+      }
       Poincare cms(sum);
       for (size_t i(0);i<p.size();++i) cms.Boost(p[i]);
       double Q2(sum.Abs2());
@@ -64,7 +67,7 @@ namespace RESUM {
       std::vector<std::vector<double> > yij
 	(imap.size(),std::vector<double>(imap.size()));
       int ii=0, jj=0, n=p.size();
-      double dmin=Q2;
+      double dmin=s_ymax;
       for (int i=0;i<n;++i)
 	for (int j=0;j<i;++j) {
 	  double dij=yij[i][j]=y12(p[i],p[j]);
@@ -99,7 +102,7 @@ namespace RESUM {
 	int jjx=imap[jj];
 	for (int j=0;j<jj;++j) yij[jjx][imap[j]]=y12(p[jjx],p[imap[j]]);
 	for (int i=jj+1;i<n;++i) yij[imap[i]][jjx]=y12(p[imap[i]],p[jjx]);
-	ii=jj=0; dmin=Q2;
+	ii=jj=0; dmin=s_ymax;
 	for (int i=0;i<n;++i)
 	  for (int j=0;j<i;++j) {
 	    double dij=yij[imap[i]][imap[j]];
@@ -116,11 +119,11 @@ namespace RESUM {
             }
 	  }
       }
-      if(jets == NJETS) {
-        return cut;
+      if(jets >= NJETS) {
+        return cut/Q2;
       }
       else {
-        return Value(ip,fl,nin,kt2_3);
+        return _Value(ip,fl,nin,kt2_3);
       }
     }
 
@@ -131,7 +134,7 @@ namespace RESUM {
 using namespace RESUM;
 
 typedef YN_CambridgeAachen<3> Y3_CambridgeAachen;
-DECLARE_GETTER(Y3_CambridgeAachen>,"Y3_CambridgeAachen",Observable_Base,Observable_Key);
+DECLARE_GETTER(Y3_CambridgeAachen,"Y3_CambridgeAachen",Observable_Base,Observable_Key);
 Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y3_CambridgeAachen>::
 operator()(const Parameter_Type &args) const 
 { return new Y3_CambridgeAachen(args); }
@@ -140,7 +143,7 @@ PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y3_CambridgeAachen"; }
 
 typedef YN_CambridgeAachen<4> Y4_CambridgeAachen;
-DECLARE_GETTER(Y4_CambridgeAachen>,"Y4_CambridgeAachen",Observable_Base,Observable_Key);
+DECLARE_GETTER(Y4_CambridgeAachen,"Y4_CambridgeAachen",Observable_Base,Observable_Key);
 Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y4_CambridgeAachen>::
 operator()(const Parameter_Type &args) const 
 { return new Y4_CambridgeAachen(args); }
@@ -149,7 +152,7 @@ PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y4_CambridgeAachen"; }
 
 typedef YN_CambridgeAachen<5> Y5_CambridgeAachen;
-DECLARE_GETTER(Y5_CambridgeAachen>,"Y5_CambridgeAachen",Observable_Base,Observable_Key);
+DECLARE_GETTER(Y5_CambridgeAachen,"Y5_CambridgeAachen",Observable_Base,Observable_Key);
 Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y5_CambridgeAachen>::
 operator()(const Parameter_Type &args) const 
 { return new Y5_CambridgeAachen(args); }
@@ -158,7 +161,7 @@ PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y5_CambridgeAachen"; }
 
 typedef YN_CambridgeAachen<6> Y6_CambridgeAachen;
-DECLARE_GETTER(Y6_CambridgeAachen>,"Y6_CambridgeAachen",Observable_Base,Observable_Key);
+DECLARE_GETTER(Y6_CambridgeAachen,"Y6_CambridgeAachen",Observable_Base,Observable_Key);
 Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y6_CambridgeAachen>::
 operator()(const Parameter_Type &args) const 
 { return new Y6_CambridgeAachen(args); }

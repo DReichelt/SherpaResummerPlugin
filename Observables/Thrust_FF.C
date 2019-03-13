@@ -2,6 +2,7 @@
 #include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Math/Poincare.H"
+#include "FFunction/FFunctions.H"
 #include <vector>       
 #include <algorithm>       
 #include <assert.h> 
@@ -23,6 +24,12 @@ namespace RESUM {
       return Obs_Params(1.0,1.0,0.0,0.0);
     }
 
+    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+                                            const std::vector<ATOOLS::Flavour>& fl) {
+      return FFUNCTION::Additive;
+    }
+
+    
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
     {
       for(std::vector<Vec3D>::iterator i(p.begin());
