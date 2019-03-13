@@ -39,7 +39,9 @@ namespace PHASIC {
 
     bool Trigger(const ATOOLS::Vec4D_Vector &p)
     {
-      if (p_proc->Process()->Name().find("QCD(S)")) return true;
+      if (p_proc->Process()->Name().find("QCD(S)") != std::string::npos) {
+        return true;
+      }
       double tau=p_tau->Value(&p.front(),m_fl,p.size(),p_proc->NIn());
       bool pass=tau>m_taumin;
       m_sel_log->Hit(1-pass);
