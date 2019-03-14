@@ -178,6 +178,7 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
   }
   if (m_mode & MODE::SKIP_SUBT) return;
   if (sub==nullptr) THROW(fatal_error,"Missing subtraction info.");
+  msg_Debugging()<<*sub<<"\n"<<*real<<"\n";
   for (size_t i=0; i<m_obss.size(); i++) {
     RESUM::Obs_Params ps = m_obss[i]->Parameters(sub->p_mom,sub->p_fl,
                                                  sub->m_n,sub->m_ijt);
@@ -268,7 +269,7 @@ Primitive_Observable_Base *ATOOLS::Getter
 <Primitive_Observable_Base,Argument_Matrix,Matching_Analysis>::
 operator()(const Argument_Matrix &parameters) const
 {
-  if (parameters.size()==0 || parameters[0].size()<1) return NULL;
+  if (parameters.size()==0 || parameters[0].size()<1) return nullptr;
   return new Matching_Analysis(parameters);
 }
 

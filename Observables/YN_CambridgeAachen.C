@@ -56,6 +56,7 @@ namespace RESUM {
       Vec4D sum;
       size_t nn = ip.size();
       Vec4D_Vector p(&ip[nin],&ip[nn]);
+      if(p.size() < NJETS) return 0;
       for (size_t i(0);i<p.size();++i) {
         sum+=p[i];
       }
@@ -83,14 +84,14 @@ namespace RESUM {
             }
           }
 	}
-      double kt2_3 = 0;
+      double kt2_max = 0;
       int jets = 1;
       while (n>1) {
 	if (ii!=jj) {
           double kt2 = KT2(p[imap[jj]],p[imap[ii]]);
           if(kt2 < cut) {
             p[imap[jj]]+=p[imap[ii]];
-            if(kt2_3 < kt2) kt2_3 = kt2;
+            if(kt2_max < kt2) kt2_max = kt2;
           }
           else {
             jets++;
@@ -123,7 +124,7 @@ namespace RESUM {
         return cut/Q2;
       }
       else {
-        return _Value(ip,fl,nin,kt2_3);
+        return _Value(ip,fl,nin,kt2_max);
       }
     }
 
