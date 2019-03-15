@@ -12,7 +12,7 @@ using namespace ATOOLS;
 
 namespace RESUM {
 
-  template <int NJETS>
+  template <unsigned int NJETS>
   class YN_CambridgeAachen: public Observable_Base {
   public:
 

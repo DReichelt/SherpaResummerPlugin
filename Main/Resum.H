@@ -88,7 +88,7 @@ namespace RESUM {
     double CalcPDF(const double L,double &PDFexp);
     double T(const double x);
 
-    double Value(const double &v, const int n);
+    double Value(const double &v);
 
   public:
 

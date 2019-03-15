@@ -120,9 +120,11 @@ int Resum::PerformShowers()
   return 1;
 }
 
-double Resum::Value(const double &v, const int n)
+double Resum::Value(const double &v)
 {
   DEBUG_FUNC(v);
+  if(IsZero(v)) return 0;
+  if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
   double weight=CalcS(L,Softexp);
