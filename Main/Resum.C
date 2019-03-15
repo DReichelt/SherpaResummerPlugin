@@ -108,8 +108,8 @@ int Resum::PerformShowers()
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(xl, n);
-    const double yh = Value(xh, n);
+    const double yl = Value(xl);
+    const double yh = Value(xh);
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
