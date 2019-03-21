@@ -8,7 +8,7 @@
 
 #include <map>
 #include <string>
-
+#include <functional>
 
 namespace MODEL {
   class Running_AlphaS;
