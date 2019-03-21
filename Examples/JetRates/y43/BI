@@ -1,0 +1,37 @@
+(run){
+  EVENTS 10k; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; BEAM_REMNANTS 0;
+  BEAM_1 11 45.6; BEAM_2 -11 45.6;
+  SHOWER_GENERATOR Resum;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{Abs2(p[0]+p[1])};#
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  ANALYSIS_WRITEOUT_INTERVAL 10000;
+  RESUM_MODE RESUM;
+  RESUM::pre_calc pre_calc/trace_basis
+  PDF_LIBRARY None;
+}(run);
+(processes){
+  Process 11 -11 -> 93 93 93;
+  Order (*,2)
+  End process;
+}(processes);
+
+(selector){
+  ResumObs Y3_Durham 0.008;
+}(selector);
+
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL Shower; PATH_PIECE BI/;
+    Resum { FinalState;
+      Y4_Durham 0 1 100 LinErr;
+      Y4_Durham 1e-8 1 100 LogErr;
+      Y4_Durham 6.14421e-6 1 100 LnErr; 
+      Y4_CambridgeAachen 0 1 100 LinErr;
+      Y4_CambridgeAachen 1e-8 1 100 LogErr;
+      Y4_CambridgeAachen 6.14421e-6 1 100 LnErr;
+    }
+  } END_ANALYSIS;
+}(analysis);
