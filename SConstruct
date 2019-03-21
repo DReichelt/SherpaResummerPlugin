@@ -21,20 +21,21 @@ if env['PLATFORM']=='darwin':
                          '-lmpfr'])
 
 resumlib = env.SharedLibrary('SherpaResum',
-	['Math/r8lib.cpp',
-	'Math/c8lib.cpp',
-	'Math/matexp.cpp',
-	'Math/asa007.cpp',
-	'Tools/CBasis.C',
-	'Tools/CMetric_Base.C',
-	'Tools/Hard_Matrix.C',
-        'Tools/StringTools.C',
-        'Tools/Reader.C',
-	'Bases/QCD_Generic.C',
-	'Main/Comix_Interface.C',
-	'Main/Resum.C',
-        'Main/Cluster_Definitions.C',
-         'Scales/Resum_Scale_Setter.C'])
+	                     ['Math/r8lib.cpp',
+	                      'Math/c8lib.cpp',
+	                      'Math/matexp.cpp',
+	                      'Math/asa007.cpp',
+	                      'Tools/CBasis.C',
+	                      'Tools/CMetric_Base.C',
+	                      'Tools/Hard_Matrix.C',
+                              'Tools/StringTools.C',
+                              'Tools/Reader.C',
+	                      'Bases/QCD_Generic.C',
+	                      'Main/Comix_Interface.C',
+	                      'Main/Resum.C',
+                              'Main/Cluster_Definitions.C',
+                              'Scales/Resum_Scale_Setter.C'
+                             ])
 
 
 analysislib = env.SharedLibrary('ResumAnalysis',
@@ -49,12 +50,14 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 	   'Observables/Thrust_IF.C',
 	   'Observables/Thrust_II.C',
 	   'Observables/TThrust_FF.C',
+           'Observables/Thrust_F_table.C',
 	   'Observables/Thrust.C',
            'Tools/StringTools.C',
 	   'Observables/HeavyJetMass.C',
            'Observables/Durham_3Jet_res.C',
            'Observables/YN_CambridgeAachen.C',
-           'Observables/YN_Durham.C'
+           'Observables/YN_Durham.C',
+           'FFunction/FFunctions.C'
           ],
 	LIBPATH=['${sherpa}/lib/SHERPA-MC'],
 	RPATH=['${sherpa}/lib/SHERPA-MC'],

@@ -1,12 +1,10 @@
 #include "Analysis/Observable_Base.H"
-#include "ATOOLS/Org/Run_Parameter.H"
-#include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Math/Poincare.H"
 #include <vector>       
 #include <algorithm>       
-#include <assert.h> 
-#include  <fstream>
-#include "Tools/Files.H" 
+
+
+#include "FFunction/FFunctions.H"
 using std::string;
 
 using namespace ATOOLS;
@@ -26,34 +24,17 @@ namespace RESUM {
       return Obs_Params(1.0,1.0,0.0,0.0);
     }
 
-    double CalcF(const double Rp){
-		string filename = "Additiv_F.dat";
-		std::ifstream input(FILENAMES::SHARE_DIR+"/FFunction/Additiv/" + filename);
-		if(!input.good()) THROW(fatal_error,"No file " + filename);
-		string Rp_l, F_l, F_err_l, Rp_u, F_u, F_err_u;
-		string row = "";
-		getline(input, row);
-		while(getline(input, row)){
-			int space1 = row.find(" ");
-			int space2 = row.find(" ",space1+1);
-			if(space1 == std::string::npos or space2 == std::string::npos) THROW(fatal_error,"The file " + filename + " has wrong format");
-			Rp_u = row.substr(0,space1);
-			F_u = row.substr(space1+1,space2);
-			F_err_u = row.substr(space2+1);
-			if (stod(Rp_u) < Rp){
-				Rp_l = Rp_u;
-				F_l = F_u;
-				F_err_l = F_err_u;
-			}else{break;}
-		}
-		if(Rp_l == Rp_u) THROW(fatal_error,"No data for requested F funtion");
-		double F;
-		if (Rp_l == Rp_u){
-			F = stod(F_l);
-		}else{ F = stod(F_l)+(stod(F_u)-stod(F_l))/(stod(Rp_u)-stod(Rp_l))*(Rp-stod(Rp_l));}
-		input.close();
-		return F; 
-    } 
+
+    std::function<double(double)> FFunction(const std::vector<Vec4D>& p,
+                                            const std::vector<ATOOLS::Flavour>& fl) {
+      
+      if(!p_F) {
+        p_F.reset(new FFUNCTION::FFunction("Additiv/Additiv_F.dat"));
+      }
+      return *p_F;
+    }
+
+
 
 
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
@@ -145,7 +126,12 @@ namespace RESUM {
       return 1.0-thrust;
     }
 
+  private:
+    FFUNCTION::FFunction::Ptr p_F = nullptr;
+
+    
   };
+  
 
 }// end of namespace RESUM
 

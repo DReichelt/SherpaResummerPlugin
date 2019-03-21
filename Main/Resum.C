@@ -126,6 +126,7 @@ double Resum::Value(const double &v)
   if(IsZero(v)) return 0;
   if(v > 1)     return 1;
   const double L = log(1.0/v);
+
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
   double weight=CalcS(L,Softexp);
   //weight*=1 //non-global logs  
@@ -133,8 +134,8 @@ double Resum::Value(const double &v)
   //calc PDF factor for IS legs
   weight*=CalcPDF(L, PDFexp); 
   //calc collinear piece
-  weight*=exp(CalcColl(L,1,Rp,Collexp)); 
-  weight*=m_F(Rp);
+  weight*=exp(CalcColl(L,1,Rp,Collexp));
+  if(!std::isnan(Rp)) weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
     if ((m_amode & MODE::COLLEXPAND) != 0) weight += Collexp;
