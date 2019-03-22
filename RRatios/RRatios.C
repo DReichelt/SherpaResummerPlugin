@@ -78,6 +78,7 @@ inline kf_code new_flavour(kf_code fl1, kf_code fl2) {
 
 int RRatios::PerformShowers()
 {
+  std::cout<<"check"<<std::endl;
   DEBUG_FUNC(this);
   // first check we got everything we need
   if(p_ampl_np1==nullptr) THROW(fatal_error,"No process info for n+1.");
@@ -165,27 +166,38 @@ int RRatios::PerformShowers()
 
     MatrixD Gamma(Tprods.at(0).numRows(), Tprods.at(0).numCols());
 
+    // Do all insertions between -coloured- legs
     size_t i=0;
-    for(size_t t=0; t<p_ampl_n->Legs().size(); t++){ 
-      for(size_t r=t+1; r<p_ampl_n->Legs().size(); r++) {
-        msg_Debugging()<<"Insertion between legs "
+    for(size_t t=0; t<p_ampl_n->Legs().size(); t++){
+
+      // Check if leg t is coloured
+      Flavour flav_t = p_ampl_n->IdLeg(m_ordered_ids.at(t))->Flav();
+      if (flav_t.IsGluon() || flav_t.IsQuark()) {
+	for(size_t r=t+1; r<p_ampl_n->Legs().size(); r++) {
+
+	  // Check if leg r is coloured
+	  Flavour flav_r = p_ampl_n->IdLeg(m_ordered_ids.at(r))->Flav();
+	  if (flav_r.IsGluon() || flav_r.IsQuark()) {
+	    msg_Debugging()<<"Insertion between legs "
                        <<t<<" -> "<<ID(m_ordered_ids.at(t))<<", "
                        <<r<<" -> "<< ID(m_ordered_ids.at(r))<<".\n";
-        Vec4D pt = p_ampl_n->IdLeg(m_ordered_ids.at(t))->Mom();
-        Vec4D pr = p_ampl_n->IdLeg(m_ordered_ids.at(r))->Mom();
-        // incoming legs have negative momentum
-        // TODO: is there a more natural way to detect them?
-        if(pt[0]<0) pt *= -1;
-        if(pr[0]<0) pr *= -1;
-        const double eikonal = pt*pr / ((pt*soft)*(pr*soft));
-        msg_Debugging()<<"T-product: \n"<<Tprods[i]<<"\n";
-        msg_Debugging()<<"p_t = "<<pt<<"\n";
-        msg_Debugging()<<"p_r = "<<pr<<"\n";
-        msg_Debugging()<<"p_soft = "<<soft<<"\n";
-        msg_Debugging()<<"eikonal = "<<eikonal<<"\n\n";
-        // factor 2 due to symmetrisation of sum
-        Gamma -= 2.*eikonal*Tprods.at(i);
-        i++;
+	    Vec4D pt = p_ampl_n->IdLeg(m_ordered_ids.at(t))->Mom();
+	    Vec4D pr = p_ampl_n->IdLeg(m_ordered_ids.at(r))->Mom();
+	    // incoming legs have negative momentum
+	    // TODO: is there a more natural way to detect them?
+	    if(pt[0]<0) pt *= -1;
+	    if(pr[0]<0) pr *= -1;
+	    const double eikonal = pt*pr / ((pt*soft)*(pr*soft));
+	    msg_Debugging()<<"T-product: \n"<<Tprods[i]<<"\n";
+	    msg_Debugging()<<"p_t = "<<pt<<"\n";
+	    msg_Debugging()<<"p_r = "<<pr<<"\n";
+	    msg_Debugging()<<"p_soft = "<<soft<<"\n";
+	    msg_Debugging()<<"eikonal = "<<eikonal<<"\n\n";
+	    // factor 2 due to symmetrisation of sum
+	    Gamma -= 2.*eikonal*Tprods.at(i);
+	    i++;
+	  }
+	}
       }
     }
     /* msg_Debugging()<<"Gamma:\n"<<Gamma<<"\n"; */
@@ -276,7 +288,6 @@ bool RRatios::PrepareShower
   DEBUG_VAR(ampl->Proc<Process_Base>());
 
   p_ampl_np1=ampl->Copy();
-
 
   // if we want we can reset momenta here
   if(rpa->gen.Variable("RESUM::RRatio_Mode") == "Starlike") {
@@ -440,7 +451,7 @@ bool RRatios::PrepareShower
   for(size_t i=0; i<tmp->Legs().size(); i++) {
     m_ordered_ids.at(i) = tmp->Leg(cmetric_n->Map(i))->Id();
   }
-  
+
   p_cmetric_n = cmetric_n;
   tmp->Delete();
   return true;
