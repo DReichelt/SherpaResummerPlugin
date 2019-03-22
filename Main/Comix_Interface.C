@@ -87,10 +87,10 @@ Hard_Matrix *Comix_Interface::ComputeHardMatrix
     msg_Debugging()<<"}\n";
   }
   p_h = new Hard_Matrix(hc.size());
-  if(perms.size()==1){
-    (*p_h)[0][0]=1; 
-    return p_h;
-  }
+  //if(perms.size()==1){
+  //  (*p_h)[0][0]=1; 
+  //  return p_h;
+  //}
   for (size_t i(0);i<hc.size();++i) {
     p_h->m_id[i]=hc[i].m_id;
     for (size_t j(0);j<hc.size();++j) {

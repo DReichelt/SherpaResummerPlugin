@@ -78,7 +78,6 @@ inline kf_code new_flavour(kf_code fl1, kf_code fl2) {
 
 int RRatios::PerformShowers()
 {
-  std::cout<<"check"<<std::endl;
   DEBUG_FUNC(this);
   // first check we got everything we need
   if(p_ampl_np1==nullptr) THROW(fatal_error,"No process info for n+1.");
@@ -147,14 +146,15 @@ int RRatios::PerformShowers()
     
     m_comix.Reset();
     msg_Debugging()<<"Read in matrix for n+1 process.\n";
-    
+    msg_Debugging()<<H_np1<<std::endl;
+
     MatrixD H_n = MatrixC(m_comix.ComputeHardMatrix(p_ampl_n,p_cmetric_n->Perms()),
                           dim_n, dim_n, 0).real();
     H_n.data() *= pref_n.data();
     if(p_cmetric_n->hasTrafo()) H_n = trafo_n*H_n*trafo_n_T;
     m_comix.Reset(); //TODO: do I need these resets?
     msg_Debugging()<<"Read in matrix for n process.\n";
-    
+    msg_Debugging()<<H_n<<std::endl;
 
     msg_Debugging()<<"Amplitude for n+1: "<<*p_ampl_np1<<"\n";
     msg_Debugging()<<"Amplitude for n: "<<*p_ampl_n<<"\n";
