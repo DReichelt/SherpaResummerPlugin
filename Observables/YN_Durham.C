@@ -29,7 +29,10 @@ namespace RESUM {
 
     std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
-      return FFUNCTION::Additive;
+      if(!p_F) {
+        p_F.reset(new FFUNCTION::FFunction(Name()+".dat"));
+      }
+      return *p_F;
     }
   
     
@@ -77,6 +80,10 @@ namespace RESUM {
       }
       return dmin/Q2;
     }
+
+  private:
+    FFUNCTION::FFunction::Ptr p_F = nullptr;
+
 
   };// end of class YN_Durham
 
