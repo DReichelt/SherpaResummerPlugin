@@ -53,7 +53,8 @@ Resum::Resum(ISR_Handler *const isr,
   }
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
-
+  
+  
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
   }
@@ -70,6 +71,7 @@ Resum::~Resum()
     m_cmetrics.erase(m_cmetrics.begin());
   }
 }
+
 
 int Resum::PerformShowers()
 {
@@ -92,9 +94,7 @@ int Resum::PerformShowers()
     m_b.clear();
     m_logdbar.clear();
     for (size_t i(0);i<moms.size();++i) {
-      Obs_Params ps = m_obss[n]->Parameters(&moms.front(),
-                                            &flavs.front(),
-                                            moms.size(),i);
+      Obs_Params ps = m_obss[n]->Parameters(moms, flavs, i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
 
@@ -108,8 +108,8 @@ int Resum::PerformShowers()
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(xl);
-    const double yh = Value(xh);
+    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs));
+    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs));
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -126,7 +126,6 @@ double Resum::Value(const double &v)
   if(IsZero(v)) return 0;
   if(v > 1)     return 1;
   const double L = log(1.0/v);
-
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
   double weight=CalcS(L,Softexp);
   //weight*=1 //non-global logs  

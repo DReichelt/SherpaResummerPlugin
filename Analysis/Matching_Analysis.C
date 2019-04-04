@@ -253,7 +253,12 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     ((TH2D*)(*MYROOT::myroot)["yzplot"])->Fill
       (log(tau),log(1.0-z),dabs(weight)*lrat*pdfrat);
 #endif
-    FillHisto(i, tau, weight*lrat*pdfrat, ncount, mode);
+    // @TODO: Endpoint needs to be done more carefully for inital state stuff
+
+    FillHisto(i, m_obss[i]->ObsVal(tau,
+                                   {sub->p_mom, sub->p_mom+sub->m_n},
+                                   {sub->p_fl, sub->p_fl+sub->m_n}),
+              weight*lrat*pdfrat, ncount, mode);
   }
 }
 

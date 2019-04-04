@@ -5,7 +5,9 @@
 #include "ATOOLS/Phys/Cluster_Amplitude.H"
 #include "ATOOLS/Phys/Particle_List.H"
 #include "ATOOLS/Phys/NLO_Subevt.H"
+#include "ATOOLS/Org/Data_Reader.H"
 #include "Observables/Algorithms/Algorithm.H"
+#include "Tools/StringTools.H"
 #include <functional>
 
 using ATOOLS::sqr;
@@ -30,16 +32,45 @@ namespace RESUM {
 
   template <typename T>
   class Observable_Base_Template {
-
+  public:
     typedef ATOOLS::Vec4<T> Vec4T;
     typedef ATOOLS::Vec3<T> Vec3T;
   protected:
 
     std::string m_name;
 
+    double m_logfac = 1.;
+    double m_logpow = 1.;
+    double m_endpoint = 1.;
+
+    enum EP_MODE {
+                  FIXED = 0,
+                  DYNAMIC = 1   << 0,
+    };
+
+    EP_MODE m_epmode = EP_MODE::FIXED;
+    
+    const std::map<std::string,EP_MODE> m_EPModeToEnum = {{"FIXED", EP_MODE::FIXED},
+                                                          {"DYNAMIC", EP_MODE::DYNAMIC}};
+    
   public:
     typedef std::shared_ptr<Observable_Base_Template> Ptr;
-    Observable_Base_Template(const Observable_Key &args) : m_name(args.m_name) {}
+    Observable_Base_Template(const Observable_Key &args) : m_name(args.m_name) {
+      ATOOLS::Data_Reader read(" ",";","#","=");
+      m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
+      m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
+      m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",1.);
+      const std::string& ep_mode = read.GetValue<std::string>("RESUM::"+m_name+"::EP_MODE","FIXED");
+      if(is_int(ep_mode)) {
+        m_epmode = static_cast<EP_MODE>(to_type<int>(ep_mode));
+      }
+      else {
+        for(const std::string& m: split(ep_mode,"\\|")) {
+          m_epmode = static_cast<EP_MODE>(m_epmode | m_EPModeToEnum.at(m));
+        }
+      }
+      
+    }
 
     virtual ~Observable_Base_Template() {};
 
@@ -79,7 +110,48 @@ namespace RESUM {
         return ps.m_logdbar-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
     }
     
+    virtual double LogArg(double v, const std::vector<Vec4T>& p,
+                          const std::vector<ATOOLS::Flavour>& fl) {
+      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
+        return _LogArg_Dynamic(v, p, fl);
+      }
+      return _LogArg_Fixed(v, m_endpoint);
+    }
 
+    virtual double ObsVal(double logarg, const std::vector<Vec4T>& p,
+                          const std::vector<ATOOLS::Flavour>& fl) {
+      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
+        return _ObsVal_Dynamic(logarg, p, fl);
+      }
+      return _ObsVal_Fixed(logarg, m_endpoint);
+    }
+
+    
+    virtual double _LogArg_Fixed(double v, double endpoint) {
+      double ret = 1;
+      if (v < endpoint) {
+        ret += 1./pow(m_logfac*v,m_logpow) - 1./pow(m_logfac*endpoint,m_logpow);
+      }
+      return 1./pow(ret,1./m_logpow);                                                   
+    }
+
+    virtual double _LogArg_Dynamic(double v,
+                                   const std::vector<Vec4T>& p,
+                                   const std::vector<ATOOLS::Flavour>& fl) {
+      THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
+    }
+
+    virtual double _ObsVal_Fixed(double logarg, double endpoint) {
+      double ret = 1./pow(logarg,m_logpow)+1./pow(m_logfac*endpoint,m_logpow)-1;
+      return 1./pow(m_logfac*ret,1./m_logpow);
+    }
+
+    virtual double _ObsVal_Dynamic(double logarg,
+                                   const std::vector<Vec4T>& p,
+                                   const std::vector<ATOOLS::Flavour>& fl) {
+      THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
+    }
+    
     // deprecated
     T Value
     (const Vec4T *p,const ATOOLS::Flavour *fl,

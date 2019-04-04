@@ -42,6 +42,14 @@ namespace RESUM {
                  const std::vector<Flavour>& fl,
 		 const size_t &nin)
     {
+      return _Value(ip,fl,nin,NJETS);
+    }
+
+    double _Value(const std::vector<Vec4D>& ip,
+                  const std::vector<Flavour>& fl,
+                  const size_t &nin,
+                  int njets)
+    {
       Vec4D sum;
       size_t nn = ip.size();
       Vec4D_Vector p(&ip[nin],&ip[nn]);
@@ -60,7 +68,7 @@ namespace RESUM {
 	  double dij=kt2ij[i][j]=KT2(p[i],p[j]);
 	  if (dij<dmin) { dmin=dij; ii=i; jj=j; }
 	}
-      while (n>NJETS) {
+      while (n>njets) {
 	if (ii!=jj) p[imap[jj]]+=p[imap[ii]];
 	else THROW(fatal_error,"Invalid clustering");
 	--n;
@@ -76,6 +84,19 @@ namespace RESUM {
 	  }
       }
       return dmin/Q2;
+    }
+
+    
+    double _LogArg_Dynamic(double v,
+                           const std::vector<Vec4T>& p,
+                           const std::vector<ATOOLS::Flavour>& fl) {
+      return _LogArg_Fixed(v,_Value(p,fl,2,NJETS-1));
+    }
+
+    double _ObsVal_Dynamic(double logarg,
+                           const std::vector<Vec4T>& p,
+                           const std::vector<ATOOLS::Flavour>& fl) {
+      return _ObsVal_Fixed(logarg, _Value(p,fl,2,NJETS-1));
     }
 
   };// end of class YN_Durham
