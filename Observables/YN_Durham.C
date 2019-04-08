@@ -29,7 +29,10 @@ namespace RESUM {
 
     std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
-      return FFUNCTION::Additive;
+      if(!p_F) {
+        p_F.reset(new FFUNCTION::FFunction(Name()+".dat"));
+      }
+      return *p_F;
     }
   
     
@@ -98,6 +101,8 @@ namespace RESUM {
                            const std::vector<ATOOLS::Flavour>& fl) {
       return _ObsVal_Fixed(logarg, _Value(p,fl,2,NJETS-1));
     }
+  private:
+    FFUNCTION::FFunction::Ptr p_F = nullptr;
 
   };// end of class YN_Durham
 
