@@ -56,6 +56,7 @@ namespace RESUM {
       Vec4D sum;
       size_t nn = ip.size();
       Vec4D_Vector p(&ip[nin],&ip[nn]);
+      if(p.size() < njets) return 0;
       for (size_t i(0);i<p.size();++i) sum+=p[i];
       Poincare cms(sum);
       for (size_t i(0);i<p.size();++i) cms.Boost(p[i]);

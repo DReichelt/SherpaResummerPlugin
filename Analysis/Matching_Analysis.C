@@ -160,9 +160,9 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     fl[0]=rpa->gen.Beam1();
     fl[1]=rpa->gen.Beam2();
     for (size_t i=0; i<m_obss.size(); i++) {
-      double value = m_obss[i]->Value(&mom[0], &fl[0], mom.size());
+      const double value = m_obss[i]->Value(mom, fl);
       msg_Debugging()<<"value["<<i<<"] = "<<value
-		     <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
+                     <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
       FillHisto(i,value,weight,ncount,mode);
     }
     return;
