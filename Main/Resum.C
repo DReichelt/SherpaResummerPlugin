@@ -108,8 +108,8 @@ int Resum::PerformShowers()
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs));
-    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs));
+    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), log(xl));
+    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), log(xh));
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -120,20 +120,21 @@ int Resum::PerformShowers()
   return 1;
 }
 
-double Resum::Value(const double &v)
+
+double Resum::Value(const double v, const double LResum)
 {
   DEBUG_FUNC(v);
   if(IsZero(v)) return 0;
   if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
-  double weight=CalcS(L,Softexp);
+  double weight=CalcS(L, LResum, Softexp);
   //weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
-  weight*=CalcPDF(L, PDFexp); 
+  weight*=CalcPDF(L, LResum, PDFexp); 
   //calc collinear piece
-  weight*=exp(CalcColl(L,1,Rp,Collexp));
+  weight*=exp(CalcColl(L, LResum, 1, Rp, Collexp));
   if(!std::isnan(Rp)) weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
@@ -325,7 +326,7 @@ double Resum::T(const double x)
 
 
 
-double Resum::CalcS(const double L, double &Softexp) 
+double Resum::CalcS(const double L, const double LResum, double &Softexp) 
 {
   DEBUG_FUNC(L);
   const size_t numlegs = n_g + n_q + n_aq;
@@ -494,15 +495,8 @@ double Resum::CalcS(const double L, double &Softexp)
  
 }
 
-double Resum::CalcF(const double Rp) 
-{
-  //implements F function for thrust 
-  //use implementation of Ln(Gamma) in MathTools
-  double F = exp(-GAMMA_E*Rp-Gammln(1.+Rp));
-  return F;
-}
 
-double Resum::CalcColl(const double L, const int order, double &Rp, double &Collexp) 
+double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, double &Collexp) 
 {
 
   const double nf = double(p_as->Nf(p_ampl->MuR2()));
@@ -539,7 +533,7 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 
       //The following formulae are taken from Appendix A of hep-ph/0407286. 
 
-      if (abs(m_b[i])>0.0001)
+      if (!IsZero(m_b[i]))
 	{
 	  if (order>=0) {    
 	    //LL part
@@ -555,7 +549,9 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 							 -0.5*(m_a[i]+m_b[i])*pow(log(1.-2.*lambda/(m_a[i]+m_b[i])),2.)
 							 +m_a[i]*log(1-2.*lambda/m_a[i])
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
-	    double r2=1./m_b[i]*(r2_cmw+r2_beta1);
+            // subtract NLL contribution of scale variation
+            double r2_corr = (L-LResum)*(T(as*beta0*LResum/m_a[i])-T(as*beta0*LResum/(m_a[i]+m_b[i])));
+	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
@@ -574,7 +570,9 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
 	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
 	    double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
-	    double r2=(r2_cmw+r2_beta1);
+            // subtract NLL contribution of scale variation
+            double r2_corr = (L-LResum)*2./(m_a[i]*m_a[i])/(M_PI*beta0)*as*beta0*LResum/(1.-2.*as*beta0*LResum/m_a[i]);
+	    double r2=(r2_cmw+r2_beta1+r2_corr);
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
@@ -586,7 +584,7 @@ double Resum::CalcColl(const double L, const int order, double &Rp, double &Coll
   return R;
 }
 
-double Resum::CalcPDF(const double L, double &PDFexp) 
+double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) 
 {
   //strong coupling & PDFs
   double as = (*p_as)(p_ampl->MuR2());
