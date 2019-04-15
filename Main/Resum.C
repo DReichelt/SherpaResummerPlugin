@@ -549,10 +549,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							 -0.5*(m_a[i]+m_b[i])*pow(log(1.-2.*lambda/(m_a[i]+m_b[i])),2.)
 							 +m_a[i]*log(1-2.*lambda/m_a[i])
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
-            // subtract NLL contribution of scale variation
-            double r2_corr = (L-LResum)*(T(as*beta0*LResum/m_a[i])-T(as*beta0*LResum/(m_a[i]+m_b[i])));
-	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
+            // subtract NLL contribution of scale variation
+            double r2_corr = (L-LResum)*r1p*colfac;
+	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
+
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	    
@@ -570,10 +571,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
 	    double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
-            // subtract NLL contribution of scale variation
-            double r2_corr = (L-LResum)*2./(m_a[i]*m_a[i])/(M_PI*beta0)*as*beta0*LResum/(1.-2.*as*beta0*LResum/m_a[i]);
-	    double r2=(r2_cmw+r2_beta1+r2_corr);
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
+            // subtract NLL contribution of scale variation
+            double r2_corr = (L-LResum)*r1p*colfac;
+	    double r2=(r2_cmw+r2_beta1+r2_corr);
+
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	  }
