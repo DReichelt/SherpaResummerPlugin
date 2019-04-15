@@ -45,27 +45,29 @@ namespace RESUM {
       auto alg = algorithms.find(name);
       if(alg==algorithms.end()) {
         alg = algorithms.insert({name,GetAlgorithm<T>(name, moms, flavs, nin)}).first;
-        msg_Out()<<"Found jets.\n";
+        msg_Debugging()<<"Found jets.\n";
       }
-      else msg_Out()<<"Reusing jets found earlier.\n";
+      else msg_Debugging()<<"Reusing jets found earlier.\n";
       const auto& jet_inds = alg->second->Jets();
       Vec4<T> sum = {0,0,0,0};
-      for(const auto& p: moms) sum += p;
-      msg_Out()<<"Calculated event energy.\n";
+      for(size_t i=nin; i<moms.size(); i++) {
+        sum += moms[i];
+      }
+      msg_Debugging()<<"Calculated event energy.\n";
       T mass2 = 0;
       for(const auto& inds: jet_inds) {
         Vec4<T> cur = {0,0,0,0};
-        msg_Out()<<"\n";
+        msg_Debugging()<<"\n";
         for(int ind: inds) {
-          msg_Out()<<moms.at(ind)<<"\n";
+          msg_Debugging()<<moms.at(ind)<<"\n";
           cur += moms.at(ind);
         }
-        msg_Out()<<"\n";
+        msg_Debugging()<<"\n";
         T m2 = cur.Abs2();
         // TODO: replace this by max function appropriate for T
         mass2 = m2 > mass2 ? m2 : mass2;
       }
-      msg_Out()<<"Finished.\n";
+      msg_Debugging()<<"Finished.\n";
       return mass2/sum.Abs2();
     }
 
