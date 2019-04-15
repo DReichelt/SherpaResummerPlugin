@@ -10,6 +10,14 @@ namespace RESUM {
       Algorithm() {}
 
       const std::vector<std::set<size_t>>& Jets() const { return m_jets; }
+      template <typename T>
+      std::vector<T> apply(std::vector<T> all, size_t jetIdx) {
+        std::vectot<T> ret(m_jets.at(jetIdx).size());
+        for(size_t i=0; i<ret.size(); i++) {
+          ret[i] = all.at(m_jets[jetIdx][i]);
+        }
+        return ret;
+      }
       
     protected:
       std::vector<std::set<size_t>> m_jets;
