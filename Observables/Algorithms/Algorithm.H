@@ -13,8 +13,8 @@ namespace RESUM {
       template <typename T>
       std::vector<T> apply(std::vector<T> all, size_t jetIdx) {
         std::vector<T> ret(m_jets.at(jetIdx).size());
-        auto& idit = m_jets[jetIdx].begin();
-        for(auto& retit = ret.begin(); retit != ret.end(); retit++, idit++) {
+        auto idit = m_jets[jetIdx].begin();
+        for(auto retit = ret.begin(); retit != ret.end(); retit++, idit++) {
           *retit = all.at(*idit);
         }
         return ret;
