@@ -108,8 +108,8 @@ int Resum::PerformShowers()
     const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), log(xl));
-    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), log(xh));
+    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
+    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -132,7 +132,7 @@ double Resum::Value(const double v, const double LResum)
   //weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
-  weight*=CalcPDF(L, LResum, PDFexp); 
+  weight*=CalcPDF(L, LResum, PDFexp);
   //calc collinear piece
   weight*=exp(CalcColl(L, LResum, 1, Rp, Collexp));
   if(!std::isnan(Rp)) weight*=m_F(Rp);
@@ -551,7 +551,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
             // subtract NLL contribution of scale variation
-            double r2_corr = (L-LResum)*r1p*colfac;
+            double r2_corr = -(L-LResum)*r1p*colfac;
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
@@ -573,7 +573,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
-            double r2_corr = (L-LResum)*r1p*colfac;
+            double r2_corr = -(L-LResum)*r1p*colfac;
 	    double r2=(r2_cmw+r2_beta1+r2_corr);
 
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
