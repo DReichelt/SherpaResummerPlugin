@@ -31,6 +31,7 @@ FFunction::FFunction(const std::string& filename) {
 }
 
 double FFunction::operator()(const double Rp) {
+  DEBUG_FUNC(Rp);
   size_t i = 0;
   for(; i<Rps.size(); i++) {
     if(Rps[i] > Rp) {

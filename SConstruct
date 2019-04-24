@@ -57,6 +57,7 @@ analysislib = env.SharedLibrary('ResumAnalysis',
            'Observables/Durham_3Jet_res.C',
            'Observables/YN_CambridgeAachen.C',
            'Observables/YN_Durham.C',
+           'Observables/CParameter.C',
            'FFunction/FFunctions.C'
           ],
 	LIBPATH=['${sherpa}/lib/SHERPA-MC'],

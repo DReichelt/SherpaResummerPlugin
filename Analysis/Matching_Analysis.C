@@ -160,9 +160,9 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     fl[0]=rpa->gen.Beam1();
     fl[1]=rpa->gen.Beam2();
     for (size_t i=0; i<m_obss.size(); i++) {
-      double value = m_obss[i]->Value(&mom[0], &fl[0], mom.size());
+      const double value = m_obss[i]->Value(mom, fl);
       msg_Debugging()<<"value["<<i<<"] = "<<value
-		     <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
+                     <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
       FillHisto(i,value,weight,ncount,mode);
     }
     return;
@@ -253,7 +253,12 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     ((TH2D*)(*MYROOT::myroot)["yzplot"])->Fill
       (log(tau),log(1.0-z),dabs(weight)*lrat*pdfrat);
 #endif
-    FillHisto(i, tau, weight*lrat*pdfrat, ncount, mode);
+    // @TODO: Endpoint needs to be done more carefully for inital state stuff
+
+    FillHisto(i, m_obss[i]->ObsVal(tau,
+                                   {sub->p_mom, sub->p_mom+sub->m_n},
+                                   {sub->p_fl, sub->p_fl+sub->m_n}),
+              weight*lrat*pdfrat, ncount, mode);
   }
 }
 

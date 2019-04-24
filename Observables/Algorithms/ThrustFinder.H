@@ -57,7 +57,8 @@ namespace RESUM {
       if(p.size() == 2) {
         m_t = 1;
         m_axis = p[0]/p[0].Abs();
-        return m_t; }
+        return m_t;
+      }
       std::vector<ATOOLS::Vec3<T>> axes(4,{T(0),T(0),T(0)});
       std::vector<T> tval(4,T(0));
       std::sort(p.begin(), p.end(), mod2Cmp<T>);
@@ -100,8 +101,9 @@ namespace RESUM {
         }
       }
       m_jets = std::vector<std::set<size_t>>(2);
-      for(size_t i=0; i<p.size(); i++) {
-        if(ATOOLS::Vec3<T>(p[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
+
+      for(size_t i=0; i<momenta.size(); i++) {
+        if(ATOOLS::Vec3<T>(momenta[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
         else m_jets.at(1).insert(i+nin);
       }
       return m_t;
