@@ -9,6 +9,8 @@ namespace RESUM {
       typedef std::shared_ptr<Algorithm> Ptr;
       Algorithm() {}
 
+      virtual ~Algorithm() = default;
+      
       const std::vector<std::set<size_t>>& Jets() const { return m_jets; }
       template <typename T>
       std::vector<T> apply(std::vector<T> all, size_t jetIdx) {
