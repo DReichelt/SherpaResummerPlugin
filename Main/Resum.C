@@ -42,7 +42,8 @@ Resum::Resum(ISR_Handler *const isr,
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
 
   Data_Reader read(" ",";","#","=");
-  const string& mode = read.GetValue<string>("RESUM_MODE","RESUM");
+  const string& mode = read.GetValue<string>("RESUM::MODE",
+                                             read.GetValue<string>("RESUM_MODE","RESUM"));
   if(is_int(mode)) {
     m_amode = static_cast<MODE>(to_type<int>(mode));
   }
@@ -105,7 +106,7 @@ int Resum::PerformShowers()
     }
     m_F = m_obss[n]->FFunction(moms, flavs);
     // select a random bin
-    const size_t i = 1+m_hist[n]->Nbin()*ran->Get();
+    const size_t i = (1+m_hist[n]->Nbin())*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
     const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
@@ -113,8 +114,8 @@ int Resum::PerformShowers()
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
-    m_ress[n].second = m_weight*(yh-yl)*m_hist[n]->Nbin();
-    msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<"\n";
+    m_ress[n].second = m_weight*(yh-yl)*(1+m_hist[n]->Nbin());
+    msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<" -> "<<(yh-yl)<<"\n";
   }  
   CleanUp();
   return 1;
@@ -551,7 +552,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
             // subtract NLL contribution of scale variation
-            double r2_corr = -(L-LResum)*r1p*colfac;
+            double r2_corr = -(L-LResum)*r1p;
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
@@ -573,7 +574,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
-            double r2_corr = -(L-LResum)*r1p*colfac;
+            double r2_corr = -(L-LResum)*r1p;
 	    double r2=(r2_cmw+r2_beta1+r2_corr);
 
 	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
@@ -581,7 +582,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	  }
 	}
       
-      Collexp+= -2./M_PI*as*(colfac) * ( L/2.0/m_a[i]/(m_a[i]+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)) + log(Q12/Q)/m_a[i])*L;
+      Collexp+= -2./M_PI*as*(colfac) * ( L/2.0/m_a[i]/(m_a[i]+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)-(L-LResum)) + log(Q12/Q)/m_a[i])*L;
     }
   return R;
 }

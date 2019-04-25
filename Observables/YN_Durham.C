@@ -91,17 +91,11 @@ namespace RESUM {
     }
 
     
-    double _LogArg_Dynamic(double v,
-                           const std::vector<Vec4T>& p,
-                           const std::vector<ATOOLS::Flavour>& fl) {
-      return _LogArg_Fixed(v,_Value(p,fl,2,NJETS-1));
+    double _Endpoint_Dynamic(const std::vector<Vec4T>& p,
+                             const std::vector<ATOOLS::Flavour>& fl) {
+      return _Value(p,fl,2,NJETS-1);
     }
 
-    double _ObsVal_Dynamic(double logarg,
-                           const std::vector<Vec4T>& p,
-                           const std::vector<ATOOLS::Flavour>& fl) {
-      return _ObsVal_Fixed(logarg, _Value(p,fl,2,NJETS-1));
-    }
   private:
     FFUNCTION::FFunction::Ptr p_F = nullptr;
 
