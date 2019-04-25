@@ -21,6 +21,35 @@ namespace PDF {
 
 namespace RESUM {
 
+
+  struct Params {
+  private:
+    double m_NC = 3;
+    double m_CF = (m_NC*m_NC-1.)/(2.*m_NC);
+    double m_CA = m_NC;
+    double m_TR = 1./2.;
+    bool m_largeNC = false;
+    MODEL::Running_AlphaS *p_as;
+  public:
+    Params() = default;
+    Params(MODEL::Running_AlphaS *as, bool largeNC=false) : m_largeNC(largeNC) {
+      p_as = as;
+      if(m_largeNC) {
+        m_CF = m_NC;
+        m_CA = m_NC;
+      }
+    }
+    double NC() const {return m_NC;}
+    double CA() const {return m_CA;}
+    double CF() const {return m_CF;}
+    double TR() const {return m_TR;}
+    double beta0(double scale2) const;
+    double beta1(double scale2) const;
+    double K_CMW(double scale2) const;
+    double CollDimGlue(double scale2) const;
+    double CollDimQuark(double scale2) const;
+  };
+  
   const double s_Nc = 3.;
   const double s_CF = (s_Nc*s_Nc-1.)/(2.*s_Nc);
   const double s_CA = s_Nc;
@@ -44,6 +73,8 @@ namespace RESUM {
     PDF::PDF_Base    ** p_pdf;
     
     MODEL::Running_AlphaS *p_as;
+
+    Params m_params;
     
     //list of available and initialized bases
     CMetric_Map    m_cmetrics;
@@ -70,6 +101,7 @@ namespace RESUM {
                PDFEXPAND = 1  << 0,
                COLLEXPAND = 1 << 1,
                SOFTEXPAND = 1 << 2,
+               LARGENC = 1    << 3,
                EXPAND = COLLEXPAND | SOFTEXPAND
     };
 
@@ -77,6 +109,7 @@ namespace RESUM {
                                                      {"PDFEXPAND", MODE::PDFEXPAND},
                                                      {"COLLEXPAND", MODE::COLLEXPAND},
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
+                                                     {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND}};
     
     MODE m_amode = MODE::RESUM;

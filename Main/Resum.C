@@ -31,6 +31,28 @@ using std::string;
 using std::vector;
 using std::complex;
 
+
+double Params::beta0(double scale2) const {
+  if(!m_largeNC) return p_as->Beta0(scale2)/M_PI;
+  else return 11./12./M_PI;
+}
+double Params::beta1(double scale2) const {
+  if(!m_largeNC) return p_as->Beta1(scale2)/(M_PI*M_PI);
+  else return 17./24./M_PI/M_PI;
+}
+double Params::K_CMW(double scale2) const {
+  if(!m_largeNC) return  s_CA*(67./18. - M_PI*M_PI/6.)- m_TR*p_as->Nf(scale2)*10./9.;
+  else return 67./18. - M_PI*M_PI/6.;
+}
+double Params::CollDimGlue(double scale2) const {
+  if(!m_largeNC) return -M_PI*beta0(scale2)/s_CA;
+  else return -M_PI*beta0(scale2);
+}
+double Params::CollDimQuark(double scale2) const {
+  return -3./4.;
+}
+
+
 Resum::Resum(ISR_Handler *const isr,
 	     Model_Base *const model):
   Shower_Base("Resum"), p_ampl(nullptr)
@@ -59,6 +81,7 @@ Resum::Resum(ISR_Handler *const isr,
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
   }
+  m_params = Params(p_as, (m_amode & MODE::LARGENC) != 0);
 }
 
 Resum::~Resum()
@@ -322,7 +345,7 @@ double Resum::CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
 
 double Resum::T(const double x)
 {
-  return -1./p_as->Beta0(p_ampl->MuR2())*log(1.-2.*x);
+  return -M_PI/m_params.beta0(p_ampl->MuR2())*log(1.-2.*x);
 } 
 
 
@@ -335,7 +358,7 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
   if(numlegs == 2) return 1.;
 
   const double as = (*p_as)(p_ampl->MuR2());
-  const double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
+  const double beta0 = m_params.beta0(p_ampl->MuR2());
   const double lambda = as*beta0*L; 
   const double t = (!(m_amode & MODE::EXPAND)) ? T(lambda/m_a[0]) : 2*as*L/M_PI;
   
@@ -365,7 +388,7 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
     MatrixC Csum(dim, dim);
     for(size_t k=0; k<numlegs; k++) {
       size_t k_t = (k < 2 ? k : 2*k-1);
-      double Cl = flavlabels[k_t]==Flavour(kf_gluon) ? s_CA : s_CF;
+      double Cl = flavlabels[k_t]==Flavour(kf_gluon) ? m_params.CA() : m_params.CF();
       Csum += Cl*met;
     }
     msg_Debugging()<<(2.*Tsum+Csum).setFuzzyZeroToZeroInline()<<std::endl;
@@ -500,11 +523,10 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, double &Collexp) 
 {
 
-  const double nf = double(p_as->Nf(p_ampl->MuR2()));
-  const double Tf = s_TR*nf;
-  const double beta0 = p_as->Beta0(p_ampl->MuR2())/M_PI;
-  const double beta1 = p_as->Beta1(p_ampl->MuR2())/(M_PI*M_PI);
-  const double K_CMW = s_CA*(67./18. - M_PI*M_PI/6.)- Tf*10./9.;
+  const double muR2 = p_ampl->MuR2();
+  const double beta0 = m_params.beta0(muR2);
+  const double beta1 = m_params.beta1(muR2);
+  const double K_CMW = m_params.K_CMW(muR2);
   
   double R=0;
 
@@ -516,13 +538,13 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double colfac = 0.;
       double hardcoll = 0.;
 
-      const double as = (*p_as)(p_ampl->MuR2());
+      const double as = (*p_as)(muR2);
       Vec4D pl(p_ampl->Leg(i)->Mom());
       cms.Boost(pl);
       const double El = dabs(pl[0]);
 
-      if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {colfac = s_CA; hardcoll=-M_PI*beta0/s_CA;}
-      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {colfac = s_CF; hardcoll=-3./4.;} 
+      if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {colfac = m_params.CA(); hardcoll=m_params.CollDimGlue(muR2);}
+      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {colfac = m_params.CF(); hardcoll=m_params.CollDimQuark(muR2);} 
       else continue;
 
       double t_scale = 0.5*(sqrt(pow(p_ampl->Leg(2)->Mom()[1],2) + pow(p_ampl->Leg(2)->Mom()[2],2)+
@@ -530,7 +552,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Q=sqrt(p_ampl->MuQ2());
       double Q12=s_12;
       double lambda=as*beta0*L;
-      double Lmur=log((p_ampl->MuR2())/(Q*Q));
+      double Lmur=log((muR2)/(Q*Q));
 
       //The following formulae are taken from Appendix A of hep-ph/0407286. 
 
