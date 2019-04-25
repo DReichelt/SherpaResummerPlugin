@@ -29,10 +29,28 @@ namespace RESUM {
 
     std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
-      if(!p_F) {
-        p_F.reset(new FFUNCTION::FFunction(Name()+".dat"));
+      
+      size_t N_gluon = 0;
+      
+      for (size_t i(2); i<NJETS+1;i++){
+	if (fl[i].IDName() == "G"){
+	  N_gluon += 1;
+	}
       }
-      return *p_F;
+      
+      if(!p_F1 and (N_gluon == 0 or N_gluon == 1)) {
+        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
+      }
+            
+      if(!p_F2 and (N_gluon == 2 or N_gluon == 3)) {
+        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
+      }
+      
+
+      if (N_gluon < 2) return *p_F1;
+      if (N_gluon < 4) return *p_F2;
+      THROW(fatal_error,"No F function for events with " + std::to_string(N_gluon) + " gluons.");
+      return 0;
     }
   
     
@@ -97,7 +115,8 @@ namespace RESUM {
     }
 
   private:
-    FFUNCTION::FFunction::Ptr p_F = nullptr;
+    FFUNCTION::FFunction::Ptr p_F1 = nullptr;
+    FFUNCTION::FFunction::Ptr p_F2 = nullptr;
 
   };// end of class YN_Durham
 
