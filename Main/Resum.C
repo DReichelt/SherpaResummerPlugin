@@ -345,7 +345,7 @@ double Resum::CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
 
 double Resum::T(const double x)
 {
-  return -M_PI/m_params.beta0(p_ampl->MuR2())*log(1.-2.*x);
+  return -1./m_params.beta0(p_ampl->MuR2())/M_PI * log(1.-2.*x);
 } 
 
 
