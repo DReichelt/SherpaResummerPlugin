@@ -20,7 +20,7 @@ namespace RESUM {
     Obs_Params Parameters(const std::vector<Vec4<T>>& moms,
                           const std::vector<Flavour>& flavs,
                           const size_t& l=0) {
-      return {1,0,log(2),2};
+      return {1,0,-log(2),2};
     }
 
     using Observable_Base_Template<T>::Name;
