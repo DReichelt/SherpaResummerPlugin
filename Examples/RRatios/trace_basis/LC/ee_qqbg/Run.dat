@@ -1,0 +1,19 @@
+(run){
+  INTEGRATION_ERROR=.9
+  EVENTS 100; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 11 45.6; BEAM_2 -11 45.6;
+  SHOWER_GENERATOR RRatios;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{sqr(91.188)};
+  SHERPA_LDADD ResumAnalysis YODA;
+  RESUM_MODE 3;
+  RESUM::pre_calc = pre_calc/trace_basis/LC;
+}(run);
+(processes){
+  Process 11 -11 -> 1 -1 21 21;
+  End Process;
+}(processes);
+(selector){
+  ResumObs Y4_Durham 0.008;
+}(selector);
