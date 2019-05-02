@@ -32,8 +32,8 @@ namespace RESUM {
       
       size_t N_gluon = 0;
       
-      for (size_t i(2); i<NJETS+1;i++){
-	if (fl[i].IDName() == "G"){
+      for (size_t i=2; i<fl.size(); i++){
+	if (fl[i].IsGluon()){
 	  N_gluon += 1;
 	}
       }
@@ -43,12 +43,12 @@ namespace RESUM {
       }
             
       if(!p_F2 and (N_gluon == 2 or N_gluon == 3)) {
-        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
+        p_F2.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
       }
       
 
-      if (N_gluon < 2) return *p_F1;
-      if (N_gluon < 4) return *p_F2;
+      if (N_gluon < 2 && p_F1 != nullptr) return *p_F1;
+      if (N_gluon < 4 && p_F2 != nullptr) return *p_F2;
       THROW(fatal_error,"No F function for events with " + std::to_string(N_gluon) + " gluons.");
       return 0;
     }
@@ -109,17 +109,11 @@ namespace RESUM {
     }
 
     
-    double _LogArg_Dynamic(double v,
-                           const std::vector<Vec4T>& p,
-                           const std::vector<ATOOLS::Flavour>& fl) {
-      return _LogArg_Fixed(v,_Value(p,fl,2,NJETS-1));
+    double _Endpoint_Dynamic(const std::vector<Vec4T>& p,
+                             const std::vector<ATOOLS::Flavour>& fl) {
+      return _Value(p,fl,2,NJETS-1);
     }
 
-    double _ObsVal_Dynamic(double logarg,
-                           const std::vector<Vec4T>& p,
-                           const std::vector<ATOOLS::Flavour>& fl) {
-      return _ObsVal_Fixed(logarg, _Value(p,fl,2,NJETS-1));
-    }
   private:
     FFUNCTION::FFunction::Ptr p_F1 = nullptr;
     FFUNCTION::FFunction::Ptr p_F2 = nullptr;

@@ -2,6 +2,7 @@
 #define RESUM__FFUNCTION__FFUNCTIONS_H
 
 #include "ATOOLS/Math/MathTools.H"
+#include "Math/InterpolationWrapper.H"
 #include <memory>
 #include <vector>
 
@@ -12,18 +13,20 @@ namespace RESUM {
     }
 
 
-    class FFunction {
+    class FFunction : public InterpolationWrapper {
     public:
       typedef std::unique_ptr<FFunction> Ptr;
 
       FFunction(const std::string& filename);
       
       double operator()(const double Rp);
-      
+
+      // double LaplacePol(const double Rp) const;
 
     private:
-      std::vector<double> Rps;
-      std::vector<double> Fs;      
+      std::vector<double> m_Rps;
+      std::vector<double> m_Fs;
+      // std::vector<double> m_bweights;
     };
 
 

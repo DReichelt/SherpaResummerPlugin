@@ -110,45 +110,43 @@ namespace RESUM {
         return ps.m_logdbar-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
     }
     
-    virtual double LogArg(double v, const std::vector<Vec4T>& p,
+    double LogArg(double v, const std::vector<Vec4T>& p,
                           const std::vector<ATOOLS::Flavour>& fl) {
-      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
-        return _LogArg_Dynamic(v, p, fl);
-      }
-      return _LogArg_Fixed(v, m_endpoint);
+      return LogArg(v, Endpoint(p,fl));
     }
 
-    virtual double ObsVal(double logarg, const std::vector<Vec4T>& p,
+    double ObsVal(double logarg, const std::vector<Vec4T>& p,
                           const std::vector<ATOOLS::Flavour>& fl) {
-      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
-        return _ObsVal_Dynamic(logarg, p, fl);
-      }
-      return _ObsVal_Fixed(logarg, m_endpoint);
+      return ObsVal(logarg, Endpoint(p, fl));
     }
 
+    double Endpoint(const std::vector<Vec4T>& p,
+                            const std::vector<ATOOLS::Flavour>& fl) {
+      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
+        return _Endpoint_Dynamic(p, fl);
+      }
+      return m_endpoint;
+    }
+
+
+    double LogFac() {return m_logfac;}
+    double LogPow() {return m_logpow;}
     
-    virtual double _LogArg_Fixed(double v, double endpoint) {
+    double LogArg(double v, double endpoint) {
       double ret = 1;
       if (v < endpoint) {
-        ret += 1./pow(m_logfac*v,m_logpow) - 1./pow(m_logfac*endpoint,m_logpow);
+        ret += pow(m_logfac/v,m_logpow) - pow(m_logfac/endpoint,m_logpow);
       }
       return 1./pow(ret,1./m_logpow);                                                   
     }
 
-    virtual double _LogArg_Dynamic(double v,
-                                   const std::vector<Vec4T>& p,
-                                   const std::vector<ATOOLS::Flavour>& fl) {
-      THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
+    double ObsVal(double logarg, double endpoint) {
+      double ret = pow(1./logarg,m_logpow)+pow(m_logfac/endpoint,m_logpow)-1;
+      return m_logfac/pow(ret,1./m_logpow);
     }
 
-    virtual double _ObsVal_Fixed(double logarg, double endpoint) {
-      double ret = 1./pow(logarg,m_logpow)+1./pow(m_logfac*endpoint,m_logpow)-1;
-      return 1./pow(m_logfac*ret,1./m_logpow);
-    }
-
-    virtual double _ObsVal_Dynamic(double logarg,
-                                   const std::vector<Vec4T>& p,
-                                   const std::vector<ATOOLS::Flavour>& fl) {
+    virtual double _Endpoint_Dynamic(const std::vector<Vec4T>& p,
+                                     const std::vector<ATOOLS::Flavour>& fl) {
       THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
     }
     
