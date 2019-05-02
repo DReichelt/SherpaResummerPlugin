@@ -44,7 +44,8 @@ namespace RESUM {
       for(const auto& p: moms_FF) sum += p;
       T Cpar = T(3);
       for(const auto& p: moms_FF) {
-        if(!IsZero(p.Abs2())) THROW(not_implemented, "C parameter is implemented assuming massless particles. p2 = "+std::to_string(p.Abs2()));
+        // Note: default accuracy 1e-12 to strict apparently.
+        if(!IsZero(p.Abs2(),1e-6)) THROW(not_implemented, "C parameter is implemented assuming massless particles. p2 = "+ToString(p.Abs2()));
         for(const auto& q: moms_FF) {
           Cpar -= T(3)/T(2) * pow(p*q,2)/(p*sum)/(q*sum);
         }

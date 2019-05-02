@@ -3,6 +3,7 @@
 
 #include "Algorithm.H"
 #include "ATOOLS/Math/Poincare.H"
+#include "ATOOLS/Math/MathTools.H"
 #include "ATOOLS/Org/Run_Parameter.H"
 
 #include <algorithm>
@@ -36,18 +37,24 @@ namespace RESUM {
                  const std::vector<ATOOLS::Flavour>& fl,
                  const size_t &nin)   {
       std::vector<ATOOLS::Vec4<T>> moms = {p.begin()+nin,p.end()};
-      _calcThrust(moms,nin);
+      _calcAll(moms,nin);
+      _getJets(moms,nin);
     }
   
     
     T Thrust() const { return m_t; }
+    T ThrustMajor() const {return m_tMaj;}
+    T ThrustMinor() const {return m_tMin;}
     T Tau() const { return 1.-m_t; }
     const ATOOLS::Vec3<T>& Axis() const { return m_axis; }
+    const ATOOLS::Vec3<T>& AxisMajor() const { return m_axis; }
+    const ATOOLS::Vec3<T>& AxisMinor() const { return m_axis; }
 
-    
   private:
 
-    T _calcThrust(const std::vector<ATOOLS::Vec4<T>>& momenta, const size_t nin=2) {
+
+    
+    T _calcAll(const std::vector<ATOOLS::Vec4<T>>& momenta, const size_t nin=2) {
       std::vector<ATOOLS::Vec3<T>> p;
       ATOOLS::Vec4<T> Q = {T(0),T(0),T(0),T(0)};
       for(auto&& mom: momenta) {
@@ -59,6 +66,34 @@ namespace RESUM {
         m_axis = p[0]/p[0].Abs();
         return m_t;
       }
+      _calcThrust(p,Q,m_axis,m_t);
+      _calcThrustMajor(p,Q);
+      _calcThrustMinor(p,Q);
+    }
+
+    T _calcThrustMajor(const std::vector<ATOOLS::Vec3<T>>& p, const ATOOLS::Vec4<T>& Q) {
+      std::vector<ATOOLS::Vec3<T>> q;
+      for (const ATOOLS::Vec3<T>& v : p) {
+        const ATOOLS::Vec3<T> vpar = (v*m_axis) * m_axis;
+        q.emplace_back(v - vpar);
+      }
+      return _calcThrust(q, Q, m_axisMaj, m_tMaj);
+    }
+
+    T _calcThrustMinor(const std::vector<ATOOLS::Vec3<T>>& p, const ATOOLS::Vec4<T>& Q) {
+      if(!ATOOLS::IsZero(m_axis*m_axisMaj)) {
+        m_tMin = 0;
+        m_axisMin = {T(0),T(0),T(0)};
+      }
+      else {
+        m_axisMin = cross(m_axis, m_axisMaj);
+        for(const ATOOLS::Vec3<T>& q: p) {
+          m_tMin += RESUM::abs(m_axisMin*q)/Q.Abs();
+        }
+      }
+    }
+    
+    T _calcThrust(std::vector<ATOOLS::Vec3<T>> p, ATOOLS::Vec4<T> Q, ATOOLS::Vec3<T>& axis, T& t) {
       std::vector<ATOOLS::Vec3<T>> axes(4,{T(0),T(0),T(0)});
       std::vector<T> tval(4,T(0));
       std::sort(p.begin(), p.end(), mod2Cmp<T>);
@@ -91,28 +126,35 @@ namespace RESUM {
         }
         //std::cout << tval.at(i) << std::endl << std::endl;
       }
-      m_t = 0;
+      t = 0;
       for(unsigned int i=0; i<axes.size(); i++) {
         //std::cout << std::setprecision(10) << std::endl;
         //std::cout << tval.at(i) << " " << axes.at(i) << std::endl;
-        if(tval.at(i) > m_t) {
-          m_t = tval.at(i);
-          m_axis = axes.at(i);
+        if(tval.at(i) > t) {
+          t = tval.at(i);
+          axis = axes.at(i);
         }
       }
+      return t;
+    }
+
+
+    void _getJets(const std::vector<ATOOLS::Vec4<T>>& momenta, const size_t nin=2) {
       m_jets = std::vector<std::set<size_t>>(2);
 
       for(size_t i=0; i<momenta.size(); i++) {
         if(ATOOLS::Vec3<T>(momenta[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
         else m_jets.at(1).insert(i+nin);
       }
-      return m_t;
+      
     }
-
-
     
     ATOOLS::Vec3<T> m_axis = {0,0,0};
+    ATOOLS::Vec3<T> m_axisMaj = {0,0,0};
+    ATOOLS::Vec3<T> m_axisMin = {0,0,0};
     T m_t = 1;
+    T m_tMaj = 1;
+    T m_tMin = 1;
   };
 
   
