@@ -152,13 +152,14 @@ double Resum::Value(const double v, const double LResum)
   if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
-  double weight=CalcS(L, LResum, Softexp);
+  double weight = 1.;
+  if(!(m_amode & MODE::LARGENC)) weight *= CalcS(L, LResum, Softexp);
   //weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
-  weight*=CalcPDF(L, LResum, PDFexp);
+  weight *= CalcPDF(L, LResum, PDFexp);
   //calc collinear piece
-  weight*=exp(CalcColl(L, LResum, 1, Rp, Collexp));
+  weight *= exp(CalcColl(L, LResum, 1, Rp, Collexp));
   if(!std::isnan(Rp)) weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
@@ -599,7 +600,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_corr = -(L-LResum)*r1p;
 	    double r2=(r2_cmw+r2_beta1+r2_corr);
 
-	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
+	    R+= -colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i]));
+            if(!(m_amode & MODE::LARGENC)) R+= -colfac*log(Q12/Q)*T(lambda/m_a[i]);
 	    Rp+=r1p*colfac;
 	  }
 	}
