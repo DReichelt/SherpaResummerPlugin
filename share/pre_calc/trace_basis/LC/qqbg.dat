@@ -3,7 +3,7 @@
 SIZE_CONNECTED = 1;
 
 % prefactors of the partial amplitude in total amplitude
-a_0 = 2.82842712474619029;
+a_0 = 1.41421356237309515;
 
 % permutations defining the partial amplitudes
 A_0 = 0 2 1;
@@ -13,9 +13,9 @@ A_0 = 0 2 1;
 DIM = 1;
 
 % colour metric aka soft matrix
-METRIC = 1.12500000000000000;
+METRIC = 1.00000000000000000;
 
 % colour change matrices
-C_01 = -0.18750000000000000;
-C_02 = -1.50000000000000000;
-C_12 = -1.50000000000000000;
+C_01 = 1.00000000000000000;
+C_02 = 1.00000000000000000;
+C_12 = 1.00000000000000000;
