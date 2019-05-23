@@ -256,16 +256,15 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
     const double L = -log(tau);
     // subtraction from scale variations
     const double p = m_obss[i]->LogPow();
-    const double x = m_obss[i]->LogFac();
+    const double x = m_obss[i]->LogFac();    
     const double e = m_obss[i]->Endpoint({sub->p_mom, sub->p_mom+sub->m_n},
                                          {sub->p_fl, sub->p_fl+sub->m_n});
-
+    lrat += -2.*log(x)/sub->m_lt[0]/ps.m_a;
     // lrat += -2.*2.*Lt/sub->m_lt[0]/ps.m_a;
     // lrat += 2.*(L+Lt/(1-pow(y,p)-pow(x*y/e,p)))/sub->m_lt[0]/ps.m_a;
 
-    lrat += -2.*(2.*Lt-(L+Lt/(1-pow(y,p)+pow(x*y/e,p))))/sub->m_lt[0]/ps.m_a;
+    // lrat += -2.*(2.*Lt-(L+Lt/(1-pow(y,p)+pow(x*y/e,p))))/sub->m_lt[0]/ps.m_a;
 
-    
     lrat *= 2.0/(ps.m_a+ps.m_b);
     
 #ifdef USING__ROOT

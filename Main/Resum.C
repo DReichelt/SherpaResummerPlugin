@@ -81,7 +81,8 @@ Resum::Resum(ISR_Handler *const isr,
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
   }
-  m_params = Params(p_as, (m_amode & MODE::LARGENC) != 0);
+  msg_Debugging()<<"Resum Mode: "<<m_amode<<"\n";
+  m_params = Params(p_as, (m_amode & MODE::LARGENC));
 }
 
 Resum::~Resum()
@@ -132,8 +133,10 @@ int Resum::PerformShowers()
     const size_t i = (1+m_hist[n]->Nbin())*ran->Get();
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
-    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
-    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
+    // const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
+    // const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
+    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()));
+    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()));
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
@@ -152,13 +155,14 @@ double Resum::Value(const double v, const double LResum)
   if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, Collexp=0.0, Softexp=0.0, PDFexp=0.0;
-  double weight=CalcS(L, LResum, Softexp);
+  double weight = 1.;
+  weight *= CalcS(L, LResum, Softexp);
   //weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
-  weight*=CalcPDF(L, LResum, PDFexp);
+  weight *= CalcPDF(L, LResum, PDFexp);
   //calc collinear piece
-  weight*=exp(CalcColl(L, LResum, 1, Rp, Collexp));
+  weight *= exp(CalcColl(L, LResum, 1, Rp, Collexp));
   if(!std::isnan(Rp)) weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
@@ -574,10 +578,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
 	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
             // subtract NLL contribution of scale variation
-            double r2_corr = -(L-LResum)*r1p;
+            double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 
-	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i]))+log(Q12/Q)*T(lambda/m_a[i]));
+	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	    
 	  }
@@ -596,15 +600,15 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
-            double r2_corr = -(L-LResum)*r1p;
+            double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
 	    double r2=(r2_cmw+r2_beta1+r2_corr);
 
-	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i])+log(Q12/Q)*T(lambda/m_a[i]));
+	    R+= -colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	  }
 	}
       
-      Collexp+= -2./M_PI*as*(colfac) * ( L/2.0/m_a[i]/(m_a[i]+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)-(L-LResum)) + log(Q12/Q)/m_a[i])*L;
+      Collexp+= -2./M_PI*as*(colfac) * ( L/2.0/m_a[i]/(m_a[i]+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i])*L;
     }
   return R;
 }

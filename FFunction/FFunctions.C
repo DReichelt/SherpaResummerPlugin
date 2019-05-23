@@ -16,6 +16,7 @@ FFunction::FFunction(const std::string& filename) {
   DEBUG_FUNC(filename);
   std::ifstream input(FILENAMES::SHARE_DIR+"/FFunction/" + filename);
   if(!input.good()) THROW(fatal_error,"No file " + filename + ".");
+  m_mode = MODE::HERMITE;
   double Rp;
   double F;
   std::string row = "";

@@ -10,6 +10,7 @@ InterpolationWrapper::InterpolationWrapper(const std::vector<double>& xvals,
 }
 
 void InterpolationWrapper::_calc() {
+  m_coeff.resize(m_xvals.size());
   spline_pchip_set(m_xvals.size(),&m_xvals[0],&m_yvals[0],&m_coeff[0]);
 }
 

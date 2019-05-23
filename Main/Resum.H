@@ -37,7 +37,9 @@ namespace RESUM {
       if(m_largeNC) {
         m_CF = m_NC;
         m_CA = m_NC;
+        msg_Debugging()<<"Calculate QCD parameters in large NC limit.\n";
       }
+      else msg_Debugging()<<"Calculate QCD parameters with NC = 3.\n";
     }
     double NC() const {return m_NC;}
     double CA() const {return m_CA;}
