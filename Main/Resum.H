@@ -117,12 +117,12 @@ namespace RESUM {
     MODE m_amode = MODE::RESUM;
     
     double CalcS(const double L, const double LResum, double &Softexp);
-    double CalcColl(const double L, const double LResum, const int order,
+    double CalcColl(const double L, const double LResum, const int order, double epRatio,
 		    double &Rp,double &Collexp);
     double CalcPDF(const double L, const double LResum, double &PDFexp);
     double T(const double x);
 
-    double Value(const double v, const double LResum);
+    double Value(const double v, const double LResum, double epRatio);
 
   public:
 
