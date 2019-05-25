@@ -2,10 +2,10 @@
 SIZE_CONNECTED = 1;
 
 % prefactors of the partial amplitude in total amplitude
-a_0 = 3.00000000000000000;
+a_0 = 1.73205080756887719;
 
 % permutations defining the partial amplitudes
-A_0 = 0 2 1;
+A_0 = 0 1;
 
 
 % dimension of the colour space
@@ -15,6 +15,4 @@ DIM = 1;
 METRIC = 1.00000000000000022;
 
 % colour change matrices
-C_01 = 0.00000000000000000;
-C_02 = -1.50000000000000022;
-C_12 = -1.50000000000000022;
+C_01 = -1.50000000000000044;
