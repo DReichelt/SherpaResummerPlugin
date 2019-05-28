@@ -130,12 +130,16 @@ int Resum::PerformShowers()
     }
     m_F = m_obss[n]->FFunction(moms, flavs);
     // select a random bin
-    const size_t i = (1+m_hist[n]->Nbin())*ran->Get();
+    const size_t i = (1+m_hist[n]->Nbin())*ran->Get();    
     const double xl = m_hist[n]->LowEdge(i);
     const double xh = m_hist[n]->HighEdge(i);
     // const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
     // const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
+    m_zcut = m_obss[n]->GroomZcut();
+    m_beta = m_obss[n]->GroomBeta();
+    m_gmode = m_obss[n]->GroomMode(xl);
     const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()));
+    m_gmode = m_obss[n]->GroomMode(xh);
     const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()));
     // bin to fill
     m_ress[n].first = std::floor(i+1);
@@ -553,9 +557,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 
       double t_scale = 0.5*(sqrt(pow(p_ampl->Leg(2)->Mom()[1],2) + pow(p_ampl->Leg(2)->Mom()[2],2)+
 				 pow(p_ampl->Leg(3)->Mom()[1],2) + pow(p_ampl->Leg(3)->Mom()[2],2)));
-      double Q=sqrt(p_ampl->MuQ2());
-      double Q12=s_12;
-      double lambda=as*beta0*L;
+      double Q = sqrt(p_ampl->MuQ2());
+      double Q12 = s_12;
+      double lambda = as*beta0*L;
+      double lambdaZ = as*beta0*log(1./m_zcut);
+      double lambda2 = as*beta0*log(1./2.);
       double Lmur=log((muR2)/(Q*Q));
 
       //The following formulae are taken from Appendix A of hep-ph/0407286. 
@@ -564,19 +570,39 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	{
 	  if (order>=0) {    
 	    //LL part
-	    double r1= 1./2./M_PI/pow(beta0,2.)/as/m_b[i]*((m_a[i]-2.*lambda)*log(1.-2.*lambda/m_a[i])
-							    -(m_a[i]+m_b[i]-2.*lambda)*log(1.-2.*lambda/(m_a[i]+m_b[i])));
+            double r1 = 0;
+            if(m_gmode & GROOM_MODE::SD) {
+              r1 = -1./2./M_PI/pow(beta0,2)/as/m_b[i] * (m_b[i]/(1.+m_beta) * (1.-2.*lambdaZ-m_beta*lambda2)*log(1.-2.*lambdaZ-m_beta*lambda2) \
+                                                         - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2)*log(1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2) \
+                                                        + (m_a[i]+m_b[i])*(1.-2./(m_a[i]+m_b[i])*lambda)*log(1.-2./(m_a[i]+m_b[i])*lambda) );              
+            }
+            else {
+              r1= 1./2./M_PI/pow(beta0,2.)/as/m_b[i]*((m_a[i]-2.*lambda)*log(1.-2.*lambda/m_a[i])
+                                                      -(m_a[i]+m_b[i]-2.*lambda)*log(1.-2.*lambda/(m_a[i]+m_b[i])));
+            }
 	    R+=((-1.)*colfac*r1);
 	  }
 	  if (order>=1) {	    
             //NLL part   //note Lmur term in r2_cmw
-	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
-						       -m_a[i]*log(1.-2.*lambda/m_a[i]));
-	    double r2_beta1=beta1/2./M_PI/pow(beta0,3.)*(m_a[i]/2.*pow(log(1-2.*lambda/m_a[i]),2.)
-							 -0.5*(m_a[i]+m_b[i])*pow(log(1.-2.*lambda/(m_a[i]+m_b[i])),2.)
-							 +m_a[i]*log(1-2.*lambda/m_a[i])
-							 -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
-	    double r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));	    
+            double r2_cmw = 0;
+            double r2_beta1 = 0;
+            double r1p = 0.;
+            if(m_gmode & GROOM_MODE::SD) {
+              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ/* -m_beta*lambda2 */),2)+2.*log(1.-2.*lambdaZ/* -m_beta*lambda2 */)) \
+                                                           -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ/* -m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i]+m_b[i])*lambda2 */),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]+m_beta+m_a[i]+m_b[i])*lambdaZ-m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i]/* +m_b[i])*lambda2 */)) ) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
+              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ/* -m_beta*lambda2 */) \
+                                                      - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ /* - m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 */) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
+              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2./(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ/* -m_b[i]*m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 */)-log(1-2.*lambda));
+            }
+            else {
+              r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
+                                                                       -m_a[i]*log(1.-2.*lambda/m_a[i]));
+              r2_beta1=beta1/2./M_PI/pow(beta0,3.)*(m_a[i]/2.*pow(log(1-2.*lambda/m_a[i]),2.)
+                                                    -0.5*(m_a[i]+m_b[i])*pow(log(1.-2.*lambda/(m_a[i]+m_b[i])),2.)
+                                                    +m_a[i]*log(1-2.*lambda/m_a[i])
+                                                    -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
+              r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));
+            }
             // subtract NLL contribution of scale variation
             double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);

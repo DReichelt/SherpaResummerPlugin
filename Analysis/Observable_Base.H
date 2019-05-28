@@ -30,6 +30,12 @@ namespace RESUM {
       m_a(a), m_b(b), m_logdbar(logdbar), m_g(g) {}
   };
 
+  enum GROOM_MODE {
+                   NONE = 0,
+                   SD = 1  << 0
+  };
+
+  
   template <typename T>
   class Observable_Base_Template {
   public:
@@ -52,6 +58,12 @@ namespace RESUM {
     
     const std::map<std::string,EP_MODE> m_EPModeToEnum = {{"FIXED", EP_MODE::FIXED},
                                                           {"DYNAMIC", EP_MODE::DYNAMIC}};
+
+    const std::map<std::string,GROOM_MODE> m_GroomModeToEnum = {{"NONE", GROOM_MODE::NONE},
+                                                                {"SD", GROOM_MODE::SD}};
+    GROOM_MODE m_gmode = GROOM_MODE::NONE;
+    double m_zcut = 0;
+    double m_beta = 0;
     
   public:
     typedef std::shared_ptr<Observable_Base_Template> Ptr;
@@ -69,7 +81,24 @@ namespace RESUM {
           m_epmode = static_cast<EP_MODE>(m_epmode | m_EPModeToEnum.at(m));
         }
       }
-      
+
+      const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","DEFAULT");
+      if(is_int(ep_mode)) {
+        m_gmode = static_cast<GROOM_MODE>(to_type<int>(ep_mode));
+      }
+      else {
+        if(!(gmode=="DEFAULT")) {
+          for(const std::string& m: split(ep_mode,"\\|")) {
+            m_gmode = static_cast<GROOM_MODE>(m_epmode | m_GroomModeToEnum.at(m));
+          }
+        }
+      }
+      if(m_gmode & GROOM_MODE::SD) {
+        m_zcut = read.GetValue<double>("RESUM::"+m_name+"::GROOM::ZCUT",
+                                       read.GetValue<double>("RESUM::GROOM::ZCUT", 0.1) );
+        m_beta = read.GetValue<double>("RESUM::"+m_name+"::GROOM::BETA",
+                                       read.GetValue<double>("RESUM::GROOM::BETA", 0));
+      }
     }
 
     virtual ~Observable_Base_Template() {};
@@ -140,6 +169,24 @@ namespace RESUM {
       return 1./pow(ret,1./m_logpow);                                                   
     }
 
+    // stuff for grooming
+    GROOM_MODE GroomMode(double v) {
+      if(v > GroomTransitionPoint()) return GROOM_MODE::NONE;
+      else return m_gmode;
+    }
+
+    T GroomZcut() {
+      return m_zcut;
+    }
+
+    T GroomBeta() {
+      return m_beta;
+    }
+
+    virtual double GroomTransitionPoint() {
+      return std::numeric_limits<T>::infinity();
+    }
+    
     double ObsVal(double logarg, double endpoint) {
       double ret = pow(1./logarg,m_logpow)+pow(m_logfac/endpoint,m_logpow)-1;
       return m_logfac/pow(ret,1./m_logpow);

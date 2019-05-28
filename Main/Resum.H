@@ -5,6 +5,7 @@
 
 #include "Main/Comix_Interface.H"
 #include "Tools/CMetric_Base.H"
+#include "Analysis/Observable_Base.H"
 
 #include <map>
 #include <string>
@@ -95,6 +96,9 @@ namespace RESUM {
     int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
 
+    // grooming parameters
+    double m_zcut, m_beta;
+    
     /// Leg ids ordered as quarks-antiquarks-gluons in n-parton amplitude.
     std::vector<size_t> m_ordered_ids;
     
@@ -115,6 +119,9 @@ namespace RESUM {
                                                      {"EXPAND", MODE::EXPAND}};
     
     MODE m_amode = MODE::RESUM;
+
+
+    RESUM::GROOM_MODE m_gmode = GROOM_MODE::NONE;
     
     double CalcS(const double L, const double LResum, double &Softexp);
     double CalcColl(const double L, const double LResum, const int order,
