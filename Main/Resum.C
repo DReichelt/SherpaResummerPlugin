@@ -173,7 +173,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
     weight = 0.0;
     if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL*(1.-epRatio);
     if ((m_amode & MODE::SOFTEXPAND) != 0) weight += Softexp*(1.-epRatio);
-    if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp;
+    if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp*(1.-epRatio);
   }
   return weight;
 }
@@ -369,7 +369,8 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
   const double as = (*p_as)(p_ampl->MuR2());
   const double beta0 = m_params.beta0(p_ampl->MuR2());
   const double lambda = as*beta0*L; 
-  const double t = (!(m_amode & MODE::EXPAND)) ? T(lambda/m_a[0]) : 2*as*L/M_PI;
+  const double t = T(lambda/m_a[0]);
+  const double t_exp = 2*as*L/M_PI;
   
   const MatrixD& met = p_cmetric->CMetric();
   const MatrixC& ICmetric = p_cmetric->Imetric();
@@ -448,9 +449,9 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
       Gamma += MatrixC(Tprods[k]);
     }
   }
-  ReGamma *= t;
+  MatrixD Gamma_exp = t_exp*ReGamma;
   Gamma *= complex<double>(0,-t/2.*M_PI);
-  Gamma += MatrixC(ReGamma);
+  Gamma += MatrixC(t*ReGamma);
   if(msg_LevelIsDebugging()) {
     msg_Debugging()<<"Gamma = \n"<<Gamma<<"\n";
   }
@@ -467,7 +468,7 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
  //Note that normalization of H drops out in S
  const double traceH = Trace(Hard, met);
  //Leading order expansion Tr(-t*H*Gamma);
- const double traceHG = 2.*Trace(Hard, std::move(ReGamma));  
+ const double traceHG = 2.*Trace(Hard, std::move(Gamma_exp));  
  Softexp=traceHG/traceH/m_a[0];
 
  
@@ -606,7 +607,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
             double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
-            double r2_pow = epRatio * (-2./M_PI*as) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]) * L;
+            // double r2_pow = epRatio * (-2./M_PI*as) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]) * L;
             double r2=(r2_cmw+r2_beta1+r2_corr);
 
 	    R+= -colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
