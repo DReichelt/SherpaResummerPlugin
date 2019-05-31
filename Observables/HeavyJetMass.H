@@ -29,9 +29,10 @@ namespace RESUM {
       return Value(moms, flavs, dummy, nin);
     }
 
-    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+    std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
-      return [](double Rp) { return exp(-GAMMA_E*Rp-2*Gammln(1.+0.5*Rp)); };
+      //@TODO: find expansion
+      return [](double Rp,double& Fexp) {Fexp=1.; return exp(-GAMMA_E*Rp-2*Gammln(1.+0.5*Rp)); };
     }
        
     T Value(const std::vector<Vec4<T>>& moms,

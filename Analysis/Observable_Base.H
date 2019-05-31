@@ -93,7 +93,7 @@ namespace RESUM {
      const std::vector<ATOOLS::Flavour>& fl,
      const size_t &l) = 0;
 
-    virtual std::function<double(double)> FFunction(const std::vector<Vec4T>& p,
+    virtual std::function<double(double,double&)> FFunction(const std::vector<Vec4T>& p,
                                                     const std::vector<ATOOLS::Flavour>& fl) = 0;
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {

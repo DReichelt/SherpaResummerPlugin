@@ -32,7 +32,7 @@ namespace RESUM {
       return Value(moms, flavs, dummy, nin);
     }
 
-    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+    std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
       if(p_F == nullptr) {
         p_F.reset(new FFUNCTION::FFunction(Name()+".dat"));

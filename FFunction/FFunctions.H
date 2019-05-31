@@ -8,7 +8,8 @@
 
 namespace RESUM {
   namespace FFUNCTION {
-    inline double Additive(const double& Rp) {
+    inline double Additive(const double& Rp, double& FexpNLL_NLO) {
+      FexpNLL_NLO = -pow(M_PI,2)/12; 
       return exp(-GAMMA_E*Rp-ATOOLS::Gammln(1.+Rp));
     }
 
@@ -19,7 +20,7 @@ namespace RESUM {
 
       FFunction(const std::string& filename);
       
-      double operator()(const double Rp);
+      double operator()(const double Rp, double& FexpNLL_NLO);
 
       // double LaplacePol(const double Rp) const;
 

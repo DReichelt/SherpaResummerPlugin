@@ -90,7 +90,7 @@ namespace RESUM {
     std::vector<ATOOLS::Vec4D> m_cms, momlabels;
     std::vector<ATOOLS::Flavour> flavlabels;
     std::vector<double> m_Qij, m_a, m_b, m_logdbar;
-    std::function<double(double)> m_F;
+    std::function<double(double, double&)> m_F;
     std::vector<int> signlabels;
     int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
@@ -113,12 +113,27 @@ namespace RESUM {
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
                                                      {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND}};
-    
+
+    enum MATCH_MODE {
+      NONE = 0,
+      LO   = 1          << 1,
+      NLO  = 1          << 2,
+      ADD  = 1          << 3
+    };
+
+    const std::map<std::string,MATCH_MODE> m_MModeToEnum = {{"NONE", MATCH_MODE::NONE},
+                                                     {"LO", MATCH_MODE::LO},
+                                                     {"NLO", MATCH_MODE::NLO},
+                                                     {"ADD", MATCH_MODE::ADD}};
+
+      
     MODE m_amode = MODE::RESUM;
+    MATCH_MODE m_mmode = MATCH_MODE::NONE;
     
-    double CalcS(const double L, const double LResum, double &Softexp);
+    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO);
     double CalcColl(const double L, const double LResum, const int order,
-		    double &Rp,double &CollexpLL, double& CollexpNLL);
+		    double &Rp,double &CollexpLL_LO, double& CollexpNLL_LO,
+                    double &CollexpLL_NLO, double& CollexpNLL_NLO);
     double CalcPDF(const double L, const double LResum, double &PDFexp);
     double T(const double x);
 

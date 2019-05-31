@@ -27,7 +27,7 @@ namespace RESUM {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
-    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+    std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
       
       size_t N_gluon = 0;
