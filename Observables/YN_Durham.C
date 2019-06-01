@@ -31,19 +31,33 @@ namespace RESUM {
                                             const std::vector<ATOOLS::Flavour>& fl) {
       
       size_t N_gluon = 0;
-      
+
+      // TODO: actally get parameters here
+      double NC = 3.;
+      double CF = (NC*NC-1.)/2./NC;
+      double CA = NC;
+
+      double num = 0;
+      double den = 0;
       for (size_t i=2; i<fl.size(); i++){
 	if (fl[i].IsGluon()){
 	  N_gluon += 1;
+          num += CA*CA;
+          den += CA;
 	}
+        else if(fl[i].IsQuark()) {
+          num += CF*CF;
+          den += CF;
+        }
       }
+      double F2 = -M_PI/8. * 0.5*num/den/den;
       
       if(!p_F1 and (N_gluon == 0 or N_gluon == 1)) {
-        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
+        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat", F2));
       }
             
       if(!p_F2 and (N_gluon == 2 or N_gluon == 3)) {
-        p_F2.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat"));
+        p_F2.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat", F2));
       }
       
 

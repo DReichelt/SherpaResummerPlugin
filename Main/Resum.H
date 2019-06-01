@@ -35,7 +35,7 @@ namespace RESUM {
     Params(MODEL::Running_AlphaS *as, bool largeNC=false) : m_largeNC(largeNC) {
       p_as = as;
       if(m_largeNC) {
-        m_CF = m_NC;
+        m_CF = m_TR*m_NC;
         m_CA = m_NC;
         msg_Debugging()<<"Calculate QCD parameters in large NC limit.\n";
       }
@@ -117,8 +117,8 @@ namespace RESUM {
     enum MATCH_MODE {
       NONE = 0,
       LO   = 1          << 1,
-      NLO  = 1          << 2,
-      ADD  = 1          << 3
+      NLO = 1       << 2,
+      ADD  = 1          << 3,
     };
 
     const std::map<std::string,MATCH_MODE> m_MModeToEnum = {{"NONE", MATCH_MODE::NONE},
@@ -132,8 +132,9 @@ namespace RESUM {
     
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO);
     double CalcColl(const double L, const double LResum, const int order,
-		    double &Rp,double &CollexpLL_LO, double& CollexpNLL_LO,
-                    double &CollexpLL_NLO, double& CollexpNLL_NLO);
+		    double &Rp, MatrixD& G// ,double &CollexpLL_LO, double& CollexpNLL_LO,
+                    // double &CollexpLL_NLO, double& CollexpNLL_NLO
+                    );
     double CalcPDF(const double L, const double LResum, double &PDFexp);
     double T(const double x);
 

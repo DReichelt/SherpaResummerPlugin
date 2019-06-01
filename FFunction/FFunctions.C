@@ -45,8 +45,13 @@ FFunction::FFunction(const std::string& filename) {
   input.close(); 
 }
 
+FFunction::FFunction(const std::string& filename, double F2) : FFunction(filename) {
+  m_F2 = F2;
+}
+
 double FFunction::operator()(const double Rp, double& FexpNLL_NLO) {
   DEBUG_FUNC(Rp);
+  FexpNLL_NLO = m_F2*Rp;
   if (m_mode == MODE::DEFAULT) {
     size_t i = 0;
     for(; i<m_xvals.size(); i++) {

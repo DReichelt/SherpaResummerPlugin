@@ -19,6 +19,7 @@ namespace RESUM {
       typedef std::unique_ptr<FFunction> Ptr;
 
       FFunction(const std::string& filename);
+      FFunction(const std::string& filename, double F2);
       
       double operator()(const double Rp, double& FexpNLL_NLO);
 
@@ -27,6 +28,7 @@ namespace RESUM {
     private:
       std::vector<double> m_Rps;
       std::vector<double> m_Fs;
+      double m_F2 = 0;
       // std::vector<double> m_bweights;
     };
 
