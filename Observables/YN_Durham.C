@@ -29,7 +29,7 @@ namespace RESUM {
 
     std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                             const std::vector<ATOOLS::Flavour>& fl) {
-      
+
       size_t N_gluon = 0;
       
       for (size_t i=2; i<fl.size(); i++){
@@ -161,3 +161,22 @@ operator()(const Parameter_Type &args) const
 void ATOOLS::Getter<Observable_Base,Observable_Key,Y6_Durham>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y6_Durham"; }
+
+
+typedef YN_Durham<7> Y7_Durham;
+DECLARE_GETTER(Y7_Durham,"Y7_Durham",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y7_Durham>::
+operator()(const Parameter_Type &args) const 
+{ return new Y7_Durham(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,Y7_Durham>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"Y7_Durham"; }
+
+typedef YN_Durham<8> Y8_Durham;
+DECLARE_GETTER(Y8_Durham,"Y8_Durham",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y8_Durham>::
+operator()(const Parameter_Type &args) const 
+{ return new Y8_Durham(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,Y8_Durham>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"Y8_Durham"; }
