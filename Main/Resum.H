@@ -35,7 +35,7 @@ namespace RESUM {
     Params(MODEL::Running_AlphaS *as, bool largeNC=false) : m_largeNC(largeNC) {
       p_as = as;
       if(m_largeNC) {
-        m_CF = m_NC;
+        m_CF = m_NC/2.;
         m_CA = m_NC;
         msg_Debugging()<<"Calculate QCD parameters in large NC limit.\n";
       }
