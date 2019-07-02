@@ -121,7 +121,7 @@ namespace RESUM {
                                                      {"EXPAND", MODE::EXPAND}};
     
     MODE m_amode = MODE::RESUM;
-
+    size_t m_LogOrd = 1;
 
     RESUM::GROOM_MODE m_gmode = GROOM_MODE::NONE;
     

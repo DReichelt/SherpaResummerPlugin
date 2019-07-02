@@ -81,8 +81,8 @@ namespace RESUM {
           m_epmode = static_cast<EP_MODE>(m_epmode | m_EPModeToEnum.at(m));
         }
       }
-
-      const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","DEFAULT");
+      
+      const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","NONE");
       if(is_int(gmode)) {
         m_gmode = static_cast<GROOM_MODE>(to_type<int>(gmode));
       }
@@ -170,12 +170,6 @@ namespace RESUM {
     }
 
     // stuff for grooming
-    GROOM_MODE GroomMode(double v, const std::vector<Vec4T>& p,
-                         const std::vector<ATOOLS::Flavour>& fl) {
-      if(LogArg(v, Endpoint(p,fl)) > GroomTransitionPoint()) return GROOM_MODE::NONE;
-      else return m_gmode;
-    }
-    
     GROOM_MODE GroomMode(double v) {
         if(v > GroomTransitionPoint()) return GROOM_MODE::NONE;
         else return m_gmode;
