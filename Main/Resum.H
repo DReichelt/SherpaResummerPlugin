@@ -99,6 +99,8 @@ namespace RESUM {
     // grooming parameters
     double m_zcut, m_beta;
     
+    double m_logpow;
+    
     /// Leg ids ordered as quarks-antiquarks-gluons in n-parton amplitude.
     std::vector<size_t> m_ordered_ids;
     

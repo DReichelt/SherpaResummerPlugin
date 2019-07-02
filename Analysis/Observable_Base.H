@@ -83,13 +83,13 @@ namespace RESUM {
       }
 
       const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","DEFAULT");
-      if(is_int(ep_mode)) {
-        m_gmode = static_cast<GROOM_MODE>(to_type<int>(ep_mode));
+      if(is_int(gmode)) {
+        m_gmode = static_cast<GROOM_MODE>(to_type<int>(gmode));
       }
       else {
         if(!(gmode=="DEFAULT")) {
-          for(const std::string& m: split(ep_mode,"\\|")) {
-            m_gmode = static_cast<GROOM_MODE>(m_epmode | m_GroomModeToEnum.at(m));
+          for(const std::string& m: split(gmode,"\\|")) {
+            m_gmode = static_cast<GROOM_MODE>(m_gmode | m_GroomModeToEnum.at(m));
           }
         }
       }
@@ -170,9 +170,15 @@ namespace RESUM {
     }
 
     // stuff for grooming
-    GROOM_MODE GroomMode(double v) {
-      if(v > GroomTransitionPoint()) return GROOM_MODE::NONE;
+    GROOM_MODE GroomMode(double v, const std::vector<Vec4T>& p,
+                         const std::vector<ATOOLS::Flavour>& fl) {
+      if(LogArg(v, Endpoint(p,fl)) > GroomTransitionPoint()) return GROOM_MODE::NONE;
       else return m_gmode;
+    }
+    
+    GROOM_MODE GroomMode(double v) {
+        if(v > GroomTransitionPoint()) return GROOM_MODE::NONE;
+        else return m_gmode;
     }
 
     T GroomZcut() {

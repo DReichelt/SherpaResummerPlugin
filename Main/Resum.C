@@ -138,11 +138,14 @@ int Resum::PerformShowers()
     // const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
     m_zcut = m_obss[n]->GroomZcut();
     m_beta = m_obss[n]->GroomBeta();
-    m_gmode = m_obss[n]->GroomMode(xl);
+    
+    m_logpow = m_obss[n]->LogPow();
+    
+    m_gmode = m_obss[n]->GroomMode(xl, moms, flavs);
     const double ep = m_obss[n]->Endpoint(moms,flavs);
-    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()), std::min(xl/ep,1.));
-    m_gmode = m_obss[n]->GroomMode(xh);
-    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()), std::min(xh/ep,1.));
+    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xl/ep,m_logpow),1.));
+    m_gmode = m_obss[n]->GroomMode(xh, moms, flavs);
+    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xh/ep,m_logpow),1.));
 
     // bin to fill
     m_ress[n].first = std::floor(i+1);
@@ -158,22 +161,23 @@ int Resum::PerformShowers()
 double Resum::Value(const double v, const double LResum, const double epRatio)
 {
   DEBUG_FUNC(v);
+  
   if(IsZero(v)) return 0;
   if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, CollexpLL=0.0, CollexpNLL=0.0, Softexp=0.0, PDFexp=0.0;
   double weight = 1.;
-  weight *= CalcS(L, LResum, Softexp);
-  weight *= exp(-epRatio*Softexp);
+//   weight *= CalcS(L, LResum, Softexp);
+//   weight *= exp(-epRatio*Softexp);
   // weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
-  weight *= CalcPDF(L, LResum, PDFexp);
-  weight *= exp(-epRatio*PDFexp);
+//   weight *= CalcPDF(L, LResum, PDFexp);
+//   weight *= exp(-epRatio*PDFexp);
   //calc collinear piece
-  weight *= exp(CalcColl(L, LResum, 1, Rp, CollexpLL, CollexpNLL));
-  weight *= exp(-epRatio*CollexpNLL);
-  if(!std::isnan(Rp)) weight*=m_F(Rp);
+  weight *= exp(CalcColl(L, LResum, 0, Rp, CollexpLL, CollexpNLL));
+//   weight *= exp(-epRatio*CollexpNLL);
+//   if(!std::isnan(Rp)) weight*=m_F(Rp);
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
     if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL*(1.-epRatio);
@@ -537,6 +541,10 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
 
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, double &CollexpLL, double& CollexpNLL) 
 {
+    
+//   if(m_gmode & GROOM_MODE::SD) std::cout << "test (zcut): " << exp(-L) << " " << m_zcut << " " << m_beta << " " << (m_gmode & GROOM_MODE::SD) << std::endl;
+    
+    
 
   const double muR2 = p_ampl->MuR2();
   const double beta0 = m_params.beta0(muR2);
@@ -546,6 +554,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   double R=0;
 
   Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
+  
   
   for(size_t i =0; i<p_ampl->Legs().size(); i++) 
     {
@@ -595,11 +604,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_beta1 = 0;
             double r1p = 0.;
             if(m_gmode & GROOM_MODE::SD) {
-              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ/* -m_beta*lambda2 */),2)+2.*log(1.-2.*lambdaZ/* -m_beta*lambda2 */)) \
-                                                           -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ/* -m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i]+m_b[i])*lambda2 */),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]+m_beta+m_a[i]+m_b[i])*lambdaZ-m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i]/* +m_b[i])*lambda2 */)) ) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
-              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ/* -m_beta*lambda2 */) \
-                                                      - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ /* - m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 */) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
-              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2./(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ/* -m_b[i]*m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 */)-log(1-2.*lambda));
+              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ -m_beta*lambda2 ),2)+2.*log(1.-2.*lambdaZ -m_beta*lambda2 )) \
+                                                          -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ -m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i]+m_b[i])*lambda2 ),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]+m_beta+m_a[i]+m_b[i])*lambdaZ-m_beta*m_b[i]/(m_a[i]*m_beta+m_a[i] +m_b[i])*lambda2 ) ) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
+              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ -m_beta*lambda2 ) \
+                                                      - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ  - m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 ) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
+              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2./(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ -m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 )-log(1-2.*lambda));
             }
             else {
               r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
