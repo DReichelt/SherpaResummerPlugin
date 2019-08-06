@@ -102,9 +102,9 @@ Resum::~Resum()
 
 int Resum::PerformShowers()
 {
-  DEBUG_FUNC(this);
+//   DEBUG_FUNC(this);
   if (p_ampl==nullptr) THROW(fatal_error,"No process info");
-  msg_Debugging()<<*p_ampl<<"\n";
+//   msg_Debugging()<<*p_ampl<<"\n";
   m_weight=1.0;
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
@@ -116,7 +116,7 @@ int Resum::PerformShowers()
   m_rn[1]=ran->Get();
   // loop over observables
   for (size_t n = 0; n<m_obss.size(); n++) {
-    DEBUG_FUNC(m_obss[n]->Name());
+//     DEBUG_FUNC(m_obss[n]->Name());
     m_a.clear();
     m_b.clear();
     m_logdbar.clear();
@@ -142,17 +142,17 @@ int Resum::PerformShowers()
     
     m_logpow = m_obss[n]->LogPow();
     
-    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xl, moms, flavs));
+    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xl, moms, flavs), moms, flavs, n);
     const double ep = m_obss[n]->Endpoint(moms,flavs);
     const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xl/ep,m_logpow),1.));
-    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xh, moms, flavs));
+    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xh, moms, flavs), moms, flavs, n);
     const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xh/ep,m_logpow),1.));
 
     // bin to fill
     m_ress[n].first = std::floor(i+1);
     // weight for bin
     m_ress[n].second = m_weight*(yh-yl)*(1+m_hist[n]->Nbin());
-    msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<" -> "<<(yh-yl)<<"\n";
+//     msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<" -> "<<(yh-yl)<<"\n";
   }  
   CleanUp();
   return 1;
@@ -559,6 +559,13 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 
   Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
   
+  Vec4D_Vector moms(p_ampl->Legs().size());
+  Flavour_Vector flavs(p_ampl->Legs().size());
+  for (size_t i(0);i<p_ampl->Legs().size();++i) {
+      moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
+      flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
+  }
+  
   
   for(size_t i =0; i<p_ampl->Legs().size(); i++) 
     {
@@ -580,7 +587,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Q = sqrt(p_ampl->MuQ2());
       double Q12 = s_12;
       double lambda = as*beta0*L;
-      double lambdaZ = as*beta0*log(1./m_zcut);
+      double transp = m_obss[i]->GroomTransitionPoint(moms, flavs, i);
+      double lambdaZ = as*beta0*log(1./transp);
       double lambda2 = as*beta0*log(1./2.);
       double Lmur=log((muR2)/(Q*Q));
 
@@ -592,8 +600,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	    //LL part
             double r1 = 0;
             if(m_gmode & GROOM_MODE::SD) {
-              r1 = -1./2./M_PI/pow(beta0,2)/as/m_b[i] * (m_b[i]/(1.+m_beta) * (1.-2.*lambdaZ-m_beta*lambda2)*log(1.-2.*lambdaZ-m_beta*lambda2) \
-                                                         - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-m_b[i]*m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2)*log(1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-m_b[i]*m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2) \
+              r1 = -1./2./M_PI/pow(beta0,2)/as/m_b[i] * (m_b[i]/(1.+m_beta) * (1.-2.*lambdaZ)*log(1.-2.*lambdaZ) \
+                                                         - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)*log(1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ) \
                                                         + (m_a[i]+m_b[i])*(1.-2./(m_a[i]+m_b[i])*lambda)*log(1.-2./(m_a[i]+m_b[i])*lambda) );
             }
             else {
@@ -609,11 +617,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_beta1 = 0.;
             double r1p = 0.;
             if(m_gmode & GROOM_MODE::SD) {
-              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ-m_beta*lambda2),2)+2.*log(1.-2.*lambdaZ-m_beta*lambda2)) \
-                                                           -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2 )) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
-              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ-m_beta*lambda2) \
-                                                      - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ - m_beta*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
-              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ-m_b[i]*m_beta/(m_a[i]*(1.+m_beta)+m_b[i])*lambda2)-log(1.-lambda));
+              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
+                                                           -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
+              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ) \
+                                                      - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
+              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-lambda));
             }
             else {
               r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))

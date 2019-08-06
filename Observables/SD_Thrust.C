@@ -1,27 +1,40 @@
 #include "Analysis/Observable_Base.H"
-#include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Org/Exception.H"
+#include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Math/Poincare.H"
 #include "FFunction/FFunctions.H"
-#include <vector>       
 #include <algorithm>       
-#include <assert.h> 
 
 using namespace ATOOLS;
+using namespace std;
 
 namespace RESUM {
 
-  class SD_Thrust_FF: public Observable_Base {
+  class SD_Thrust: public Observable_Base {
+  private:
+    /// The thrust scalars.
+    vector<double> m_thrusts;
+
+    /// The thrust axes.
+    vector<Vec3D> m_thrustAxes;
+    
   public:
 
-    SD_Thrust_FF(const Observable_Key &args): 
+    SD_Thrust(const Observable_Key &args): 
     Observable_Base(args) {}
 
     Obs_Params Parameters
       (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t &l) {
-      return Obs_Params(1.0,1.0,0.0,0.0);
+      double a=1.0;
+      double b=l<2?0.0:1.0;
+      double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
+      double d=log(l<2?1.0/sinth:1.0/sqr(sinth));
+      const double G_cat=0.915965594177;
+      if (l<2) d+=-4.0*G_cat/M_PI-log(2.0);
+      else d+=-2.0*log(2.0);
+      return Obs_Params(a,b,d,0.0);
     }
 
     std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
@@ -33,8 +46,10 @@ namespace RESUM {
        (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t &l) {
-      return pow(2,m_beta/2)*m_zcut;
+      double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
+      return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta);
     }
+
     
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
     {
@@ -68,23 +83,16 @@ namespace RESUM {
       return a.Sqr()>b.Sqr();
     }
 
-    double Value(const std::vector<Vec4D>& ip,
+    double Value(const std::vector<Vec4D>& p,
                  const std::vector<Flavour>& fl,
 		 const size_t &nin)
     {
       THROW(not_implemented, "Matching was not implemented for sd.")
-      size_t n = ip.size();
-      // need boost to match resummation at small \tau (~1e-4)
-      Vec4D sum;
-      Vec4D_Vector p(&ip[0],&ip[n]);
-      for (size_t i(nin);i<n;++i) sum+=p[i];
-      Poincare cms(sum);
-      for (size_t i(0);i<n;++i) cms.Boost(p[i]);
-      // generic form as in CALT-68-836, copied from Sherpa
+      size_t n = p.size();
       Vec3D lastaxis, curraxis, thrustaxis;
       double maxthrust=0., lastthrust , currthrust, thrust;
       std::vector<Vec3D> vectors(n-nin);
-      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(p[i]);
+      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(p[i][1],p[i][2],0.0);
       for (int pass=0;pass<2;++pass) {
 	if (pass==1) RotateMoms(vectors,thrustaxis);
 	sort(vectors.begin(),vectors.end(),&bigger);
@@ -125,17 +133,17 @@ namespace RESUM {
       }
       return 1.0-thrust;
     }
-
-  };// end of class SD_Thrust_FF
+    
+  };// end of class Thrust
 
 }// end of namespace RESUM
 
 using namespace RESUM;
 
-DECLARE_GETTER(SD_Thrust_FF,"SD_Thrust_FF",Observable_Base,Observable_Key);
-Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,SD_Thrust_FF>::
+DECLARE_GETTER(SD_Thrust,"SD_Thrust",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,SD_Thrust>::
 operator()(const Parameter_Type &args) const 
-{ return new SD_Thrust_FF(args); }
-void ATOOLS::Getter<Observable_Base,Observable_Key,SD_Thrust_FF>::
+{ return new SD_Thrust(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,SD_Thrust>::
 PrintInfo(std::ostream &str,const size_t width) const
-{ str<<"SD_Thrust_FF"; }
+{ str<<"SD_Thrust"; }

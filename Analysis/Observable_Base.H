@@ -64,6 +64,7 @@ namespace RESUM {
     GROOM_MODE m_gmode = GROOM_MODE::NONE;
     double m_zcut = 0;
     double m_beta = 0;
+    double m_R0 = 1.;
     
   public:
     typedef std::shared_ptr<Observable_Base_Template> Ptr;
@@ -98,6 +99,8 @@ namespace RESUM {
                                        read.GetValue<double>("RESUM::GROOM::ZCUT", 0.1) );
         m_beta = read.GetValue<double>("RESUM::"+m_name+"::GROOM::BETA",
                                        read.GetValue<double>("RESUM::GROOM::BETA", 0));
+        m_R0   = read.GetValue<double>("RESUM::"+m_name+"::GROOM::RAD0",
+                                       read.GetValue<double>("RESUM::GROOM::RAD0", 1));
       }
     }
 
@@ -170,8 +173,10 @@ namespace RESUM {
     }
 
     // stuff for grooming
-    GROOM_MODE GroomMode(double v) {
-        if(v > GroomTransitionPoint()) return GROOM_MODE::NONE;
+    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
+                         const std::vector<ATOOLS::Flavour>& fl,
+                         const size_t &l) {
+        if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
         else return m_gmode;
     }
 
@@ -183,7 +188,10 @@ namespace RESUM {
       return m_beta;
     }
 
-    virtual double GroomTransitionPoint() {
+    virtual double GroomTransitionPoint
+       (const std::vector<ATOOLS::Vec4D>& p,
+       const std::vector<ATOOLS::Flavour>& fl,
+       const size_t &l) {
       return std::numeric_limits<T>::infinity();
     }
     
