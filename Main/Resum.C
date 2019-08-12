@@ -173,8 +173,10 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL));
   if(m_LogOrd > 0) {
     weight *= exp(-epRatio*CollexpNLL);
-    weight *= CalcS(L, LResum, Softexp);
-    weight *= exp(-epRatio*Softexp);
+    if(!(m_gmode & GROOM_MODE::SD)) {
+      weight *= CalcS(L, LResum, Softexp);
+      weight *= exp(-epRatio*Softexp);
+    }
     // weight*=1 //non-global logs  
     //weight*=(1+delta) //finite aS corrections
     //calc PDF factor for IS legs
@@ -588,25 +590,36 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Q12 = s_12;
       double lambda = as*beta0*L;
       double transp = m_obss[i]->GroomTransitionPoint(moms, flavs, i);
-      double lambdaZ = as*beta0*log(1./transp);
+      double lambdaZ = as*beta0*log(1./transp)/m_a[i];
       double lambda2 = as*beta0*log(1./2.);
       double Lmur=log((muR2)/(Q*Q));
 
       //The following formulae are taken from Appendix A of hep-ph/0407286. 
-
       if (!IsZero(m_b[i]))
 	{
 	  if (order>=0) {    
 	    //LL part
             double r1 = 0;
             if(m_gmode & GROOM_MODE::SD) {
-              r1 = -1./2./M_PI/pow(beta0,2)/as/m_b[i] * (m_b[i]/(1.+m_beta) * (1.-2.*lambdaZ)*log(1.-2.*lambdaZ) \
+              if(i<2){
+                  r1 = 0.;
+              }
+              else{
+                r1 = -1./2./M_PI/pow(beta0,2)/as/m_b[i] * (m_b[i]/(1.+m_beta) * (1.-2.*lambdaZ)*log(1.-2.*lambdaZ) \
                                                          - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)*log(1.-2*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ) \
                                                         + (m_a[i]+m_b[i])*(1.-2./(m_a[i]+m_b[i])*lambda)*log(1.-2./(m_a[i]+m_b[i])*lambda) );
+                
+                CollexpLL += -2./M_PI*as*(colfac)*(m_a[i]*m_beta*L*L/2.0 
+                                                  +(m_a[i]+m_b[i])*L*log(1./transp)
+                                                  -(m_a[i]+m_b[i])*log(1./transp)*log(1./transp) )
+                             /m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+              }
             }
             else {
               r1= 1./2./M_PI/pow(beta0,2.)/as/m_b[i]*((m_a[i]-2.*lambda)*log(1.-2.*lambda/m_a[i])
                                                       -(m_a[i]+m_b[i]-2.*lambda)*log(1.-2.*lambda/(m_a[i]+m_b[i])));
+              
+              CollexpLL += -2./M_PI*as*(colfac) * L*L/2.0/m_a[i]/(m_a[i]+m_b[i]);
             }
             msg_Debugging()<<"r1("<<exp(-L)<<") = "<<r1/L<<"\n";
 	    R+=((-1.)*colfac*r1);
@@ -617,11 +630,32 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_beta1 = 0.;
             double r1p = 0.;
             if(m_gmode & GROOM_MODE::SD) {
-              r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
+              if(i<2){
+                r2_beta1 = 0.;
+                r2_cmw = 0.;
+                r1p = 0.;
+              }
+              else{
+                r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
                                                            -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
-              r2_cmw = K_CMW/pow(2.*M_PI*beta0,2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ) \
+                r2_cmw = (K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.) * (m_b[i]/(1.+m_beta) * log(1.-2.*lambdaZ) \
                                                       - (m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ) + (m_a[i]+m_b[i])*log(1.-2./(m_a[i]+m_b[i])*lambda));
-              r1p = -(m_a[i]+m_b[i])/(2.*M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-lambda));
+                
+                r1p = -1./(M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./(m_a[i]+m_b[i])*lambda));
+                
+                msg_Debugging()<<"r2_beta1("<<exp(-L)<<") = "<<r2_beta1<<"\n";
+                msg_Debugging()<<"r2_cmw("<<exp(-L)<<") = "<<r2_cmw<<"\n";
+                msg_Debugging()<<"rp("<<exp(-L)<<") = "<<r1p<<"\n";
+                
+                // subtract NLL contribution of scale variation
+                double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
+                double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr;
+                
+                R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
+                Rp+=r1p*colfac;
+                
+                CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i])*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum))*log(1./transp) );
+              }
             }
             else {
               r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
@@ -631,17 +665,20 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                                     +m_a[i]*log(1-2.*lambda/m_a[i])
                                                     -(m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i])));
               r1p=1./m_b[i]*(T(lambda/m_a[i])-T(lambda/(m_a[i]+m_b[i])));
+              
+              msg_Debugging()<<"r2_beta1("<<exp(-L)<<") = "<<r2_beta1<<"\n";
+              msg_Debugging()<<"r2_cmw("<<exp(-L)<<") = "<<r2_cmw<<"\n";
+              msg_Debugging()<<"rp("<<exp(-L)<<") = "<<r1p<<"\n";
+              
+              // subtract NLL contribution of scale variation
+              double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
+              double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr;
+              
+              R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
+              Rp+=r1p*colfac;
+              
+              CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
             }
-            msg_Debugging()<<"r2_beta1("<<exp(-L)<<") = "<<r2_beta1<<"\n";
-            msg_Debugging()<<"r2_cmw("<<exp(-L)<<") = "<<r2_cmw<<"\n";
-            msg_Debugging()<<"rp("<<exp(-L)<<") = "<<r1p<<"\n";
-
-            // subtract NLL contribution of scale variation
-            double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
-	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
-
-	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
-	    Rp+=r1p*colfac;
 	    
 	  }
 	}
@@ -650,7 +687,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	  if (order>=0) {    
 	    //LL part
 	    double r1= -1./2./M_PI/pow(beta0,2.)/as*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]));
-	    R+=(-1.)*colfac*r1;
+            R+=(-1.)*colfac*r1;
+            
+            CollexpLL += -2./M_PI*as*(colfac) * L*L/2.0/m_a[i]/(m_a[i]+m_b[i]);
 	  }
 	  if (order>=1) {	    
             //NLL part
@@ -664,12 +703,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2=(r2_cmw+r2_beta1+r2_corr);
 
 	    R+= -colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
-	    Rp+=r1p*colfac;
+            Rp+=r1p*colfac;
+            
+            CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
 	  }
 	}
       
-      CollexpLL += -2./M_PI*as*(colfac) * L*L/2.0/m_a[i]/(m_a[i]+m_b[i]);
-      CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
 
     }
   return R;
