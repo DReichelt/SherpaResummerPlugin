@@ -176,12 +176,12 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
     if(!(m_gmode & GROOM_MODE::SD)) {
       weight *= CalcS(L, LResum, Softexp);
       weight *= exp(-epRatio*Softexp);
+      //calc PDF factor for IS legs
+      weight *= CalcPDF(L, LResum, PDFexp);
+      weight *= exp(-epRatio*PDFexp);
     }
     // weight*=1 //non-global logs  
     //weight*=(1+delta) //finite aS corrections
-    //calc PDF factor for IS legs
-    weight *= CalcPDF(L, LResum, PDFexp);
-    weight *= exp(-epRatio*PDFexp);
     if(!std::isnan(Rp)) weight*=m_F(Rp);
   }
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
