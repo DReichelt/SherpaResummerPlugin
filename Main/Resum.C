@@ -629,6 +629,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_cmw = 0.;
             double r2_beta1 = 0.;
             double r1p = 0.;
+            double r1d = 0.;
             if(m_gmode & GROOM_MODE::SD) {
               if(i<2){
                 r2_beta1 = 0.;
@@ -643,6 +644,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 
                 r1p = -1./(M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./(m_a[i]+m_b[i])*lambda));
                 
+                r1d = -1./(M_PI*m_a[i]*beta0)/(m_beta+1.)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./m_a[i]*lambdaZ));
+                
                 msg_Debugging()<<"r2_beta1("<<exp(-L)<<") = "<<r2_beta1<<"\n";
                 msg_Debugging()<<"r2_cmw("<<exp(-L)<<") = "<<r2_cmw<<"\n";
                 msg_Debugging()<<"rp("<<exp(-L)<<") = "<<r1p<<"\n";
@@ -651,10 +654,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
                 double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr;
                 
-                R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
+                R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1d*m_logdbar[i]+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
                 Rp+=r1p*colfac;
                 
-                CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i])*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum))*log(1./transp) );
+                CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + log(Q12/Q)/m_a[i])*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp) );
               }
             }
             else {
