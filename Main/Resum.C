@@ -173,12 +173,14 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL));
   if(m_LogOrd > 0) {
     weight *= exp(-epRatio*CollexpNLL);
+//     std::cout << "1: " << v << " " << CollexpLL << " " << CollexpNLL << " " << Softexp << " " << PDFexp << std::endl;
     if(!(m_gmode & GROOM_MODE::SD)) {
       weight *= CalcS(L, LResum, Softexp);
       weight *= exp(-epRatio*Softexp);
       //calc PDF factor for IS legs
       weight *= CalcPDF(L, LResum, PDFexp);
       weight *= exp(-epRatio*PDFexp);
+//       std::cout << "2: " << v << " " << CollexpLL << " " << CollexpNLL << " " << Softexp << " " << PDFexp << std::endl;
     }
     // weight*=1 //non-global logs  
     //weight*=(1+delta) //finite aS corrections
@@ -588,6 +590,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 				 pow(p_ampl->Leg(3)->Mom()[1],2) + pow(p_ampl->Leg(3)->Mom()[2],2)));
       double Q = sqrt(p_ampl->MuQ2());
       double Q12 = s_12;
+      
+//       std::cout << Q << " " << Q12 << " " << Q/Q12 << std::endl;
+      
       double lambda = as*beta0*L;
       double transp = m_obss[i]->GroomTransitionPoint(moms, flavs, i);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
