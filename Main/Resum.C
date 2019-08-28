@@ -618,6 +618,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                                   +(m_a[i]+m_b[i])*L*log(1./transp)
                                                   -(m_a[i]+m_b[i])*log(1./transp)*log(1./transp) )
                              /m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+                             
+//                 std::cout << i << " " << CollexpLL << " " << -2./M_PI*as*(colfac)*(m_a[i]*m_beta*L*L/2.0 ) << std::endl;
               }
             }
             else {
@@ -692,6 +694,15 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	}
       else
 	{
+            
+          if(m_gmode & GROOM_MODE::SD) {
+            if(i<2){
+            }
+            else{
+              std::cout << "Groomed b=0 not implimented" << std::endl;
+            }
+          }
+          else{
 	  if (order>=0) {    
 	    //LL part
 	    double r1= -1./2./M_PI/pow(beta0,2.)/as*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]));
@@ -715,6 +726,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             
             CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
 	  }
+          }
 	}
       
 
