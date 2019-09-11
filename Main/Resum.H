@@ -127,7 +127,7 @@ namespace RESUM {
     
     double CalcS(const double L, const double LResum, double &Softexp);
     double CalcColl(const double L, const double LResum, const int order,
-		    double &Rp,double &CollexpLL, double& CollexpNLL);
+                    double &Rp,double &CollexpLL, double& CollexpNLL, double& ExpAtEnd, double& RAtEnd);
     double CalcPDF(const double L, const double LResum, double &PDFexp);
     double T(const double x);
 

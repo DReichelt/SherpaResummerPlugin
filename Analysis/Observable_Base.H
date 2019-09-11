@@ -173,7 +173,7 @@ namespace RESUM {
     }
 
     // stuff for grooming
-    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
+    virtual GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
                          const std::vector<ATOOLS::Flavour>& fl,
                          const size_t &l) {
         if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;

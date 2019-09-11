@@ -167,12 +167,13 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   if(v > 1)     return 1;
   const double L = log(1.0/v);
   double Rp = 0.0, CollexpLL=0.0, CollexpNLL=0.0, Softexp=0.0, PDFexp=0.0;
+  double ExpAtEnd=0.0, RAtEnd=0.0;
   double weight = 1.;
   
   //calc collinear piece
-  weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL));
+  weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL, ExpAtEnd, RAtEnd));
+  weight *= exp(-epRatio*RAtEnd);
   if(m_LogOrd > 0) {
-    weight *= exp(-epRatio*CollexpNLL);
 //     std::cout << "1: " << v << " " << CollexpLL << " " << CollexpNLL << " " << Softexp << " " << PDFexp << std::endl;
     if(!(m_gmode & GROOM_MODE::SD)) {
       weight *= CalcS(L, LResum, Softexp);
@@ -188,7 +189,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   }
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
-    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL*(1.-epRatio);
+    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL-epRatio*ExpAtEnd;
     if ((m_amode & MODE::SOFTEXPAND) != 0) weight += Softexp*(1.-epRatio);
     if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp*(1.-epRatio);
   }
@@ -547,7 +548,7 @@ double Resum::CalcS(const double L, const double LResum, double &Softexp)
 }
 
 
-double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, double &CollexpLL, double& CollexpNLL) 
+double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, double &CollexpLL, double& CollexpNLL, double& ExpAtEnd, double& RAtEnd) 
 {
     
 //   if(m_gmode & GROOM_MODE::SD) std::cout << "test (zcut): " << exp(-L) << " " << m_zcut << " " << m_beta << " " << (m_gmode & GROOM_MODE::SD) << std::endl;
@@ -616,8 +617,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 
                 CollexpLL += -2./M_PI*as*(colfac)*(m_a[i]*m_beta*L*L/2.0 
                                                   +(m_a[i]+m_b[i])*L*log(1./transp)
-                                                  -(m_a[i]+m_b[i])*log(1./transp)*log(1./transp) )
+                                                  -(m_a[i]+m_b[i])*log(1./transp)*log(1./transp)/2.0 )
                              /m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+                             
+                ExpAtEnd += -2./M_PI*as*(colfac)*(m_a[i]+m_b[i])*L*log(1./transp)/m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+                
+                RAtEnd += colfac*L*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
                              
 //                 std::cout << i << " " << CollexpLL << " " << -2./M_PI*as*(colfac)*(m_a[i]*m_beta*L*L/2.0 ) << std::endl;
               }
@@ -661,10 +666,23 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
                 double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr;
                 
-                R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1d*m_logdbar[i]+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
+                R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1d*m_logdbar[i]+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambdaZ));
+                
                 Rp+=r1p*colfac;
                 
-                CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + log(Q12/Q)/m_a[i])*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp) );
+                CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) )*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])+ log(Q12/Q)/m_a[i])*log(1./transp) );
+                
+                ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) )*L);
+                
+                double r2_beta1AtEnd = -as*beta1/M_PI/beta0/beta0*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
+                double r2_cmwAtEnd = 2.*as*beta0*(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
+                double r2_hardcollAtEnd = 2.*as/M_PI/(m_a[i]+m_b[i]);
+                double r1pAtEnd = -2.*as*beta0/m_b[i]*(1./(m_a[i]+m_b[i])-(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i])));
+                double r1dAtEnd = 2.*as/M_PI/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
+                
+                double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
+                
+                RAtEnd += (-1.)*colfac*L*(r2AtEnd+r1pAtEnd*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);
               }
             }
             else {
@@ -688,6 +706,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               Rp+=r1p*colfac;
               
               CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+              
+              ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+              
+              RAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
             }
 	    
 	  }
@@ -725,6 +747,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             Rp+=r1p*colfac;
             
             CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+            
+            ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+            
+            RAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
 	  }
           }
 	}

@@ -42,6 +42,12 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
+                         const std::vector<ATOOLS::Flavour>& fl,
+                         const size_t &l) {
+       return m_gmode;
+    }
+
     double GroomTransitionPoint
        (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
@@ -49,7 +55,6 @@ namespace RESUM {
       double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
       return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta);
     }
-
     
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
     {
