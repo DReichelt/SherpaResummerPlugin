@@ -168,10 +168,13 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   const double L = log(1.0/v);
   double Rp = 0.0, CollexpLL=0.0, CollexpNLL=0.0, Softexp=0.0, PDFexp=0.0;
   double ExpAtEnd=0.0, RAtEnd=0.0;
+  double Rp0 = 0.0, CollexpLL0=0.0, CollexpNLL0=0.0;
+  double ExpAtEnd0=0.0, RAtEnd0=0.0;
   double weight = 1.;
   
   //calc collinear piece
   weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL, ExpAtEnd, RAtEnd));
+  weight *= exp(-CalcColl(0., LResum, m_LogOrd, Rp0, CollexpLL0, CollexpNLL0, ExpAtEnd0, RAtEnd0));
   weight *= exp(-epRatio*RAtEnd);
   if(m_LogOrd > 0) {
 //     std::cout << "1: " << v << " " << CollexpLL << " " << CollexpNLL << " " << Softexp << " " << PDFexp << std::endl;
@@ -189,7 +192,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   }
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
-    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL-epRatio*ExpAtEnd;
+    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL-epRatio*ExpAtEnd-CollexpLL0-CollexpNLL0;
     if ((m_amode & MODE::SOFTEXPAND) != 0) weight += Softexp*(1.-epRatio);
     if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp*(1.-epRatio);
   }
@@ -595,7 +598,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 //       std::cout << Q << " " << Q12 << " " << Q/Q12 << std::endl;
       
       double lambda = as*beta0*L;
-      double transp = m_obss[i]->GroomTransitionPoint(moms, flavs, i);
+      double transp = pow(m_obss[i]->GroomTransitionPoint(moms, flavs, i),m_a[i])*exp(m_logdbar[i]);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
       double lambda2 = as*beta0*log(1./2.);
       double Lmur=log((muR2)/(Q*Q));
