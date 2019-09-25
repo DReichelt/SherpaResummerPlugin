@@ -46,14 +46,26 @@ namespace RESUM {
                          const std::vector<ATOOLS::Flavour>& fl,
                          const size_t &l) {
        return m_gmode;
+       
+        if(l<2){
+            return m_gmode;
+        }
+        else{
+            if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
+            else return m_gmode;
+        }
     }
 
     double GroomTransitionPoint
        (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t &l) {
+           
       double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
-      return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta);
+      
+      double d=log(1.0/sqr(sinth));
+      d += -2.0*log(2.0);
+      return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta)*exp(d);
     }
     
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)

@@ -29,12 +29,6 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
-    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
-                         const std::vector<ATOOLS::Flavour>& fl,
-                         const size_t &l) {
-       return m_gmode;
-    }
-
     double GroomTransitionPoint
        (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,

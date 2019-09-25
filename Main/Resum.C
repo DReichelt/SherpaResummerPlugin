@@ -116,6 +116,7 @@ int Resum::PerformShowers()
   m_rn[1]=ran->Get();
   // loop over observables
   for (size_t n = 0; n<m_obss.size(); n++) {
+    m_obss_n = m_obss[n];
 //     DEBUG_FUNC(m_obss[n]->Name());
     m_a.clear();
     m_b.clear();
@@ -142,10 +143,10 @@ int Resum::PerformShowers()
     
     m_logpow = m_obss[n]->LogPow();
     
-    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xl, moms, flavs), moms, flavs, n);
+//     m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xl, moms, flavs), moms, flavs, n);
     const double ep = m_obss[n]->Endpoint(moms,flavs);
     const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xl/ep,m_logpow),1.));
-    m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xh, moms, flavs), moms, flavs, n);
+//     m_gmode = m_obss[n]->GroomMode(m_obss[n]->LogArg(xh, moms, flavs), moms, flavs, n);
     const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()), std::min(pow(xh/ep,m_logpow),1.));
 
     // bin to fill
@@ -163,6 +164,14 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
 {
   DEBUG_FUNC(v);
   
+  
+  Vec4D_Vector moms(p_ampl->Legs().size());
+  Flavour_Vector flavs(p_ampl->Legs().size());
+  for (size_t i(0);i<p_ampl->Legs().size();++i) {
+      moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
+      flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
+  }
+  
   if(IsZero(v)) return 0;
   if(v > 1)     return 1;
   const double L = log(1.0/v);
@@ -175,12 +184,17 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   //calc collinear piece
   weight *= exp(CalcColl(L, LResum, m_LogOrd, Rp, CollexpLL, CollexpNLL, ExpAtEnd, RAtEnd));
   weight *= exp(-CalcColl(0., LResum, m_LogOrd, Rp0, CollexpLL0, CollexpNLL0, ExpAtEnd0, RAtEnd0));
-  weight *= exp(-epRatio*RAtEnd);
+  weight *= exp(-epRatio*RAtEnd0*L);
+  
   if(m_LogOrd > 0) {
+    m_gmode = m_obss_n->GroomMode(v, moms, flavs, -1);
 //     std::cout << "1: " << v << " " << CollexpLL << " " << CollexpNLL << " " << Softexp << " " << PDFexp << std::endl;
     if(!(m_gmode & GROOM_MODE::SD)) {
       weight *= CalcS(L, LResum, Softexp);
       weight *= exp(-epRatio*Softexp);
+    }
+    m_gmode = m_obss_n->GroomMode(v, moms, flavs, -2);
+    if(!(m_gmode & GROOM_MODE::SD)) {    
       //calc PDF factor for IS legs
       weight *= CalcPDF(L, LResum, PDFexp);
       weight *= exp(-epRatio*PDFexp);
@@ -192,7 +206,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   }
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
-    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL-epRatio*ExpAtEnd-CollexpLL0-CollexpNLL0;
+    if ((m_amode & MODE::COLLEXPAND) != 0) weight += CollexpLL+CollexpNLL-epRatio*ExpAtEnd0*L-CollexpLL0-CollexpNLL0;
     if ((m_amode & MODE::SOFTEXPAND) != 0) weight += Softexp*(1.-epRatio);
     if ((m_amode & MODE::PDFEXPAND) != 0)  weight += PDFexp*(1.-epRatio);
   }
@@ -577,7 +591,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   
   for(size_t i =0; i<p_ampl->Legs().size(); i++) 
     {
-    
+      m_gmode = m_obss_n->GroomMode(exp(-L), moms, flavs, i);
+        
       double colfac = 0.;
       double hardcoll = 0.;
 
@@ -598,7 +613,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 //       std::cout << Q << " " << Q12 << " " << Q/Q12 << std::endl;
       
       double lambda = as*beta0*L;
-      double transp = pow(m_obss[i]->GroomTransitionPoint(moms, flavs, i),m_a[i])*exp(m_logdbar[i]);
+      double transp = m_obss_n->GroomTransitionPoint(moms, flavs, i);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
       double lambda2 = as*beta0*log(1./2.);
       double Lmur=log((muR2)/(Q*Q));
@@ -623,9 +638,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                                   -(m_a[i]+m_b[i])*log(1./transp)*log(1./transp)/2.0 )
                              /m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
                              
-                ExpAtEnd += -2./M_PI*as*(colfac)*(m_a[i]+m_b[i])*L*log(1./transp)/m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+                ExpAtEnd += -2./M_PI*as*(colfac)*(m_a[i]+m_b[i])*log(1./transp)/m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
                 
-                RAtEnd += colfac*L*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
+                RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
                              
 //                 std::cout << i << " " << CollexpLL << " " << -2./M_PI*as*(colfac)*(m_a[i]*m_beta*L*L/2.0 ) << std::endl;
               }
@@ -675,7 +690,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 
                 CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) )*L + (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])+ log(Q12/Q)/m_a[i])*log(1./transp) );
                 
-                ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) )*L);
+                ExpAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
                 
                 double r2_beta1AtEnd = -as*beta1/M_PI/beta0/beta0*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
                 double r2_cmwAtEnd = 2.*as*beta0*(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
@@ -685,7 +700,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 
                 double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
                 
-                RAtEnd += (-1.)*colfac*L*(r2AtEnd+r1pAtEnd*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);
+                RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);
               }
             }
             else {
@@ -710,9 +725,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               
               CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
               
-              ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+              ExpAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
               
-              RAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+              RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
             }
 	    
 	  }
@@ -751,9 +766,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             
             CollexpNLL += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
             
-            ExpAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+            ExpAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
             
-            RAtEnd += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
+            RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
 	  }
           }
 	}
