@@ -2,12 +2,14 @@
 #define MATRIX_H
 /** \file */
 #include "ATOOLS/Org/Exception.H"
+#include "ATOOLS/Math/Random.H"
 #include <valarray>
 #include <cassert>
 #include <complex>
 
 #include "Math/matexp.hpp"
 #include "Math/asa007.hpp"
+#include "Math/linpack_d.hpp"
 
 using std::valarray;
 
@@ -17,6 +19,12 @@ using std::valarray;
     Class implementing basic functionality. If you need more, use some
     linear algebra library.
 */
+
+template <typename T>
+T _conjugate(const T& z) { return z; }
+
+template <typename X>
+std::complex<X> _conjugate(const std::complex<X>& z) { return std::conj(z); }
   
 template <typename T>
 class Matrix {
@@ -149,6 +157,17 @@ public:
     return ret;
   }
 
+  /// Build random matrix with \p r rows and \p c cols.
+  /**
+    \param r number of rows
+    \param c number of columns
+   */
+  static Matrix<T> random(size_t r, size_t c) {
+    Matrix<T> ret(r,c);
+    for(T& d: ret.m_data) d = ATOOLS::ran->Get();
+    return ret;
+  }
+
   /// \name Assignments.
   // \{
   /// Swap algorithm.
@@ -254,11 +273,11 @@ public:
   }
 
   /// Calculate the conjugate of the the matrix in-place.
-  /**
-     This is really in-place only for square matrices.
-  */
   Matrix<T> conjugateInPlace() {
-    m_data = m_data.apply(std::conj);
+    if(std::is_same<T,std::complex<double>>::value) {
+      for(T& d: m_data) d = _conjugate(d);
+    }
+    // m_data = m_data.apply(std::conj);
     return *this;
   }
 
@@ -298,6 +317,7 @@ public:
 
   /// Calculate the inverse of the symmetric matrix with lower triangular matrix equal to this one in place.
   Matrix<T> inverseLowerTriangularInPlace() {
+    Matrix<T> old(*this);
     _toLowTriang();
     int nullity;
     int ifault;
@@ -305,13 +325,35 @@ public:
     valarray<T> new_data(m_dim*(m_dim+1)/2);
     syminv(&m_data[0], m_dim, &new_data[0], &W[0],
            &nullity, &ifault);
+    // ifault = 2;
     switch(ifault) {
-    case 0: break;
+    case 0:
+      msg_Debugging()<<"Rank of deficiency: "<<nullity<<"\n";
+      _fromLowTriang(std::move(new_data));
+      break;
     case 1: msg_Error()<<"N < 1.\n"; break;
-    case 2: msg_Error()<<"A is not positive semi-definite.\n"; break;
+    case 2:
+      {
+        msg_Debugging()<<"A is not positive semi-definite.\n";
+        std::vector<double> sdiag(old.numRows()+old.numCols());
+        std::vector<double> e(old.numRows()+old.numCols());
+        std::vector<double> work(old.numRows());
+        Matrix<T> u(old.numRows(),old.numCols());
+        Matrix<T> s(old.numRows(),old.numCols(),T(0));
+        Matrix<T> v(old.numRows(),old.numCols());
+        int info = dsvdc ( &old.m_data[0], old.numRows(), old.numRows(), old.numCols(),
+                           &sdiag[0], &e[0], &u.m_data[0], old.numRows(), &v.m_data[0],
+                           old.numCols(), &work[0], 11 );
+        if(info > 0) msg_Error()<<"Error in linpack svd decomposition.\n";
+        for(size_t i=0; i<s.numCols(); i++) s(i,i) = abs(sdiag[i])>T(1e-6) ? T(1)/sdiag[i] : 0;
+        v *= s*Conjugate(u);
+        // msg_Out()<<v<<"\n"<<s<<"\n"<<Transpose(u)<<"\n";
+        // exit(1);
+        m_data = v.m_data;
+        break;
+      }
     default: msg_Error()<<"Unexpected Error code in syminv.\n"; break;
     }
-    _fromLowTriang(std::move(new_data));
     return *this;
   }
 
@@ -630,4 +672,5 @@ namespace std {
 typedef Matrix<double> MatrixD;
 /// Typedef for matrix with complex elements.
 typedef Matrix<std::complex<double>> MatrixC;
+
 #endif
