@@ -87,7 +87,9 @@ Resum::Resum(ISR_Handler *const isr,
 
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
-  
+  rpa->gen.SetVariable("RESUM::FFUNCTION::VARIATION",read.GetValue<string>("RESUM::FFUNCTION::VARIATION","0"));
+  rpa->gen.SetVariable("RESUM::FFUNCTION::PLOT",read.GetValue<string>("RESUM::FFUNCTION::PLOT","0"));
+  rpa->gen.SetVariable("RESUM::FFUNCTION::INC",read.GetValue<string>("RESUM::FFUNCTION::INC","1"));
   
   if (rpa->gen.Variable("SHOWER_GENERATOR")=="") {
     rpa->gen.SetVariable("SHOWER_GENERATOR",ToString(this));
@@ -125,37 +127,29 @@ int Resum::PerformShowers()
   m_rn[0]=ran->Get();
   m_rn[1]=ran->Get();
   // loop over observables
-  for (size_t n = 0; n<m_obss.size(); n++) {
-    DEBUG_FUNC(m_obss[n]->Name());
+  for (m_n = 0; m_n<m_obss.size(); m_n++) {
+    DEBUG_FUNC(m_obss[m_n]->Name());
+    if(!m_init) m_init = true;
     m_a.clear();
     m_b.clear();
     m_logdbar.clear();
     for (size_t i(0);i<moms.size();++i) {
-      Obs_Params ps = m_obss[n]->Parameters(moms, flavs, i);
+      Obs_Params ps = m_obss[m_n]->Parameters(p_ampl, i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
 
-      /// @TODO we have ps.m_d and ps.m_g, in CAESAR notation
-      /// logdbar = log (d*average(g))
-      /// but we just use logdbar = ps.m_d
       m_logdbar.push_back(ps.m_logdbar);
     }
-    m_F = m_obss[n]->FFunction(moms, flavs);
-    // select a random bin
-    const size_t i = (1+m_hist[n]->Nbin())*ran->Get();
-    const double xl = m_hist[n]->LowEdge(i);
-    const double xh = m_hist[n]->HighEdge(i);
-    // const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(xl));
-    // const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(xh));
-    const double ep = m_obss[n]->Endpoint(moms,flavs);
-    const double yl = Value(m_obss[n]->LogArg(xl, moms, flavs), -log(m_obss[n]->LogFac()), std::min(xl/ep,1.));
-    const double yh = Value(m_obss[n]->LogArg(xh, moms, flavs), -log(m_obss[n]->LogFac()), std::min(xh/ep,1.));
-    // bin to fill
-    m_ress[n].first = std::floor(i+1);
-    // weight for bin
-    m_ress[n].second = m_weight*(yh-yl)*(1+m_hist[n]->Nbin());
-    msg_Debugging()<<"Bin["<<i<<"]("<<xl<<","<<xh<<"): "<<yl<<" "<<yh<<" -> "<<(yh-yl)<<"\n";
-  }  
+    m_F = m_obss[m_n]->FFunction(moms, flavs);
+
+
+    for(size_t i=0; i<m_xvals[m_n].size(); i++) {
+      const double x = m_xvals[m_n][i];
+      const double ep = m_obss[m_n]->Endpoint(p_ampl);
+      const double p = m_obss[m_n]->LogPow(p_ampl);
+     FillValue(i,m_obss[m_n]->LogArg(x, p_ampl), -log(m_obss[m_n]->LogFac(p_ampl)), pow(std::min(x/ep,1.),p));
+    }
+  }
   CleanUp();
   return 1;
 }
@@ -178,53 +172,110 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   double PDFexp=0.0;
   double FexpNLL_NLO = 0.0;
   double weight = 1.;
+  weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
+  // double calcs1 = weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,true);
   weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+  // msg_Out()<<"Check independence of colour inversion: "<<weight-calcs1<<"\n";
+  // if(!IsZero(weight-calcs1,1e-2)) THROW(fatal_error, "Color inversion check failed -> "+ToString(weight-calcs1))
   // weight*=1 //non-global logs  
   //weight*=(1+delta) //finite aS corrections
   //calc PDF factor for IS legs
   weight *= CalcPDF(L, LResum, PDFexp);
   //calc collinear piece
-  weight *= exp(CalcColl(L, LResum, 1, Rp, G//  CollexpLL_LO, CollexpNLL_LO,
-                         // CollexpLL_NLO, CollexpNLL_NLO
-                         ));
+  const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
   if(m_mmode & MATCH_MODE::ADD) {
         weight *= exp(-epRatio*SoftexpNLL_LO);
         weight *= exp(-epRatio*PDFexp);
-        weight *= exp(-epRatio*CollexpNLL_LO);
+        weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
   }
   if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
+  else m_F(0,FexpNLL_NLO); // even if Rp diverges its leading order expansion can be determined
+  // msg_Out()<<v<<" "<<weight<<" ";
   if ((m_amode & (MODE::EXPAND | MODE::PDFEXPAND)) != 0) {
     weight = 0.0;
-    const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
     MatrixD H(4,4,0);
     if(m_mmode & MATCH_MODE::LO|MATCH_MODE::NLO) {
       H(0,1) = pow(as,1)*pow(L,2) * ( G(0,1) );
       H(0,0) = pow(as,1)*pow(L,1) * ( G(0,0) );
     }
     if(m_mmode & MATCH_MODE::NLO) {
+
       H(1,3) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(0,1),2) );
       H(1,2) = pow(as,2)*pow(L,3) * ( G(1,2) + G(0,1)*(G(0,0)) );
-      H(1,1) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(0,0),2) + G(1,1) );
+      H(1,1) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(0,0),2) + G(1,1) + 4.*FexpNLL_NLO*pow(G(0,1),2)
+                                      );
     }
-    weight = H.data().sum();
-    // const double pow_corr =  (m_mmode & MATCH_MODE::ADD) ? 1.-epRatio : 1.;
-    // if ((m_amode & MODE::COLLEXPAND) != 0) {
-    //   if(m_mmode & MATCH_MODE::LO|MATCH_MODE::NLO) weight += CollexpLL_LO+CollexpNLL_LO*pow_corr;
-    //   // msg_Out()<<weight<<"\n";
-    //   if(m_mmode & MATCH_MODE::NLO) weight += CollexpLL_NLO+CollexpNLL_NLO*pow_corr+FexpNLL_NLO*pow_corr;
-    //   // msg_Out()<<weight<<"\n\n";
-    // }
-    // if ((m_amode & MODE::SOFTEXPAND) != 0) {
-    //   if(m_mmode & MATCH_MODE::LO|MATCH_MODE::NLO) weight += SoftexpNLL_LO*pow_corr;
-    //   if(m_mmode & MATCH_MODE::NLO) weight += SoftexpNLL_NLO*pow_corr;
-    // }
-    // if ((m_amode & MODE::PDFEXPAND) != 0)  {
-    //   if(m_mmode & MATCH_MODE::LO|MATCH_MODE::NLO) weight += PDFexp*pow_corr;
-    //   if(m_mmode & MATCH_MODE::NLO) THROW(not_implemented, "PDF expansion to NLO not implemented.");
-    // }
+    weight = H.data().sum(); 
+    if(m_mmode & MATCH_MODE::ADD) {
+      weight -= (epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ) + epRatio*SoftexpNLL_LO + epRatio*PDFexp);
+    }
   }
   return weight;
 }
+
+void Resum::FillValue(size_t i, const double v, const double LResum, const double epRatio)
+{
+  DEBUG_FUNC(v);
+  if(IsZero(v)) return;
+  if(v > 1)     return;
+  const double L = log(1.0/v);
+  double Rp = 0.0;
+  MatrixD G(3,3,0);
+  double CollexpLL_LO=0.0;
+  double CollexpNLL_LO=0.0;
+  double CollexpLL_NLO=0.0;
+  double CollexpNLL_NLO=0.0;
+  double SoftexpNLL_LO=0.0;
+  double SoftexpNLL_NLO=0.0;
+  double PDFexp=0.0;
+  double FexpNLL_NLO = 0.0;
+  double weight = 1.;
+  weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
+  // double calcs1 = weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,true);
+  weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+  // msg_Out()<<"Check independence of colour inversion: "<<weight-calcs1<<"\n";
+  // if(!IsZero(weight-calcs1,1e-2)) THROW(fatal_error, "Color inversion check failed -> "+ToString(weight-calcs1))
+  // weight*=1 //non-global logs  
+  //calc PDF factor for IS legs
+  weight *= CalcPDF(L, LResum, PDFexp);
+  //calc collinear piece
+
+  const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
+  const double beta0 = m_params.beta0(p_ampl->MuR2());
+  double expon = 0;
+  if(m_mmode & MATCH_MODE::ADD) {
+    expon = exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO)*exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
+    weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
+    weight *= exp(-epRatio*PDFexp);
+    weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
+  }
+  if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
+  else m_F(0,FexpNLL_NLO); // even if Rp diverges the leading order expansion of F can be determined
+  double tmp = weight;
+  m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
+
+  MatrixD H(4,4,0);
+
+  H(0,1) = pow(as,1)*pow(L,2) * ( G(0,1) );
+  H(0,0) = pow(as,1)*pow(L,1) * ( G(0,0) );
+  m_resExpLO[m_n][i] = H(0,0)+H(0,1)+ pow(as,1)*pow(L,1)* 4./m_a[0]*SoftexpNLL_LO + PDFexp;
+  if(m_mmode & MATCH_MODE::ADD) {
+    m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * ( G(0,0)  + 4./m_a[0]*SoftexpNLL_LO);
+  }
+  m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+  
+  H(1,3) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(0,1),2) );
+  H(1,2) = pow(as,2)*pow(L,3) * ( G(1,2) + G(0,1)*(G(0,0) ) );
+  H(1,1) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(0,0),2) + G(1,1) +
+                                  4.*FexpNLL_NLO*pow(G(0,1),2) );
+  m_resExpNLO[m_n][i] = H(1,3) + H(1,2) + H(1,1);
+  m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(0,0)+L*G(0,1)+2.*M_PI*beta0/m_a[0]));
+
+  if(m_mmode & MATCH_MODE::ADD) {
+    m_resExpNLO[m_n][i] += (H(0,0)+H(0,1)+ PDFexp+ pow(as,1)*pow(L,1)* 4./m_a[0]*SoftexpNLL_LO)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(0,0) )))+pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) )),2)/2.;
+  }
+}
+
 
 int Resum::PerformDecayShowers()
 {
@@ -385,6 +436,19 @@ size_t Resum::AddObservable(Observable_Base *const obs,
   return m_ress.size()-1;
 }
 
+size_t Resum::AddObservable(const std::string& name,
+			    const std::vector<double>& xvals)
+{
+  m_obss.push_back(RESUM::Observable_Getter::GetObject(name,RESUM::Observable_Key(name)));
+  m_xvals.push_back(xvals);
+  m_resNLL.push_back(vector<double>(xvals.size()));
+  m_resExpLO.push_back(vector<double>(xvals.size()));
+  m_resExpNLO.push_back(vector<double>(xvals.size()));
+  m_ress.push_back({-1,-1});
+  return m_ress.size()-1;
+}
+
+
 void Resum::ResetObservables() {
   m_obss.clear();
   m_hist.clear();
@@ -407,7 +471,7 @@ double Resum::T(const double x)
 
 
 
-double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO) 
+double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, bool ranCheck) 
 {
   DEBUG_FUNC(L);
   const size_t numlegs = n_g + n_q + n_aq;
@@ -418,11 +482,14 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   const double beta0 = m_params.beta0(p_ampl->MuR2());
   const double lambda = as*beta0*L; 
   const double t = T(lambda/m_a[0]);
-  const double t_exp = 2*as*L/M_PI;
+  const double t_exp = 1.;//as*L/M_PI/2.;//2*as*L/M_PI;
   
   const MatrixD& met = p_cmetric->CMetric();
-  const MatrixC& ICmetric = p_cmetric->Imetric();
+  InverseLowerTriangular(met);
+  MatrixC ICmetric = p_cmetric->Imetric();
+  if(ranCheck) ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
 
+  
   const size_t dim = met.numCols();
   
  
@@ -437,7 +504,10 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     
     msg_Debugging() << "Check metric.Inverse = identity" << std::endl;
     msg_Debugging()<<(MatrixC(met)*ICmetric).setFuzzyZeroToZeroInline()<<std::endl;
-    
+
+    msg_Debugging() << "Check Inverse.metric = identity" << std::endl;
+    msg_Debugging()<<(ICmetric*MatrixC(met)).setFuzzyZeroToZeroInline()<<std::endl;
+
   
 
     msg_Debugging()<<"Check color conservation: 2 \\sum Tprods + \\sum Casimir*metric = [0].\n";
@@ -497,7 +567,8 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
       Gamma += MatrixC(Tprods[k]);
     }
   }
-  MatrixD Gamma_exp = t_exp*ReGamma;
+  MatrixC Gamma_exp = MatrixC(t_exp*ReGamma) \
+    - complex<double>(0,-t_exp/2.*M_PI)*Gamma;
   Gamma *= complex<double>(0,-t/2.*M_PI);
   Gamma += MatrixC(t*ReGamma);
   if(msg_LevelIsDebugging()) {
@@ -505,51 +576,59 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   }
     
   //Hard Matrix in T-basis
-  const MatrixD& Hard = MatrixC(m_comix.ComputeHardMatrix(p_ampl,
+  MatrixD Hard = MatrixC(m_comix.ComputeHardMatrix(p_ampl,
                                                    p_cmetric->Perms()),
                          dim, dim, 0).real();
- if(msg_LevelIsDebugging()) {
-   msg_Debugging()<<"Hard Matrix =\n"<<Hard.setFuzzyZeroToZero()<<"\n";
- }
+  if(p_cmetric->hasTrafo()) {
+    const MatrixD& trafo = p_cmetric->TransformationMatrix();
+    const MatrixD& trafo_T = Transpose(trafo);
+    Hard = trafo*Hard*trafo_T;
+  }
+  if(msg_LevelIsDebugging()) {
+    msg_Debugging()<<"Hard Matrix =\n"<<Hard.setFuzzyZeroToZero()<<"\n";
+  }
   
- //Trace of hard matrix (Hard Matrix Element)
- //Note that normalization of H drops out in S
- const double traceH = Trace(Hard, met);
- //Leading order expansion Tr(-t*H*Gamma);
- const double traceHG = 2.*Trace(Hard, std::move(Gamma_exp));  
- SoftexpNLL_LO = traceHG/traceH/m_a[0];
- MatrixC conjGamma = Conjugate(Gamma);
- if((m_amode & MODE::SOFTEXPAND) && (m_mmode & MATCH_MODE::NLO)) {
-   SoftexpNLL_NLO = 2./pow(m_a[0],2) * (Trace(Hard,real(conjGamma*ICmetric*conjGamma)) + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma)) + Trace(Hard,real(Gamma*ICmetric*Gamma)))/traceH;
- }
+  //Trace of hard matrix (Hard Matrix Element)
+  //Note that normalization of H drops out in S
+  const double traceH = Trace(Hard, met);
+  //Leading order expansion Tr(-t*H*Gamma);
+  SoftexpNLL_NLO = SoftexpNLL_LO;
+  SoftexpNLL_LO += 2.*Trace(Hard, Gamma_exp.real())/traceH;
+  MatrixC conjGamma = Conjugate(Gamma_exp);
+  if((m_amode & MODE::SOFTEXPAND) && (m_mmode & MATCH_MODE::NLO)) {
+    SoftexpNLL_NLO *= (SoftexpNLL_LO-SoftexpNLL_NLO/2.);
+    SoftexpNLL_NLO += 4.*(Trace(Hard,real(conjGamma*ICmetric*conjGamma)) + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp)) + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
+  }
  
- // Calculate Soft matrix
- const MatrixC& eGamma = exp(ICmetric*Gamma.transposeInPlace());
- const MatrixC& cGamma = Conjugate(eGamma)*eGamma;
- const MatrixD& Soft = met*real(std::move(cGamma));
- if(msg_LevelIsDebugging()) {
-   msg_Debugging()<<"Soft Matrix = \n"<<Soft.setFuzzyZeroToZero()<<"\n";
- }
- //Hard-soft contraction 
- const double traceHS = Trace(Hard, std::move(Soft));
-
- if(msg_LevelIsDebugging()) {
-   msg_Debugging()<<"==============================================" << std::endl;
-   msg_Debugging()<<"Soft function:" << std::endl;
-   msg_Debugging()<<"==============================================" << std::endl;  
-   msg_Debugging()<< "alpha_s: " << as << std::endl;
-   msg_Debugging()<< "evolution variable t: " << t << std::endl;
-   msg_Debugging()<< "Log(1/v): " << L << std::endl;
-   msg_Debugging()<< std::endl;
-   msg_Debugging()<< "Kinematics" << std::endl;
-   msg_Debugging()<< *p_ampl << std::endl;
-   msg_Debugging()<< "Check energy-momentum conservation: ";
+  // Calculate Soft matrix
+  const MatrixC& eGamma = exp(ICmetric*Gamma.transposeInPlace());
+  const MatrixC& cGamma = Conjugate(eGamma)*eGamma;
+  const MatrixD& Soft = met*real(std::move(cGamma));
+  if(msg_LevelIsDebugging()) {
+    msg_Debugging()<<"Soft Matrix = \n"<<Soft.setFuzzyZeroToZero()<<"\n";
+  }
+  //Hard-soft contraction 
+  const double traceHS = Trace(Hard, std::move(Soft));
+  
+  if(msg_LevelIsDebugging()) {
+    msg_Debugging()<<"==============================================" << std::endl;
+    msg_Debugging()<<"Soft function:" << std::endl;
+    msg_Debugging()<<"==============================================" << std::endl;  
+    msg_Debugging()<< "alpha_s: " << as << std::endl;
+    msg_Debugging()<< "evolution variable t: " << t << std::endl;
+    msg_Debugging()<< "Log(1/v): " << L << std::endl;
+    msg_Debugging()<< std::endl;
+    msg_Debugging()<< "Kinematics" << std::endl;
+    msg_Debugging()<< *p_ampl << std::endl;
+    msg_Debugging()<< "Check energy-momentum conservation: ";
    Vec4D testEM(0,0,0,0);
    for(const auto& l: p_ampl->Legs()) testEM += l->Mom();
    msg_Debugging()<< testEM << std::endl;
    msg_Debugging()<<"Tr( c H ): " << traceH << std::endl;
-   msg_Debugging()<<"Softexp: " << SoftexpNLL_LO << std::endl;
-   msg_Debugging()<<"Tr( H G Gb ) / Tr( c H ): " << traceHS/traceH << std::endl;
+   msg_Debugging()<<"Softexp lo: " << SoftexpNLL_LO << std::endl;
+   if((m_amode & MODE::SOFTEXPAND) && (m_mmode & MATCH_MODE::NLO))
+     msg_Debugging()<<"Softexp nlo: " << SoftexpNLL_NLO << std::endl;
+   msg_Debugging() <<"Tr( H G Gb ) / Tr( c H ): " << traceHS/traceH << std::endl;
    msg_Debugging() << std::endl;
    //Print Tprods
    size_t k = 0;
@@ -581,9 +660,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 }
 
 
-double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G//  double &CollexpLL_LO, double& CollexpNLL_LO,
-                       // double &CollexpLL_NLO, double& CollexpNLL_NLO
-                       ) 
+double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G, double& S1) 
 {
 
   const double muR2 = p_ampl->MuR2();
@@ -605,7 +682,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       Vec4D pl(p_ampl->Leg(i)->Mom());
       cms.Boost(pl);
       const double El = dabs(pl[0]);
-
+      
       if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {colfac = m_params.CA(); hardcoll=m_params.CollDimGlue(muR2);}
       else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {colfac = m_params.CF(); hardcoll=m_params.CollDimQuark(muR2);} 
       else continue;
@@ -616,6 +693,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Q12=s_12;
       double lambda=as*beta0*L;
       double Lmur=log((muR2)/(Q*Q));
+
 
       //The following formulae are taken from Appendix A of hep-ph/0407286. 
 
@@ -640,7 +718,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
 	    double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr);
 
-	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
+	    R+=(-1.)*colfac*(r2+r1p*(m_logdbar[i]// +m_a[i]*log(Q/Q12)
+                                     -m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])) + log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	    
 	  }
@@ -654,31 +733,26 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	  }
 	  if (order>=1) {	    
             //NLL part
-	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
+            // @TODO: Check Lmur sign
+	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
 	    double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
 							  +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
 	    double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
-            double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
-            // double r2_pow = epRatio * (-2./M_PI*as) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]) * L;
+            double r2_corr = +LResum*r1p;
             double r2=(r2_cmw+r2_beta1+r2_corr);
 
-	    R+= -colfac*(r2+r1p*(m_logdbar[i]+m_a[i]*log(Q/Q12))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
+	    R+= -colfac*(r2+r1p*(m_logdbar[i]// +m_a[i]*log(Q/Q12)
+                                 )+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
 	    Rp+=r1p*colfac;
 	  }
 	}
-
       G(0,1) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
-      G(0,0) += -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/Q)));
-
+      G(0,0) += -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum));
       G(1,2) += -8.*M_PI*beta0/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
-      G(1,1) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q))) \
-                         -2.*K_CMW/m_a[i]/(m_a[i]+m_b[i]));
-
-      // CollexpLL_LO += -2./M_PI*as*(colfac) * L*L/2.0/m_a[i]/(m_a[i]+m_b[i]);
-      // CollexpNLL_LO += -2./M_PI*as*(colfac) * ((hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]))*L;
-      // CollexpLL_NLO += -pow(as/M_PI/2.,2)*colfac * L*L * 8.*M_PI*beta0/(3.*pow(m_a[i],2)) * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
-      // CollexpNLL_NLO += -pow(as/M_PI/2.,2)*colfac * L * (8.*M_PI*beta0*(1./pow(m_a[i],2) * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2) * (m_logdbar[i]-m_b[i]*log(2.0*El/Q)) + hardcoll/pow(m_a[i]+m_b[i],2) ) + 2.*K_CMW/m_a[i]/(m_a[i]+m_b[i]) );
+      G(1,1) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)) \
+                         +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
+      S1 += -colfac*log(Q12/Q);
     }
   return R;
 }

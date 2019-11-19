@@ -77,7 +77,7 @@ namespace RESUM {
     MODEL::Running_AlphaS *p_as;
 
     Params m_params;
-    
+
     //list of available and initialized bases
     CMetric_Map    m_cmetrics;
     //suitable basis for actual event
@@ -94,7 +94,9 @@ namespace RESUM {
     std::vector<int> signlabels;
     int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
-
+    size_t m_n;
+    bool m_init = false;
+    
     /// Leg ids ordered as quarks-antiquarks-gluons in n-parton amplitude.
     std::vector<size_t> m_ordered_ids;
     
@@ -130,22 +132,22 @@ namespace RESUM {
     MODE m_amode = MODE::RESUM;
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
     
-    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO);
+    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, bool ranCheck=false);
     double CalcColl(const double L, const double LResum, const int order,
-		    double &Rp, MatrixD& G// ,double &CollexpLL_LO, double& CollexpNLL_LO,
-                    // double &CollexpLL_NLO, double& CollexpNLL_NLO
-                    );
+		    double &Rp, MatrixD& G, double& S1);
     double CalcPDF(const double L, const double LResum, double &PDFexp);
     double T(const double x);
 
     double Value(const double v, const double LResum, double epRatio);
-
+    void FillValue(size_t i, const double v, const double LResum, double epRatio);
+    
   public:
 
     Resum(PDF::ISR_Handler *const isr,
 	  MODEL::Model_Base *const model);
 
     ~Resum();
+
 
     int  PerformShowers();
     int  PerformDecayShowers();
@@ -158,6 +160,7 @@ namespace RESUM {
     bool PrepareShower(ATOOLS::Cluster_Amplitude *const ampl,
 		       const bool & soft=false);
 
+   
     double CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
 		  const ATOOLS::Flavour &flk,const int type,
 		  const int cpl,const double &mu2) const;
@@ -165,9 +168,19 @@ namespace RESUM {
     virtual size_t AddObservable(Observable_Base *const obs,
 			 ATOOLS::Histogram *const h);
 
+    virtual size_t AddObservable(const std::string& name,
+                                 const std::vector<double>& xvals);
+   
+    
     std::pair<int, double> Result(int n) const { return m_ress.at(n); }
+    bool Initialized() const { return m_init; } 
     virtual void ResetObservables();
 
+    std::vector<std::vector<double>> m_resNLL;
+    std::vector<std::vector<double>> m_resExpLO;
+    std::vector<std::vector<double>> m_resExpNLO;
+    std::vector<std::vector<double>> m_xvals;
+    
   };// end of class Resum
   
 }// end of namespace RESUM
