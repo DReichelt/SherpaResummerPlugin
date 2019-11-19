@@ -5,6 +5,7 @@
 
 *.dylib
 *.so
+*.gch
 
 # Sherpa and plugin generated files
 Results.*
