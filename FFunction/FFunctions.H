@@ -25,9 +25,12 @@ namespace RESUM {
 
       // double LaplacePol(const double Rp) const;
 
+      void PrintYODA(const std::string& name);
+
     private:
       std::vector<double> m_Rps;
       std::vector<double> m_Fs;
+      std::vector<double> m_yerrs;
       double m_F2 = 0;
       // std::vector<double> m_bweights;
     };
