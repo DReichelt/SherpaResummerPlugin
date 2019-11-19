@@ -6,7 +6,8 @@ vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
-vars.Add(PathVariable('include','directories that will be passed to the compiler with the -I option.','.'))
+vars.Add(PathVariable('include','directories that will be passed to the compilerwith the -I option.','.'))
+
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
 vars.Add('CXX','The C++ Compiler',
@@ -27,6 +28,9 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Math/asa007.cpp',
                               'Math/spline.cpp',
                               'Math/InterpolationWrapper.C',
+                              'Math/linpack_d.cpp',
+                              'Math/blas0.cpp',
+                              'Math/blas1_d.cpp',
 	                      'Tools/CBasis.C',
 	                      'Tools/CMetric_Base.C',
 	                      'Tools/Hard_Matrix.C',
@@ -36,28 +40,26 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
                               'Main/Cluster_Definitions.C',
-                              'Scales/Resum_Scale_Setter.C'
+                              'Scales/Resum_Scale_Setter.C',
+                              'Scales/Resum_Scale_Setter_Durham.C'
                              ])
 
 
 analysislib = env.SharedLibrary('ResumAnalysis',
-          ['Analysis/Analysis.C',
-	   'Analysis/Observable_Base.C',
-	   'Analysis/Matching_Analysis.C',
+          ['Analysis/Observable_Base.C',
 	   'Analysis/Observable_Selector.C',
            'Analysis/NLO_Analysis.C',
-	   'Observables/Y3_FF.C',
+           'Analysis/Resum_Enhance_Observable.C',
+           'Scales/Resum_Scale_Setter_Durham.C',
 	   'Observables/Y2_IF.C',
 	   'Observables/Y1_II.C',
 	   'Observables/Thrust_FF.C',
 	   'Observables/Thrust_IF.C',
 	   'Observables/Thrust_II.C',
 	   'Observables/TThrust_FF.C',
-           'Observables/Thrust_F_table.C',
 	   'Observables/Thrust.C',
            'Tools/StringTools.C',
 	   'Observables/HeavyJetMass.C',
-           'Observables/Durham_3Jet_res.C',
            'Observables/YN_CambridgeAachen.C',
            'Observables/YN_Durham.C',
            'Observables/CParameter.C',
@@ -98,6 +100,8 @@ def make_exe(target, source, env, cp=copy):
    cp(target, source, env)
    subprocess.check_output(['chmod', 'ug+x', str(target[0])])
 
+
+
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
             action=partial(replace, old='@share_dir',
 	    			    new=os.path.join(env.subst('${sherpa}'),
@@ -108,10 +112,17 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
                                       old="-*- mode: python-*-",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
+
+
+env.Command(target='Analysis/RivetResumAnalysis.so',
+            source='Analysis/Resum.cc',
+            action="cd Analysis && ${sherpa}/bin/rivet-buildplugin RivetResumAnalysis.so Resum.cc -I${sherpa}/include/SHERPA-MC -I..")
+
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',
                       '${sherpa}/share/RESUM',
-                      '${sherpa}/lib/SHERPA-MC'])
+                      '${sherpa}/lib/SHERPA-MC',
+                      'Analysis/RivetResumAnalysis.so'])
 
