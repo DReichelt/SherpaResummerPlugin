@@ -38,11 +38,11 @@ namespace PHASIC {
 		     const size_t &mode)
     {
       std::vector<ATOOLS::Flavour> dummy(p.size(),Flavour(21));
-      double a = p_Obs->Parameters(p, dummy, 0).m_a;
+      // double a = p_Obs->Parameters(p, dummy, 0).m_a;
       double Q2 = (p[0]+p[1]).Abs2(); 
       double muF= Q2;
-      double muR= Q2;
-      double muQ=pow(p_Obs->Value(p,dummy),2./a)*Q2;
+      double muR= p_Obs->Value(p,dummy)*Q2;
+      double muQ= p_Obs->Value(p,dummy)*Q2;
 
       m_scale[stp::fac] = muF;
       m_scale[stp::ren] = muR;
