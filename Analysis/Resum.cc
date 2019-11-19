@@ -147,7 +147,7 @@ namespace Rivet {
           _h_expNLO_channels[channel][k].fill(x,p_resum->m_resExpNLO[k][i+1]*weight);
         }
         
-        const std::pair<int, double>& res = p_resum->Result(k);
+        // const std::pair<int, double>& res = p_resum->Result(k);
         for(size_t i=0; i<_h_expLO_diff[k]->bins().size()-1; i++) {
 
           // if(i==res.first) {

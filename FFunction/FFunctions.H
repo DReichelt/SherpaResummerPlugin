@@ -28,6 +28,7 @@ namespace RESUM {
       void PrintYODA(const std::string& name);
 
     private:
+      void _read(const std::string& filename,int inc=1);
       std::vector<double> m_Rps;
       std::vector<double> m_Fs;
       std::vector<double> m_yerrs;

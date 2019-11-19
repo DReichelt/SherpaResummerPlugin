@@ -15,17 +15,44 @@ using namespace FFUNCTION;
 
 
 FFunction::FFunction(const std::string& filename) {
+  m_mode = MODE::HERMITE;
+  std::string name = filename;
+  std::ifstream input(FILENAMES::SHARE_DIR+"/FFunction/" + name);
+  if(!input.good()) THROW(fatal_error,"No file " + name + ".");
+  std::string line = "";
+  while(getline(input,line)) {
+    if(line.find("GOTO") == 0) {
+      name = line.substr(line.find(" ")+1);
+      input.close();
+      input = std::ifstream(FILENAMES::SHARE_DIR+"/FFunction/" + name);
+    }
+  }
+  int inc = std::stoi(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::INC","1"));
+  _read(name,inc);
+  if(m_mode != MODE::DEFAULT) _calc();
+  input.close(); 
+  if(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::PLOT","0") != "0") {
+    size_t i = filename.rfind(".",filename.size());
+    PrintYODA(filename.substr(0,i)+"_Inc"+std::to_string(inc));
+  }
+}
+
+
+FFunction::FFunction(const std::string& filename, double F2) : FFunction(filename) {
+  m_F2 = F2;
+}
+
+void FFunction::_read(const std::string& filename,int inc) {
   DEBUG_FUNC(filename);
   std::ifstream input(FILENAMES::SHARE_DIR+"/FFunction/" + filename);
   if(!input.good()) THROW(fatal_error,"No file " + filename + ".");
   double Fvar = stod(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::VARIATION","0"));
-  m_mode = MODE::HERMITE;
+
   double Rp;
   double F;
   double Ferr;
   std::string row = "";
   getline(input, row);
-  int inc = std::stoi(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::INC","1"));
   if(inc < 1) inc = 1;
   int count = 0;
   while(getline(input, row)){
@@ -60,19 +87,7 @@ FFunction::FFunction(const std::string& filename) {
       m_yvals.push_back(F+Fvar*Ferr);
       m_yerrs.push_back(Ferr);
   }
-  if(m_mode != MODE::DEFAULT) _calc();
-  input.close(); 
-  if(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::PLOT","0") != "0") {
-    size_t i = filename.rfind(".",filename.size());
-    PrintYODA(filename.substr(0,i)+"_Inc"+std::to_string(inc));
-  }
 }
-
-FFunction::FFunction(const std::string& filename, double F2) : FFunction(filename) {
-  m_F2 = F2;
-}
-
-
 
 double FFunction::operator()(const double Rp, double& FexpNLL_NLO) {
   DEBUG_FUNC(Rp);

@@ -22,7 +22,7 @@ namespace RESUM {
   }
 
   template <typename T>
-  inline T epsilon(T ref) { return T("1e-2000"); };
+  inline T epsilon(T ref) { return T("1e-2000"); }
 
   template <>
   inline double epsilon(double ref) { return 1e-12; }
@@ -69,6 +69,7 @@ namespace RESUM {
       _calcThrust(p,Q,m_axis,m_t);
       _calcThrustMajor(p,Q);
       _calcThrustMinor(p,Q);
+      return m_t;
     }
 
     T _calcThrustMajor(const std::vector<ATOOLS::Vec3<T>>& p, const ATOOLS::Vec4<T>& Q) {
@@ -91,6 +92,7 @@ namespace RESUM {
           m_tMin += RESUM::abs(m_axisMin*q)/Q.Abs();
         }
       }
+      return m_tMin;
     }
     
     T _calcThrust(std::vector<ATOOLS::Vec3<T>> p, ATOOLS::Vec4<T> Q, ATOOLS::Vec3<T>& axis, T& t) {

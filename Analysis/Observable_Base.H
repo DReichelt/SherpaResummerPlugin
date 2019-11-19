@@ -8,6 +8,7 @@
 #include "ATOOLS/Org/Data_Reader.H"
 #include "Observables/Algorithms/Algorithm.H"
 #include "Tools/StringTools.H"
+#include "Main/Resum.H"
 #include <functional>
 
 using ATOOLS::sqr;
@@ -115,7 +116,8 @@ namespace RESUM {
                                   const size_t& l) = 0;
 
     virtual std::function<double(double,double&)> FFunction(const std::vector<Vec4T>& p,
-                                                    const std::vector<ATOOLS::Flavour>& fl) = 0;
+                                                            const std::vector<ATOOLS::Flavour>& fl,
+                                                            const RESUM::Params& params) = 0;
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
         ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);

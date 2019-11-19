@@ -483,7 +483,7 @@ private:
         }
       }
     }
-    catch(std::out_of_range) {
+    catch(const std::out_of_range& e) {
       THROW(fatal_error, "Tried to initalize matrix from non-compatible structure!");
     }
   }

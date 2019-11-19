@@ -11,6 +11,7 @@
 
 #include "Main/Cluster_Definitions.H"
 
+
 #include "ATOOLS/Org/Data_Reader.H"
 #include "ATOOLS/Math/Histogram.H"
 #include "Analysis/Observable_Base.H"
@@ -49,6 +50,7 @@ double Params::CollDimGlue(double scale2) const {
   if(!m_largeNC) return -M_PI*beta0(scale2)/s_CA;
   else return -M_PI*beta0(scale2);
 }
+
 double Params::CollDimQuark(double scale2) const {
   return -3./4.;
 }
@@ -140,7 +142,7 @@ int Resum::PerformShowers()
 
       m_logdbar.push_back(ps.m_logdbar);
     }
-    m_F = m_obss[m_n]->FFunction(moms, flavs);
+    m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
 
 
     for(size_t i=0; i<m_xvals[m_n].size(); i++) {

@@ -55,17 +55,17 @@ namespace RESUM {
 
 
     std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
-                                            const std::vector<ATOOLS::Flavour>& fl) {
+                                                    const std::vector<ATOOLS::Flavour>& fl,
+                                                    const RESUM::Params& params) {
       
       if(NJETS > 6) {
         return [](double Rp,double& exp) {exp=0.;return 1.;};
       }
       size_t N_gluon = 0;
 
-      // TODO: actally get parameters here
-      double NC = 3.;
-      double CF = (NC*NC-1.)/2./NC;
-      double CA = NC;
+      double NC = params.NC();
+      double CF = params.CF();
+      double CA = params.CA();
 
       double num = 0;
       double den = 0;
@@ -82,11 +82,17 @@ namespace RESUM {
       }
       double F2 = -pow(M_PI,2)/8. * 0.5*num/den/den;
       if(!p_F1 and (N_gluon == 0 or N_gluon == 1)) {
-        p_F1.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat", F2));
+        std::string name = Name() + "_" + std::to_string(N_gluon) + "g";
+        if(params.largeNC()) name += "_largeNc";
+        name += ".dat";
+        p_F1.reset(new FFUNCTION::FFunction(name, F2));
       }
             
       if(!p_F2 and (N_gluon == 2 or N_gluon == 3)) {
-        p_F2.reset(new FFUNCTION::FFunction(Name() + "_" + std::to_string(N_gluon) + "g" + ".dat", F2));
+        std::string name = Name() + "_" + std::to_string(N_gluon) + "g";
+        if(params.largeNC()) name += "_largeNc";
+        name += ".dat";
+        p_F2.reset(new FFUNCTION::FFunction(name, F2));
       }
       
 

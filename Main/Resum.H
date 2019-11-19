@@ -45,6 +45,7 @@ namespace RESUM {
     double CA() const {return m_CA;}
     double CF() const {return m_CF;}
     double TR() const {return m_TR;}
+    bool largeNC() const {return m_largeNC;}
     double beta0(double scale2) const;
     double beta1(double scale2) const;
     double K_CMW(double scale2) const;
