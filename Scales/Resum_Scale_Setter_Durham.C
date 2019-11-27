@@ -4,7 +4,7 @@
 #include "MODEL/Main/Model_Base.H"
 #include "MODEL/Main/Running_AlphaS.H"
 #include "Observables/YN_Durham.H"
-
+#include "Tools/StringTools.H"
 
 #include "Analysis/Observable_Base.H"
 
@@ -33,7 +33,11 @@ namespace PHASIC {
       start += name.size();
       size_t end = scale.find("}");
       if(end == std::string::npos) THROW(fatal_error,"Invalid scale '"+args.m_scale+"'");
-      m_n = std::stoi(scale.substr(start,end-start));
+      std::vector<std::string> ags = RESUM::split(scale.substr(start,end-start),",");
+      m_n = std::stoi(ags[0]);
+      m_murFac = ags.size() > 1 ? std::stod(ags[1]) : 1.;
+      m_muqFac = ags.size() > 2 ? std::stod(ags[2]) : 1.;
+      m_mufFac = ags.size() > 3 ? std::stod(ags[3]) : 1.;
       std::string Obs = "Y3_Durham";
       p_y = (RESUM::YN_Durham<3>*) (RESUM::Observable_Getter::GetObject(Obs, RESUM::Observable_Key(Obs)));
       p_y4 = (RESUM::YN_Durham<4>*) (RESUM::Observable_Getter::GetObject("Y4_Durham", RESUM::Observable_Key("Y4_Durham")));
@@ -68,9 +72,9 @@ namespace PHASIC {
       double muR= Q2*exp(prod);
       double muQ= scales[0]*Q2;
       // msg_Out()<<sqrt(muQ)<<" "<<sqrt(muR)<<"\n";
-      m_scale[stp::fac] = muF;
-      m_scale[stp::ren] = muR;
-      m_scale[stp::res] = muQ;
+      m_scale[stp::fac] = m_mufFac*muF;
+      m_scale[stp::ren] = m_murFac*muR;
+      m_scale[stp::res] = m_muqFac*muQ;
 
       // Switch on debugging output for this class with:
       // Sherpa "OUTPUT=2[ResumObs_Scale_Setter|15]"
@@ -83,6 +87,9 @@ namespace PHASIC {
     }
   private:
     int m_n = -1;
+    double m_murFac = 1.;
+    double m_muqFac = 1.;
+    double m_mufFac = 1.;
     RESUM::YN_Durham<3>* p_y;
     RESUM::YN_Durham<4>* p_y4;
     RESUM::YN_Durham<5>* p_y5;
