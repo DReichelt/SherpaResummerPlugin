@@ -104,7 +104,7 @@ namespace RESUM {
         flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
       Obs_Params p = Parameters(moms,flavs,l);
-      double logdbar = p.m_logdbar + p.m_a/2. *log(ampl->MuQ2()/cme.Abs2()); 
+      double logdbar = p.m_logdbar + p.m_a/2.*log(ampl->MuQ2()/cme.Abs2()); 
       return {p.m_a,p.m_b,logdbar,p.m_g};
     }
 
