@@ -1,5 +1,6 @@
 #include "FFunction/FFunctions.H"
 #include "Tools/Files.H"
+#include "Tools/StringTools.H"
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Math/MathTools.H"
 #include "ATOOLS/Org/Run_Parameter.H"
@@ -56,14 +57,12 @@ void FFunction::_read(const std::string& filename,int inc) {
   if(inc < 1) inc = 1;
   int count = 0;
   while(getline(input, row)){
-    int space1 = row.find(" ");
-    int space2 = row.find(" ",space1+1);
-    if(space1 == std::string::npos or space2 == std::string::npos) THROW(fatal_error,"The file " + filename + " has wrong format.");
+    const std::vector<std::string>& splitrow = split(row,"[ \t]+");
+    if(splitrow.size() < 2) THROW(fatal_error,"The file " + filename + " has the wrong format.");
+    Rp = stod(splitrow[0]);
+    F = stod(splitrow[1]);
+    Ferr = splitrow.size() > 2 ? stod(splitrow[2]) : 0;
       
-    Rp = stod(row.substr(0,space1));
-    F = stod(row.substr(space1+1,space2));
-    Ferr = stod(row.substr(space2+1));
-
     m_Rps.push_back(Rp);
 
     if(count % inc == 0) {

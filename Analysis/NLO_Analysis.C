@@ -52,6 +52,15 @@ namespace RESUM {
                                                      {"SKIP_PDFR", MODE::SKIP_PDFR}};
 
 
+    void PrintHistos() {
+      for(auto& h: m_histos) {
+        msg_Out()<<h->Name()<<" has bins:"<<"\n";
+        for(int i=0; i<h->Nbin(); i++)
+          msg_Out()<<h->LowEdge(i)<<" "<<h->HighEdge(i)<<" "<<h->Bin(i)<<"\n";
+      }
+      
+      msg_Out()<<"\n";
+    }
     
   private:
 
@@ -136,12 +145,12 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
     double xmax = ToType<double>(ip->Interprete(params[i][2]));
     size_t nbin = ToType<size_t>(ip->Interprete(params[i][3]));
     int tp = HistogramType(params[i][4]);
-    msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp
+    msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp<<" ("<<params[i][4]<<") "
 		   <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
     m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,params[i][0]));
-    m_histos.push_back(new Histogram(tp,0,1,2,params[i][0]+"_Sigma"));
+    m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,params[i][0]+"_Sigma"));
     for(int j=0; j<nbin; j++)
-      m_histos.push_back(new Histogram(tp,0,1,2,params[i][0]+"_Sigma"));
+      m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,params[i][0]+"_Sigma"));
     m_obss.push_back(obs);
   }
 }
@@ -365,8 +374,11 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
                    <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
     Fill(i,value,weight,ncount,mode);
     if(m_nborn > 0) {
+      msg_Debugging()<<"Filling "<<ch<<"\n";
       m_channels.at(ch)->Fill(i,value,weight,ncount,mode);
+      msg_Debugging()<<"Filling "<<ch_bland<<"\n";
       m_channels.at(ch_bland)->Fill(i,value,weight,ncount,mode);
+      msg_Debugging()<<"Filling "<<ch_bland_z<<"\n";
       m_channels.at(ch_bland_z)->Fill(i,value,weight,ncount,mode);
     }
     obsId++;
@@ -377,14 +389,15 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
 
 void NLO_Analysis::Fill(int i, double value, double weight, double ncount, int mode) {
   FillHisto(i,value,weight,ncount,mode);
-  int fill = 1;
+  double fill = 0.75;
   if(value < m_histos[i]->LowEdge(0))
-    fill = 0;
+    fill = 0.25;
   FillHisto(i+1,fill,weight,ncount,mode);
   for(int j=0; j<m_histos[i]->Nbin(); j++) {
-    int fill = 1;
+    fill = 0.75;
     if(value < m_histos[i]->HighEdge(j))
-      fill = 0;
+      fill = 0.25;
+    msg_Debugging()<<m_histos[i]->HighEdge(j)<<" "<<value<<" "<<fill<<"\n";
     FillHisto(i+j+2,fill,weight,ncount,mode);
   }
 }
@@ -392,13 +405,16 @@ void NLO_Analysis::Fill(int i, double value, double weight, double ncount, int m
 void NLO_Analysis::EvaluateNLOevt() {
   m_fills += m_fills_tmp;
   m_fills_tmp = 0;
-  for(auto& ch: m_channels) ch.second->EvaluateNLOevt();
-  Analysis_Base::EvaluateNLOevt();  
+  for(auto& ch: m_channels) {
+    ch.second->EvaluateNLOevt();
+  }
+  Analysis_Base::EvaluateNLOevt();
 }
 
 void NLO_Analysis::EndEvaluation(double scale)
 {
   for(auto& ch: m_channels) {
+    //msg_Out()<<ch.first<<"\n";
     ch.second->EndEvaluation(scale);
   }
   for(auto& h: m_histos) {
@@ -412,28 +428,31 @@ void NLO_Analysis::EndEvaluation(double scale)
 
 
     auto& h = histos[i+1];
+    if(h->Nbin()!=2) THROW(fatal_error,"All histograms here should have two bins, this has "+std::to_string(h->Nbin()));
+
     double v = histos[i]->LowEdge(0);
     double N = h->Fills();
-    double sigW = h->Bin(0)/N;
-    double sigW2 = h->Bin2(0)/N;
+    double sigW = h->Bin(1)/N;
+    double sigW2 = h->Bin2(1)/N;
     double sigErr = sqrt((sigW2-sqr(sigW))/(N-1));
     // msg_Out()<<v<<" "<<sigW<<" "<<sigW2<<" "<<sigErr<<" ";
-    double BsigW = h->Bin(1)/N;
-    double BsigW2 = h->Bin2(1)/N;
+    double BsigW = h->Bin(2)/N;
+    double BsigW2 = h->Bin2(2)/N;
     double BsigErr = sqrt((BsigW2-sqr(BsigW))/(N-1));
     // msg_Out()<<BsigW<<" "<<BsigW2<<" "<<BsigErr<<"\n";
     m_sigma[histos[i]->Name()][0] = {v, sigW, sigW2, sigErr, BsigW, BsigW2, BsigErr, N};
 
     for(int j=0; j<histos[i]->Nbin(); j++) {
       auto& h = histos[i+j+2];
+      if(h->Nbin()!=2) THROW(fatal_error,"All histograms here should have two bins, this has "+std::to_string(h->Nbin()));
       double v = histos[i]->HighEdge(j);
       double N = h->Fills();
-      double sigW = h->Bin(0)/N;
-      double sigW2 = h->Bin2(0)/N;
+      double sigW = h->Bin(1)/N;
+      double sigW2 = h->Bin2(1)/N;
       double sigErr = sqrt((sigW2-sqr(sigW))/(N-1));
       // msg_Out()<<v<<" "<<sigW<<" "<<sigW2<<" "<<sigErr<<" ";
-      double BsigW = h->Bin(1)/N;
-      double BsigW2 = h->Bin2(1)/N;
+      double BsigW = h->Bin(2)/N;
+      double BsigW2 = h->Bin2(2)/N;
       double BsigErr = sqrt((BsigW2-sqr(BsigW))/(N-1));
       // msg_Out()<<BsigW<<" "<<BsigW2<<" "<<BsigErr<<"\n";
       m_sigma[histos[i]->Name()][j+1] = {v, sigW, sigW2, sigErr, BsigW, BsigW2, BsigErr, N};

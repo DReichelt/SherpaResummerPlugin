@@ -11,9 +11,6 @@
 #include "Main/Resum.H"
 #include <functional>
 
-using ATOOLS::sqr;
-using ATOOLS::stp;
-
 namespace RESUM {
   
   struct Observable_Key {
@@ -107,7 +104,7 @@ namespace RESUM {
         flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
       Obs_Params p = Parameters(moms,flavs,l);
-      double logdbar = p.m_logdbar + p.m_a*log(ampl->MuQ2()/cme.Abs2()); 
+      double logdbar = p.m_logdbar + p.m_a/2. *log(ampl->MuQ2()/cme.Abs2()); 
       return {p.m_a,p.m_b,logdbar,p.m_g};
     }
 
@@ -130,7 +127,7 @@ namespace RESUM {
           fl[i] = sub->p_fl[i];
         }
         // Obs_Params ps(Parameters(moms,fl,sub->m_ijt));
-        // return ps.m_logdbar-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
+        // return ps.m_logdbar-ps.m_b/2.0*log(ATOOLS::sqr(2.0*p[0])/sub->m_mu2[ATOOLS::stp::res]);
         return 0;
     }
     
@@ -218,7 +215,7 @@ namespace RESUM {
     T Value
     (const std::vector<Vec4T>& p,
      const std::vector<ATOOLS::Flavour>& fl,
-     std::map<std::string, Algorithm::Ptr> algorithms,
+     std::map<std::string, typename Algorithm<T>::Ptr> algorithms,
      const size_t &nin=2) {
       return Value(p, fl, nin);
     }

@@ -1,5 +1,3 @@
-#include <algorithm>
-using std::max;
 #include "ThrustMajor.H"
 
 
