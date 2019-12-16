@@ -800,7 +800,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp)
     //O(as) expansion of the PDF evolution
     Single_Process *proc(p_ampl->Proc<Single_Process>());
     double z(x+(1.0-x)*m_rn[i]);
-    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(L),1.0)*L;
+    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.0)*L;
 
     old_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
     //new PDF scale
