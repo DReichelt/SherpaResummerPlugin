@@ -63,7 +63,7 @@ namespace PHASIC {
         // msg_Out()<<y<<"\n";
         prod *= (1.-lambda);
       }
-      prod = pow(prod,1./(scales.size()+1));
+      prod = pow(prod,1./scales.size());
       prod -= 1.;
       prod /= aS*beta0;
       // msg_Out()<<"y3 "<<p_y->Value(p,dummy,2)<<"\n";
