@@ -248,7 +248,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(m_mmode & MATCH_MODE::ADD) {
     expon = exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO)*exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
-    weight *= exp(-epRatio*PDFexp);
+    weight *= exp(-epRatio*pow(as,1)*pow(L,1)*PDFexp);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
   }
   if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
@@ -259,8 +259,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   MatrixD H(4,4,0);
 
   H(0,1) = pow(as,1)*pow(L,2) * ( G(0,1) );
-  H(0,0) = pow(as,1)*pow(L,1) * ( G(0,0) );
-  m_resExpLO[m_n][i] = H(0,0)+H(0,1)+ pow(as,1)*pow(L,1)* 4./m_a[0]*SoftexpNLL_LO + PDFexp;
+  H(0,0) = pow(as,1)*pow(L,1) * ( G(0,0) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
+  m_resExpLO[m_n][i] = H(0,0)+H(0,1);
   if(m_mmode & MATCH_MODE::ADD) {
     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * ( G(0,0)  + 4./m_a[0]*SoftexpNLL_LO);
   }
@@ -274,7 +274,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(0,0)+L*G(0,1)+2.*M_PI*beta0/m_a[0]));
 
   if(m_mmode & MATCH_MODE::ADD) {
-    m_resExpNLO[m_n][i] += (H(0,0)+H(0,1)+ PDFexp+ pow(as,1)*pow(L,1)* 4./m_a[0]*SoftexpNLL_LO)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(0,0) )))+pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) )),2)/2.;
+    m_resExpNLO[m_n][i] += (H(0,0)+H(0,1))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(0,0)+PDFexp)))+pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) +PDFexp)),2)/2.;
   }
 }
 
@@ -709,7 +709,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 	  }
 	  if (order>=1) {	    
             //NLL part   //note Lmur term in r2_cmw
-	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)-Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
+	    double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
 						       -m_a[i]*log(1.-2.*lambda/m_a[i]));
 	    double r2_beta1=beta1/2./M_PI/pow(beta0,3.)*(m_a[i]/2.*pow(log(1-2.*lambda/m_a[i]),2.)
 							 -0.5*(m_a[i]+m_b[i])*pow(log(1.-2.*lambda/(m_a[i]+m_b[i])),2.)
@@ -762,28 +762,30 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) 
 {
   //strong coupling & PDFs
-  double as = (*p_as)(p_ampl->MuR2());
+  const double as = (*p_as)(p_ampl->MuR2());
 
   double old_pdffac=1.,new_pdffac = 1.;
   
-  double scale= p_ampl->MuF2();
+  const double scale= p_ampl->MuF2();
   msg_Debugging() << "scale before: " << scale << std::endl;
 
   for (size_t i=0;i<2;i++) {
     if (p_ampl->Leg(i)->Flav().IsLepton()) continue;
-    double x = 0;
 
-    if (i==0) x=(-p_ampl->Leg(i)->Mom()).PPlus()/rpa->gen.PBeam(0).PPlus();
-    if (i==1) x=(-p_ampl->Leg(i)->Mom().PMinus())/rpa->gen.PBeam(1).PMinus();
-    
+    const double x = i==0 ? (-p_ampl->Leg(i)->Mom()).PPlus()/rpa->gen.PBeam(0).PPlus() : (-p_ampl->Leg(i)->Mom().PMinus())/rpa->gen.PBeam(1).PMinus();
+
     //original PDF
     p_pdf[i]->Calculate(x,scale);
+
     //O(as) expansion of the PDF evolution
     Single_Process *proc(p_ampl->Proc<Single_Process>());
     double z(x+(1.0-x)*m_rn[i]);
-    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,0.0,0.0,1)*L;
+    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
 
+    // @TODO: why is this needed????
+    p_pdf[i]->Calculate(x,scale);
     old_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+
     //new PDF scale
     double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
     if (scale*scalefac<p_pdf[i]->Q2Min()) {
@@ -793,10 +795,9 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp)
     else {
       p_pdf[i]->Calculate(x,scale*scalefac);
     }
-    msg_Debugging() << "scale after: " << scale << std::endl;
+    msg_Debugging() << "scale after: " << scale*scalefac << std::endl;
     new_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
   }
-
   return new_pdffac/old_pdffac;
 }
 
