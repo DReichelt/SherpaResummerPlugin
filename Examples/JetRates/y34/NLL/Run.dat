@@ -1,0 +1,40 @@
+(run){
+  fvar:=0;
+  murfac:=1;
+  muqfac:=1;
+  power:=1;
+  EVENTS 10M; EVENT_GENERATION_MODE W;
+  ERROR = 0.4;
+  ANALYSIS_OUTPUT=NLL_muRmurfac_muQmuqfac_ppower_Ffvar
+  FRAGMENTATION Off; BEAM_REMNANTS 0;
+  BEAM_1 11 45.6; BEAM_2 -11 45.6;
+  SHOWER_GENERATOR Resum;
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES ResumDurham{3,murfac,muqfac};
+  ANALYSIS Rivet; SHERPA_LDADD ResumAnalysis
+  PDF_LIBRARY = None;
+  RESUM::MODE RESUM|SOFTEXPAND|EXPAND;
+  RESUM::LOGFAC = 1;
+  RESUM::LOGPOW = power;
+  RESUM::MATCHING=ADD|LO|NLO;
+  RESUM::Y4_Durham::EP_MODE DYNAMIC;
+  RESUM::pre_calc = pre_calc/trace_basis;
+  RESUM::FFUNCTION::VARIATION = fvar;
+  RESUM::Observables Obs[Y4_Durham&-12&0&100&LnErr]
+}(run);
+
+(processes){
+  Process 11 -11 -> 93 93 93;
+  Order (*,2);
+  End process;
+}(processes);
+
+(selector){
+  ResumObs Y3_Durham 0.02;
+}(selector);
+
+(analysis){
+    BEGIN_RIVET {
+      -a Resum
+    } END_RIVET
+}(analysis)
