@@ -39,9 +39,7 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Bases/QCD_Generic.C',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
-                              'Main/Cluster_Definitions.C',
-                              'Scales/Resum_Scale_Setter.C',
-                              'Scales/Resum_Scale_Setter_Durham.C'
+                              'Main/Cluster_Definitions.C'
                              ])
 
 
@@ -50,6 +48,7 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 	   'Analysis/Observable_Selector.C',
            'Analysis/NLO_Analysis.C',
            'Analysis/Resum_Enhance_Observable.C',
+           'Scales/Resum_Scale_Setter.C',
            'Scales/Resum_Scale_Setter_Durham.C',
 	   'Observables/Y2_IF.C',
 	   'Observables/Y1_II.C',

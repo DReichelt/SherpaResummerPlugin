@@ -190,7 +190,9 @@ namespace RESUM {
         moms[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
         flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
-      return _Value(moms,flavs,ampl->NIn(),NJETS-1);
+      double ret = _Value(moms,flavs,ampl->NIn(),NJETS-1);
+      // if (ret > 2/pow(NJETS,2)) msg_Out()<<ret<<" "<<2/pow(NJETS,2)<<"\n";
+      return ret < 2/pow(NJETS,2) ? ret :  2/pow(NJETS,2);     
     }
 
 
