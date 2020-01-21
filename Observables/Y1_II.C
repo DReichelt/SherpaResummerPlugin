@@ -13,10 +13,11 @@ using namespace ATOOLS;
 
 namespace RESUM {
 
-  class Y1_II: public Observable_Base {
+  template <int NJETS>
+  class YN_II: public Observable_Base {
   public:
 
-    Y1_II(const Observable_Key &args): 
+    YN_II(const Observable_Key &args): 
     Observable_Base(args) {}
 
     Obs_Params Parameters
@@ -34,12 +35,17 @@ namespace RESUM {
 
 
     
-    double KT2(const Vec4D &p1, const Vec4D &p2=Vec4D()) const
+    double KT2(const Vec4D &p1, const Vec4D &p2) const
     {
-      if (p2==Vec4D()) return p1.PPerp2();
       return 2.0*sqr(Min(p1.PPerp2(),p2.PPerp2()))*
 	(cosh(p1.Y()-p2.Y())-cos(p1.DPhi(p2)));
     }
+
+    double KT2(const Vec4D &p1) const
+    {
+      return p1.PPerp2();
+    }
+
 
     double Value(const std::vector<Vec4D>& ip,
                  const std::vector<Flavour>& fl,
@@ -48,10 +54,11 @@ namespace RESUM {
       size_t nn = ip.size();
       Vec4D Q;
       Vec4D_Vector p;
-      for (size_t i(nin);i<nn;++i) {
+      for (size_t i=nin;i<nn; ++i) {
 	if (fl[i].Strong()) p.push_back(ip[i]);
-	else Q+=ip[i];
+        Q+=ip[i];
       }
+      if(p.size()<NJETS) return 0;
       std::vector<int> imap(p.size());
       for (int i=0;i<imap.size();++i) imap[i]=i;
       std::vector<std::vector<double> > kt2ij
@@ -68,9 +75,9 @@ namespace RESUM {
 	}
       }
       // recalc matrix
-      while (n>1) {
+      while (n>NJETS) {
 	int jjx=imap[jj];
-	if (ii!=jj) { p[jjx]+=p[imap[ii]]; p[jjx][0]=p[jjx].PSpat(); }
+	if (ii!=jj) { p[jjx]+=p[imap[ii]]; } //p[jjx][0]=p[jjx].PSpat(); }
 	--n;
 	for (int i=ii;i<n;++i) imap[i]=imap[i+1];
 	kt2ij[jjx][jjx]=KT2(p[jjx]);
@@ -98,6 +105,8 @@ namespace RESUM {
 
 using namespace RESUM;
 
+
+typedef YN_II<1> Y1_II;
 DECLARE_GETTER(Y1_II,"Y1_II",Observable_Base,Observable_Key);
 Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y1_II>::
 operator()(const Parameter_Type &args) const 
@@ -105,3 +114,13 @@ operator()(const Parameter_Type &args) const
 void ATOOLS::Getter<Observable_Base,Observable_Key,Y1_II>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y1_II"; }
+
+
+typedef YN_II<2> Y2_II;
+DECLARE_GETTER(Y2_II,"Y2_II",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y2_II>::
+operator()(const Parameter_Type &args) const 
+{ return new Y2_II(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,Y2_II>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"Y2_II"; }
