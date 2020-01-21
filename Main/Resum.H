@@ -52,13 +52,7 @@ namespace RESUM {
     double CollDimGlue(double scale2) const;
     double CollDimQuark(double scale2) const;
   };
-  
-  const double s_Nc = 3.;
-  const double s_CF = (s_Nc*s_Nc-1.)/(2.*s_Nc);
-  const double s_CA = s_Nc;
-  const double s_TR = 1./2.;
-  const double s_eps = .000001;
-  
+    
   class Cluster_Definitions;
   template <typename T>
   class Observable_Base_Template;
@@ -107,7 +101,7 @@ namespace RESUM {
                COLLEXPAND = 1 << 1,
                SOFTEXPAND = 1 << 2,
                LARGENC = 1    << 3,
-               EXPAND = COLLEXPAND | SOFTEXPAND
+               EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},

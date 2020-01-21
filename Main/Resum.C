@@ -43,11 +43,12 @@ double Params::beta1(double scale2) const {
   else return 17./24./M_PI/M_PI;
 }
 double Params::K_CMW(double scale2) const {
-  if(!m_largeNC) return  s_CA*(67./18. - M_PI*M_PI/6.)- m_TR*p_as->Nf(scale2)*10./9.;
+  if(!m_largeNC) return  m_CA*(67./18. - M_PI*M_PI/6.)- m_TR*p_as->Nf(scale2)*10./9.;
   else return 67./18. - M_PI*M_PI/6.;
 }
+
 double Params::CollDimGlue(double scale2) const {
-  if(!m_largeNC) return -M_PI*beta0(scale2)/s_CA;
+  if(!m_largeNC) return -M_PI*beta0(scale2)/m_CA;
   else return -M_PI*beta0(scale2);
 }
 
@@ -63,6 +64,8 @@ Resum::Resum(ISR_Handler *const isr,
   p_clus = new Cluster_Definitions();
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
+  
+
   p_pdf = new PDF_Base*[2];
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
 
@@ -223,10 +226,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   const double L = log(1.0/v);
   double Rp = 0.0;
   MatrixD G(3,3,0);
-  double CollexpLL_LO=0.0;
-  double CollexpNLL_LO=0.0;
-  double CollexpLL_NLO=0.0;
-  double CollexpNLL_NLO=0.0;
   double SoftexpNLL_LO=0.0;
   double SoftexpNLL_NLO=0.0;
   double PDFexp=0.0;
@@ -244,17 +243,26 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
 
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
   const double beta0 = m_params.beta0(p_ampl->MuR2());
-  double expon = 0;
   if(m_mmode & MATCH_MODE::ADD) {
-    expon = exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO)*exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*PDFexp);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
   }
   if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
   else m_F(0,FexpNLL_NLO); // even if Rp diverges the leading order expansion of F can be determined
-  double tmp = weight;
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
+
+  if(!(m_amode & MODE::COLLEXPAND)) {
+    G = MatrixD(3,3,0);
+    FexpNLL_NLO = 0;
+  }
+  if(!(m_amode & MODE::SOFTEXPAND)) {
+    SoftexpNLL_LO = 0;
+    SoftexpNLL_NLO = 0;
+  }
+  if(!(m_amode & MODE::PDFEXPAND)) {
+    PDFexp = 0;
+  }
 
   MatrixD H(4,4,0);
 
@@ -276,6 +284,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(m_mmode & MATCH_MODE::ADD) {
     m_resExpNLO[m_n][i] += (H(0,0)+H(0,1))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(0,0)+PDFexp)))+pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) +PDFexp)),2)/2.;
   }
+
 }
 
 
@@ -658,13 +667,11 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
  }
  m_comix.Reset();
  return traceHS/traceH;
- 
 }
 
 
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G, double& S1) 
 {
-
   const double muR2 = p_ampl->MuR2();
   const double beta0 = m_params.beta0(muR2);
   const double beta1 = m_params.beta1(muR2);
@@ -780,7 +787,12 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp)
     //O(as) expansion of the PDF evolution
     Single_Process *proc(p_ampl->Proc<Single_Process>());
     double z(x+(1.0-x)*m_rn[i]);
-    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
+    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
+
+    // msg_Out()<<"Expansion\n";
+    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
+    // msg_Out()<<"done\n";
+    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,0.0,0.0,1.);
 
     // @TODO: why is this needed????
     p_pdf[i]->Calculate(x,scale);
