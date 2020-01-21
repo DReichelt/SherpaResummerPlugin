@@ -135,7 +135,9 @@ int Resum::PerformShowers()
     m_a.clear();
     m_b.clear();
     m_logdbar.clear();
-    for (size_t i(0);i<moms.size();++i) {
+    for (size_t i=0; i<moms.size(); i++) {
+      if(m_obss[m_n] == nullptr)
+        THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
       Obs_Params ps = m_obss[m_n]->Parameters(p_ampl, i);
       m_a.push_back(ps.m_a);
       m_b.push_back(ps.m_b);
@@ -143,7 +145,6 @@ int Resum::PerformShowers()
       m_logdbar.push_back(ps.m_logdbar);
     }
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
-
 
     for(size_t i=0; i<m_xvals[m_n].size(); i++) {
       const double x = m_xvals[m_n][i];
@@ -441,12 +442,17 @@ size_t Resum::AddObservable(Observable_Base *const obs,
 size_t Resum::AddObservable(const std::string& name,
 			    const std::vector<double>& xvals)
 {
-  m_obss.push_back(RESUM::Observable_Getter::GetObject(name,RESUM::Observable_Key(name)));
-  m_xvals.push_back(xvals);
-  m_resNLL.push_back(vector<double>(xvals.size()));
-  m_resExpLO.push_back(vector<double>(xvals.size()));
-  m_resExpNLO.push_back(vector<double>(xvals.size()));
-  m_ress.push_back({-1,-1});
+  Observable_Base* obs = RESUM::Observable_Getter::GetObject(name,
+                                                             RESUM::Observable_Key(name));
+  if(obs != nullptr) {
+    m_obss.push_back(obs);
+    m_xvals.push_back(xvals);
+    m_resNLL.push_back(vector<double>(xvals.size()));
+    m_resExpLO.push_back(vector<double>(xvals.size()));
+    m_resExpNLO.push_back(vector<double>(xvals.size()));
+    m_ress.push_back({-1,-1});
+  }
+  else  msg_Error()<<"Observable not found: "<<name<<".\n";
   return m_ress.size()-1;
 }
 
