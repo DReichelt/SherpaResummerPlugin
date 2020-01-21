@@ -40,6 +40,7 @@ namespace RESUM {
     double m_logfac = 1.;
     double m_logpow = 1.;
     double m_endpoint = 1.;
+    bool m_unitNorm = true;
 
     enum EP_MODE {
                   FIXED = 0,
@@ -57,6 +58,7 @@ namespace RESUM {
       ATOOLS::Data_Reader read(" ",";","#","=");
       m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
       m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
+      m_unitNorm = bool(read.GetValue<int>("RESUM::UNITNORM",1));
       m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",1.);
       const std::string& ep_mode = read.GetValue<std::string>("RESUM::"+m_name+"::EP_MODE","FIXED");
       if(is_int(ep_mode)) {
@@ -157,6 +159,7 @@ namespace RESUM {
     double LogPow() {return m_logpow;}
 
     virtual double LogFac(ATOOLS::Cluster_Amplitude* ampl) {
+      if(!m_unitNorm) return LogFac();
       double avg = 0;
       double n = 0;
       for(int i=0; i<ampl->Legs().size(); i++) {
