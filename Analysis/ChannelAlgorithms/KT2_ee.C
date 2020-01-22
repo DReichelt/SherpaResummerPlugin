@@ -14,19 +14,23 @@ KT2_ee::KT2_ee(const ChAlg_Key& parameters)
   : ChannelAlgorithm_Base(parameters) {
   m_nborn = RESUM::to_type<int>(m_params[0]);
   if(m_params.size()>1) {
-    if(m_params[1] == "") m_mode = 0;
-    else if(m_params[1] == "BLAND") m_mode = 0|1;
-    else if(m_params[1] == "BLAND_Z") m_mode = 0|1|2;
+    if(m_params[1] == "") m_mode = MODE::ALL;
+    else if(m_params[1] == "BLAND") m_mode = MODE::BLAND;
+    else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
     else THROW(fatal_error,
                "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
   }
-  if(m_mode==0) m_channelNames.push_back("other");
-  for(int j=0; j<=m_nborn; j+=2) {
-    if(m_mode==0)
+  if(m_mode==MODE::ALL) {
+    m_channelNames.push_back("other");
+    for(int j=0; j<=m_nborn; j+=2)
       m_channelNames.push_back(std::string(m_nborn-j,'g')+std::string(j,'q'));
-    else if(m_mode==0|1)
+  }
+  else if(m_mode==MODE::BLAND) {
+    for(int j=0; j<=m_nborn; j+=2)
       m_channelNames.push_back(std::string(m_nborn-j,'g')+std::string(j,'q')+std::string("_BLAND"));
-    else if(m_mode==0|1|2)
+  }
+  else if(m_mode==MODE::BLAND_Z) {
+    for(int j=2; j<=m_nborn; j+=2)
       m_channelNames.push_back(std::string(m_nborn-j,'g')+std::string(j,'q')+std::string("_BLAND_Z"));
   }
 }
@@ -132,7 +136,7 @@ std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
   for(int i=0; i<n; i++) {
     msg_Debugging()<<p[imap[i]]<<" "<<f[imap[i]]<<"\n";
     if(flavd(f[imap[i]])) {
-      if(m_mode&1) channel += "q";
+      if(m_mode&MODE::BLAND) channel += "q";
       else {
         bool found = false;
         for(int fla: f[imap[i]]) {
@@ -156,8 +160,8 @@ std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
     }
     else channel = "g"+channel;
   }
-  if(m_mode&1) channel += "_BLAND";
-  if(m_mode&2) channel += "_Z";
+  if(m_mode&BLAND) channel += "_BLAND";
+  if(m_mode&ZDECAY) channel += "_Z";
   msg_Debugging()<<"Channel = "<<channel<<"\n\n";
   return channel;
 }

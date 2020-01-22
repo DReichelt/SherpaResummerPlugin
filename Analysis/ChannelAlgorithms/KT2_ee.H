@@ -15,6 +15,13 @@ namespace RESUM {
                         const size_t &nin) override;
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
+
+    enum MODE {
+               ALL = 0,
+               BLAND = 1 << 0,
+               ZDECAY = 1 << 1,
+               BLAND_Z = ALL|BLAND|ZDECAY
+    };
     
   private:
     
@@ -23,7 +30,7 @@ namespace RESUM {
                int mode, int num_flavd) const;
     bool flavd(const std::vector<int>& fls) const;
     
-    int m_mode = 0;
+    MODE m_mode = MODE::ALL;
     int m_nborn = -1;
     std::vector<std::string> m_channelNames;
     
