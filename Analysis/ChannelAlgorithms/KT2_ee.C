@@ -20,6 +20,7 @@ KT2_ee::KT2_ee(const ChAlg_Key& parameters)
     else THROW(fatal_error,
                "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
   }
+  if(m_mode==0) m_channelNames.push_back("other");
   for(int j=0; j<=m_nborn; j+=2) {
     if(m_mode==0)
       m_channelNames.push_back(std::string(m_nborn-j,'g')+std::string(j,'q'));
