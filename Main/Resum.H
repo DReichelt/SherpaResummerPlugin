@@ -172,7 +172,7 @@ namespace RESUM {
     virtual size_t AddObservable(const std::string& name,
                                  const std::vector<double>& xvals);
    
-    
+    size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}
     std::pair<int, double> Result(int n) const { return m_ress.at(n); }
     bool Initialized() const { return m_init; } 
     virtual void ResetObservables();
