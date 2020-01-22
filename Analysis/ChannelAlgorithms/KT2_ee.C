@@ -156,6 +156,8 @@ std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
     }
     else channel = "g"+channel;
   }
+  if(m_mode==1) channel += "_BLAND";
+  if(m_mode==2) channel += "_BLAND_Z";
   msg_Debugging()<<"Channel = "<<channel<<"\n\n";
   return channel;
 }
