@@ -222,7 +222,8 @@ void NLL_Analysis::Output(const std::string& name, const CumDist& dist,
     const double Bsig2 = sigma2 - dist[i].second;
     const double Berr = sqrt(sig2-sqr(sig) + sigma2-sqr(sigma))/(m_Ncount-1);
     *ofile<<xvals[i]<<" "<<sig<<" "<<sig2<<" "<<err<<" ";
-    *ofile<<Bsig<<" "<<Bsig2<<" "<<Berr<<"\n";
+    *ofile<<Bsig<<" "<<Bsig2<<" "<<Berr<<" ";
+    *ofile<<m_Ncount<<"\n";
   }
 }
   
