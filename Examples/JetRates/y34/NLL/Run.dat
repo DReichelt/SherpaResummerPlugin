@@ -11,7 +11,7 @@
   SHOWER_GENERATOR Resum;
   RESPECT_MASSIVE_FLAG 1;
   SCALES ResumDurham{3,murfac,muqfac};
-  ANALYSIS Rivet; SHERPA_LDADD ResumAnalysis
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis
   PDF_LIBRARY = None;
   RESUM::MODE RESUM|SOFTEXPAND|EXPAND;
   RESUM::LOGFAC = 1;
@@ -34,7 +34,10 @@
 }(selector);
 
 (analysis){
-    BEGIN_RIVET {
-      -a Resum
-    } END_RIVET
-}(analysis)
+  BEGIN_ANALYSIS {
+    LEVEL MENLO;
+    NLLResum { FinalState;
+      Y4_Durham exp(-12) 1 100 LnErr;
+      }
+  } END_ANALYSIS;
+}(analysis);
