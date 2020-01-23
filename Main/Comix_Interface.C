@@ -22,7 +22,7 @@ namespace RESUM {
 
 }
 
-Comix_Interface::Comix_Interface(): p_h(NULL)
+Comix_Interface::Comix_Interface(): p_h(nullptr)
 {
   m_pmap[nlo_type::lo] = new StringProcess_Map();
 }
@@ -111,7 +111,7 @@ Process_Base *Comix_Interface::GetProcess
   NLOTypeStringProcessMap_Map *mp=
     ampl->Procs<NLOTypeStringProcessMap_Map>();
 
-  if (mp==NULL) THROW(fatal_error,"Missing process map");
+  if (mp==nullptr) THROW(fatal_error,"Missing process map");
   StringProcess_Map *pm((*mp)[nlo_type::lo]);
 
   Process_Base::SortFlavours(ampl);
@@ -120,13 +120,13 @@ Process_Base *Comix_Interface::GetProcess
 
   StringProcess_Map::const_iterator pit(pm->find(name));
 
-  Process_Base *xs=NULL;
+  Process_Base *xs=nullptr;
 
   if (pit!=pm->end() && pit->second->
-      Integrator()->ColorIntegrator()!=NULL) {
+      Integrator()->ColorIntegrator()!=nullptr) {
     xs=pit->second;
   }
-  if (xs==NULL) {
+  if (xs==nullptr) {
 
     pm=m_pmap[nlo_type::lo];
     if ((pit=pm->find(name))!=pm->end()) xs=pit->second;
@@ -151,16 +151,16 @@ Process_Base *Comix_Interface::GetProcess
       PHASIC::Process_Base *proc=
 	ampl->Proc<Process_Base>()->
 	Generator()->Generators()->InitializeProcess(pi,false);
-      if (proc==NULL) {
+      if (proc==nullptr) {
 	My_In_File::CloseDB
 	  (rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Comix/");
         My_In_File::CloseDB
 	  (rpa->gen.Variable("SHERPA_CPP_PATH")+"/Process/Sherpa/");
-	(*pm)[name]=NULL;
-	return NULL;
+	(*pm)[name]=nullptr;
+	return nullptr;
       }
       m_procs.push_back(proc);
-      Selector_Key skey(NULL,NULL,true);
+      Selector_Key skey(nullptr,nullptr,true);
       proc->SetSelector(skey);
       proc->SetScale
         (Scale_Setter_Arguments
@@ -173,7 +173,7 @@ Process_Base *Comix_Interface::GetProcess
       if ((pit=pm->find(name))==pm->end()) THROW(fatal_error,"Internal error");
       xs=pit->second;
     }
-    if (xs==NULL) return NULL;
+    if (xs==nullptr) return nullptr;
   }
   return xs;
 }
@@ -181,5 +181,5 @@ Process_Base *Comix_Interface::GetProcess
 void Comix_Interface::Reset()
 {
   if (p_h) delete p_h;
-  p_h=NULL;
+  p_h=nullptr;
 }

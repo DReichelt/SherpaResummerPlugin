@@ -259,7 +259,7 @@ Primitive_Observable_Base *ATOOLS::Getter
 <Primitive_Observable_Base,Argument_Matrix,NLL_Analysis>::
 operator()(const Argument_Matrix &parameters) const
 {
-  if (parameters.size()==0 || parameters[0].size()<1) return NULL;
+  if (parameters.size()==0 || parameters[0].size()<1) return nullptr;
   return new NLL_Analysis(parameters);
 }
 

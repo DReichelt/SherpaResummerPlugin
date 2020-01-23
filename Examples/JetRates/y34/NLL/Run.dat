@@ -20,7 +20,6 @@
   RESUM::Y4_Durham::EP_MODE DYNAMIC;
   RESUM::pre_calc = pre_calc/trace_basis;
   RESUM::FFUNCTION::VARIATION = fvar;
-  RESUM::Observables Obs[Y4_Durham&-12&0&100&LnErr]
 }(run);
 
 (processes){

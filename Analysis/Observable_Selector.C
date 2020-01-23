@@ -26,7 +26,7 @@ namespace PHASIC {
       m_sel_log=new Selector_Log(m_name);
       p_tau = RESUM::Observable_Getter::GetObject
 	(key[0][0],RESUM::Observable_Key(key[0][0]));
-      if (p_tau==NULL) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
+      if (p_tau==nullptr) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
       m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
       if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));
       

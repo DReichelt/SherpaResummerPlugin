@@ -80,7 +80,7 @@ operator()(const Parameter_Type &args) const
   for (size_t i(0);i<args.p_ampl->Legs().size();++i)
     if (args.p_ampl->Leg(i)->Flav().Strong())
       fl.push_back(args.p_ampl->Leg(i)->Flav());
-  //if (fl.size()<4) return NULL;
+  //if (fl.size()<4) return nullptr;
   return new CM_Generic(args); 
 }
 
