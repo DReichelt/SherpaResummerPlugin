@@ -107,7 +107,7 @@ NLL_Analysis::NLL_Analysis(const Argument_Matrix& params):
     Histogram dummy = {HistogramType(htype),xmin,xmax,nbin,obsName};
     vector<double> xvals(dummy.Nbin()+1);
     xvals[0] = dummy.LowEdge(0);
-    for(size_t i=0; i<dummy.Nbin(); i++) xvals[i] = dummy.HighEdge(i);
+    for(size_t i=0; i<dummy.Nbin(); i++) xvals[i+1] = dummy.HighEdge(i);
     m_NLL[obsName] = CumDist(xvals.size(),{0,0});
     m_expLO[obsName] = CumDist(xvals.size(),{0,0});
     m_expNLO[obsName] = CumDist(xvals.size(),{0,0});    
