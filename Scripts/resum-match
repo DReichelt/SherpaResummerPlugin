@@ -1,4 +1,5 @@
 #-*- mode: python-*- 
+ 
 import yoda
 import math as m
 import glob
@@ -17,7 +18,7 @@ class Sigma(object):
 
         obs = self.args.observable
         
-        f_nll = yoda.readYODA(nll_file)
+        f_nll = yoda.readYODA(nll_file[0])
         Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_Sigma".format(OBS=obs),f_nll)
         self.xvals = np.array([p.x for p in Sigma_NLL.points])
         self.nll = np.array([p.y for p in Sigma_NLL.points])
@@ -58,14 +59,8 @@ class Sigma(object):
             self.ch_sigma_0[ch] = self.ch_nll[ch][-1] if ch in self.ch_nll else 0
 
         self.ch_lo = {}
-        try:
+        if os.path.exists(lo_file):
             f_lo = yoda.readYODA(lo_file)
-        except:
-            print "No LO file ({FILE}).".format(FILE=lo_file)
-            self.lo = self.expLO
-            for ch in args.channels:
-                self.ch_lo[ch] = self.ch_expLO[ch]
-        else:
             Sigma_LO = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_lo)
             self.match_bins(Sigma_NLL,Sigma_LO)
             self.lo = np.array([p.y-self.sigma_0 for p in Sigma_LO.points])
@@ -74,15 +69,15 @@ class Sigma(object):
                 self.match_bins(Sigma_NLL,Sigma_LO)
                 self.ch_lo[ch] = np.array([p.y-self.ch_sigma_0[ch] for p in Sigma_LO.points])
 
-        self.ch_nlo = {}
-        try:
-            f_nlo = yoda.readYODA(nlo_file)
-        except:
-            print "No NLO file ({FILE}).".format(FILE=nlo_file)
-            self.nlo = self.expNLO
-            for ch in args.channels:
-                self.ch_nlo[ch] = self.ch_expNLO[ch]
         else:
+            print "No LO file ({FILE}).".format(FILE=lo_file)
+            self.lo = self.expLO
+            for ch in args.channels:
+                self.ch_lo[ch] = self.ch_expLO[ch]
+
+        self.ch_nlo = {}
+        if os.path.exists(nlo_file)
+            f_nlo = yoda.readYODA(nlo_file)
             Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_barSigma".format(OBS=obs),f_nlo)
             self.match_bins(Sigma_NLL,Sigma_NLO)
             self.nlo = np.array([p.y for p in Sigma_NLO.points])
@@ -92,6 +87,12 @@ class Sigma(object):
                                                                                            CH=ch),f_nlo)
                 self.match_bins(Sigma_NLL,Sigma_NLO)
                 self.ch_nlo[ch] = np.array([p.y for p in Sigma_NLO.points])
+
+        else:
+            print "No NLO file ({FILE}).".format(FILE=nlo_file)
+            self.nlo = self.expNLO
+            for ch in args.channels:
+                self.ch_nlo[ch] = self.ch_expNLO[ch]
 
         self.aSC = (self.lo-self.expLO)/self.sigma_0
         self.ch_aSC = {ch : ((self.ch_lo[ch]
