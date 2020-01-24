@@ -6,7 +6,7 @@ import glob
 import argparse
 import numpy as np
 import sys
-
+import os
 
 class Sigma(object):
 
@@ -76,7 +76,7 @@ class Sigma(object):
                 self.ch_lo[ch] = self.ch_expLO[ch]
 
         self.ch_nlo = {}
-        if os.path.exists(nlo_file)
+        if os.path.exists(nlo_file):
             f_nlo = yoda.readYODA(nlo_file)
             Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_barSigma".format(OBS=obs),f_nlo)
             self.match_bins(Sigma_NLL,Sigma_NLO)
@@ -313,8 +313,6 @@ if __name__=='__main__':
     print variations
 
     
-    import os
-
     file_prefix = args.file_prefix
     dirName = args.output_dir
     if not os.path.exists(dirName): os.makedirs(dirName)
