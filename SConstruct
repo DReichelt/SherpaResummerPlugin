@@ -120,9 +120,25 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 
+env.Command(target='${sherpa}/bin/resum-combine', source="Scripts/resum-combine",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
+
+env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
+
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',
+                      '${sherpa}/bin/resum-combine',
+                      '${sherpa}/bin/resum-match',
                       '${sherpa}/share/RESUM',
                       '${sherpa}/lib/SHERPA-MC'])

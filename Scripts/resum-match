@@ -1,3 +1,4 @@
+#-*- mode: python-*- 
 import yoda
 import math as m
 import glob
