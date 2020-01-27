@@ -20,7 +20,7 @@ namespace RESUM {
     Obs_Params Parameters(const std::vector<Vec4T>& moms,
                           const std::vector<ATOOLS::Flavour>& flavs,
                           const size_t& l=0) {
-      return {1,1,log(2.),1};
+      return {1,0,log(2.),1};
     }
 
     T Value(const std::vector<Vec4T>& moms,

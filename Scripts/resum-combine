@@ -1,5 +1,11 @@
 #-*- mode: python-*- 
 import math as m
+import glob
+import argparse
+import sys
+import os
+import subprocess
+import yoda
 
 
 value = 0
@@ -161,11 +167,6 @@ class Sigma(object):
                                                                                               N=v[nEntries]))
 
 if __name__=='__main__':
-    import argparse
-    import sys
-    import os
-    import subprocess
-    import yoda
     parser = argparse.ArgumentParser()
     parser.add_argument('--nll-file', '-nll',default='NLL.dat')
     parser.add_argument('--lo-file', '-lo',default='LO.dat')
@@ -177,6 +178,7 @@ if __name__=='__main__':
     parser.add_argument('--output-nll', '-NLL', default="NLL.yoda")
     parser.add_argument('--output-lo', '-LO', default="LO.yoda")
     parser.add_argument('--output-nlo', '-NLO', default="NLO.yoda")
+    parser.add_argument('--output-match','-o',default="resum-plots")
     parser.add_argument('--channels', '-ch', action='append')
     parser.add_argument('--channel-fo-add', default=None)
     parser.add_argument('--match', action='store_true', default=False)
@@ -336,7 +338,41 @@ if __name__=='__main__':
                        '-nll',args.output_nll,
                        '-obs',obs,
                        '--rebin',str(args.rebin),
-                       '-o', 'resum-plots/{OBS}'.format(OBS=obs),
+                       '-o', '{DIR}/{OBS}'.format(DIR=args.output_match,
+                                                  OBS=obs),
                        '-ch']+args.channels
             print " ".join(command)
             subprocess.call(command)
+
+    fs = {}
+    for obs in args.observable:
+        for f in glob.glob("{DIR}/{OBS}/*.yoda".format(DIR=args.output_match,
+                                                      OBS=obs)):
+            name = f.split("/")[-1]
+            if not name in fs:
+                fs[name] = yoda.readYODA(f,asdict=False)
+            else:
+                fs[name] += yoda.readYODA(f,asdict=False)
+
+    dirName = "{DIR}/Summary".format(DIR=args.output_match)
+    if not os.path.exists(dirName): os.makedirs(dirName)
+    for key in fs:
+        yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
+                                                     NAME=key))
+
+    for ch in args.channels:
+        fs = {}
+        for obs in args.observable:
+            for f in glob.glob("{DIR}/{OBS}-{CH}/*.yoda".format(DIR=args.output_match,
+                                                               OBS=obs,CH=ch)):
+                name = f.split("/")[-1]
+                if not name in fs:
+                    fs[name] = yoda.readYODA(f,asdict=False)
+                else:
+                    fs[name] += yoda.readYODA(f,asdict=False)
+
+        dirName = "{DIR}/Summary-{CH}".format(DIR=args.output_match,CH=ch)
+        if not os.path.exists(dirName): os.makedirs(dirName)
+        for key in fs:
+            yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
+                                                     NAME=key))
