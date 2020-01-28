@@ -278,13 +278,13 @@ if __name__=='__main__':
             
             rs = Sigma.from_file(
                 inpath.format(ANALYSIS=args.nlo_rs_file,
-                              ACC="NLO",
-                              OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="NLO"))
+                              ACC="NLO_RS",
+                              OBS=obs))
             vi = Sigma.from_file(
-                inpath.format(ANALYSIS=args.nlo_rs_file,
-                              ACC="NLO",
-                          OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="NLO"))
-            yodas = (rs+vi).toYoda(outpath.format(OBS=obs,ACC="LO"))
+                inpath.format(ANALYSIS=args.nlo_vi_file,
+                              ACC="NLO_VI",
+                          OBS=obs))
+            yodas = (rs+vi).toYoda(outpath.format(OBS=obs,ACC="NLO"))
             for ch in args.channels:
                 if args.channel_fo_add is None:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
@@ -294,21 +294,17 @@ if __name__=='__main__':
 
                 rs = Sigma.from_file(
                     inpath.format(ANALYSIS=args.nlo_rs_file,
-                                  ACC="NLO",
+                                  ACC="NLO_RS",
                                   CH=ch,
                                   ADD=args.channel_fo_add,
-                                  OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                  CH=ch,
-                                                                  ACC="NLO"))
+                                  OBS=obs))
                 vi = Sigma.from_file(
-                    inpath.format(ANALYSIS=args.nlo_rs_file,
-                                  ACC="NLO",
+                    inpath.format(ANALYSIS=args.nlo_vi_file,
+                                  ACC="NLO_VI",
                                   CH=ch,
                                   ADD=args.channel_fo_add,
-                                  OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                  CH=ch,
-                                                                  ACC="NLO"))
-                yodas += (rs+vi).toYoda(outpath.format(OBS=obs,ACC="NLO"))
+                                  OBS=obs))
+                yodas += (rs+vi).toYoda(outpath.format(OBS=obs,ACC="NLO",CH=ch))
                 
             yoda.writeYODA(yodas,args.output_nlo)
                 
