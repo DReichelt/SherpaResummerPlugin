@@ -73,9 +73,9 @@ class Sigma(object):
         else:
             self.has_lo = False
             print "No LO file ({FILE}).".format(FILE=lo_file)
-            self.lo = self.expLO
+            self.lo = None
             for ch in args.channels:
-                self.ch_lo[ch] = self.ch_expLO[ch]
+                self.ch_lo[ch] = None
 
         self.ch_nlo = {}
         if os.path.exists(nlo_file):
@@ -94,9 +94,9 @@ class Sigma(object):
         else:
             self.has_nlo = False
             print "No NLO file ({FILE}).".format(FILE=nlo_file)
-            self.nlo = self.expNLO
+            self.nlo = None
             for ch in args.channels:
-                self.ch_nlo[ch] = self.ch_expNLO[ch]
+                self.ch_nlo[ch] = None
 
         self.aSC = (self.lo-self.expLO)/self.sigma_0
         self.ch_aSC = {ch : ((self.ch_lo[ch]
@@ -160,7 +160,9 @@ class Sigma(object):
                                   else np.zeros_like(self._nll_logr))
                             for ch in self.args.channels}
 
-        self.ch_other = {ch: np.array([self.ch_lo[ch], self.ch_lo[ch]+self.ch_nlo[ch]])
+        self.ch_other = {ch: np.array([self.ch_lo[ch],
+                                       self.ch_lo[ch]+self.ch_nlo[ch] if not
+                                       self.ch_nlo[ch] is None else self.ch_lo[ch]])
                          if (not ch in self.ch_nll) else 0. for ch in self.args.channels}
 
         if len(self.args.channels) > 0:
@@ -180,6 +182,12 @@ class Sigma(object):
             self.nll_add_noC = self._nll_add_noC
             self.nll_mult = self._nll_mult
             self.nll_logr = self._nll_logr
+
+        if self.lo is None: self.lo = np.zeros_like(self.nll)
+        if self.nlo is None: self.nlo = np.zeros_like(self.nll)
+        for ch in self.args.channels:
+            if self.ch_lo[ch] is None: self.ch_lo[ch] = np.zeros_like(self.nll)
+            if self.ch_nlo[ch] is None: self.ch_nlo[ch] = np.zeros_like(self.nll)
             
     def toYODA(self,histo,normalize=True, scale=1.,variations=[],rebin=None):
         path = "/ResumAnalysis/{OBS}".format(OBS=self.args.observable)
@@ -330,14 +338,12 @@ if __name__=='__main__':
     args = parser.parse_args(sys.argv[1:])
     if args.channels is None: args.channels = []
     nll_file = np.array([args.nll_file.split(":")])
-    print nll_file
     args.nll_file = nll_file[:,0]
     sigma = Sigma(args)
     if args.scale is None: args.scale = 1./sigma.sigma_0
     variations = []
     for i in range(len(nll_file[0])):
         args.nll_file = nll_file[:,i]
-        print args.nll_file
         variations += [Sigma(args)]
     print variations
 
@@ -359,6 +365,7 @@ if __name__=='__main__':
                                             for s in variations]), 
                    "{DIR}/{FILE_PREF}_add_LO_noC.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
+    
     yoda.writeYODA(sigma.toYODA(sigma.nll_mult[1][::args.rebin], variations=[s.nll_mult[1][::args.rebin] for
                                                                s in variations]), 
                    "{DIR}/{FILE_PREF}_mult_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
@@ -397,17 +404,9 @@ if __name__=='__main__':
     yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC[0])*sigma.expLO+sigma.expNLO-(sigma.sigma_0+sigma.lo-sigma.nlo))[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_NLOdiff.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
-    # print sigma.nll_logr[0][-1]
-    # for p in sigma.toYODA(sigma.nll_logr[0], variations=[s.nll_logr[0] for
-    #                                                      s in variations],normalize=True)[0].points:
-    #     print p.x, p.y
     for ch in args.channels:
-        # print sigma.ch_nll_logr[ch][0][-1]
-        # for p in sigma.toYODA(sigma.ch_nll_logr[ch][0],normalize=True)[0].points:
-        #     print p.x, p.y
         dirName = args.output_dir+"-{CH}".format(CH=ch)
         if not os.path.exists(dirName): os.mkdir(dirName)
-        print ch, sigma.ch_sigma_0[ch]
         yoda.writeYODA(sigma.toYODA(sigma.ch_nll_mult[ch][0][::args.rebin],variations=[s.ch_nll_mult[ch][0][::args.rebin]
                                                                          for s in
                                                                          variations]),

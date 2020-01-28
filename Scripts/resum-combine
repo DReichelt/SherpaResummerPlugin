@@ -184,7 +184,12 @@ if __name__=='__main__':
     parser.add_argument('--match', action='store_true', default=False)
     
     args = parser.parse_args(sys.argv[1:])
-
+    args.channels = [ch for chs in args.channels for ch in chs.split()]
+    args.observable = [ob for obs in args.observable for ob in obs.split()]
+    
+    print args.channels
+    print args.observable
+    
     for obs in args.observable:
 
         # NLL files
@@ -205,6 +210,10 @@ if __name__=='__main__':
                               OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="NLO"))
             for ch in args.channels:
                 inpath = "{NLL}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
+                if not os.path.exists(inpath.format(NLL=args.nll_file,ACC="NLL",CH=ch,OBS=obs)):
+                    print ("No NLL file for channel "
+                           "{CH}. Ignoring.").format(CH=ch)
+                    continue
                 outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
                 
                 yodas += Sigma.from_file(
