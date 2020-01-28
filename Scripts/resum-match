@@ -98,12 +98,17 @@ class Sigma(object):
             for ch in args.channels:
                 self.ch_nlo[ch] = None
 
-        self.aSC = (self.lo-self.expLO)/self.sigma_0
-        self.ch_aSC = {ch : ((self.ch_lo[ch]
-                              -self.ch_expLO[ch])/self.ch_sigma_0[ch]
-                             if ch in self.ch_nll else np.zeros_like(self.aSC))
-                       for ch in self.args.channels}
-
+        if not self.lo is None:
+            self.aSC = (self.lo-self.expLO)/self.sigma_0
+            self.ch_aSC = {ch : ((self.ch_lo[ch]
+                                  -self.ch_expLO[ch])/self.ch_sigma_0[ch]
+                                 if ch in self.ch_nll else np.zeros_like(self.aSC))
+                           for ch in self.args.channels}
+        else:
+            self.aSC = np.zeros_like(self.nll)
+            self.ch_aSC = {ch : np.zeros_like(self.nll)
+                           for ch in self.args.channels}
+            
 
         # Additive
         self._nll_add = self.match_add(self.nll,
@@ -256,6 +261,7 @@ class Sigma(object):
                                   expnlo=self.ch_expNLO[ch])
     
     def match_add(self,nll,lo,explo,s0,aSC=0.,nlo=None,expnlo=None):
+        if lo is None: return np.array([nll, nll])
         LO = (1.+aSC)*nll+lo-explo-aSC*s0
         if nlo is None: return np.array([LO, LO])
         NLO = -nlo - expnlo - aSC*explo
@@ -279,6 +285,7 @@ class Sigma(object):
 
     
     def match_mult(self,nll,lo,explo,s0,aSC=0.,nlo=None,expnlo=None):
+        if lo is None: return np.array([nll, nll])
         LO = nll*(1.+(lo-explo)/s0)
         if nlo is None: return np.array([LO, LO])
         NLO = nll*(-nlo-expnlo-explo*(lo-explo)/s0)/s0
@@ -302,6 +309,7 @@ class Sigma(object):
 
     
     def match_logr(self,nll,lo,explo,s0,asC=0.,nlo=None,expnlo=None):
+        if lo is None: return np.array([nll, nll])
         LO = nll*np.exp((lo-explo)/s0)
         if nlo is None: return np.array([LO, LO])
         NLO = np.exp((-nlo-expnlo-
