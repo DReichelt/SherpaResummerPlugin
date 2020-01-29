@@ -6,7 +6,7 @@ import sys
 import os
 import subprocess
 import yoda
-
+import logging
 
 value = 0
 sumW_Sig = 1
@@ -182,16 +182,21 @@ if __name__=='__main__':
     parser.add_argument('--channels', '-ch', action='append')
     parser.add_argument('--channel-fo-add', default=None)
     parser.add_argument('--match', action='store_true', default=False)
+    parser.add_argument('--message', '-m', default='warning')
     
     args = parser.parse_args(sys.argv[1:])
     args.channels = [ch for chs in args.channels for ch in chs.split()]
     args.observable = [ob for obs in args.observable for ob in obs.split()]
-    
-    print args.channels
-    print args.observable
+    if args.message.startswith('d'): logging.basicConfig(level=logging.DEBUG)
+    if args.message.startswith('i'): logging.basicConfig(level=logging.INFO)
+    if args.message.startswith('w'): logging.basicConfig(level=logging.WARNING)
+    if args.message.startswith('e'): logging.basicConfig(level=logging.ERROR)
+    if args.message.startswith('c'): logging.basicConfig(level=logging.CRITICAL)
+
+
     
     for obs in args.observable:
-
+        logging.info("\nCombining files for {OBS}".format(OBS=obs))
         # NLL files
         if os.path.exists(args.nll_file):
             inpath = "{NLL}/{ACC}/{OBS}_Sigma.dat"
@@ -211,8 +216,8 @@ if __name__=='__main__':
             for ch in args.channels:
                 inpath = "{NLL}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                 if not os.path.exists(inpath.format(NLL=args.nll_file,ACC="NLL",CH=ch,OBS=obs)):
-                    print ("No NLL file for channel "
-                           "{CH}. Ignoring.").format(CH=ch)
+                    logging.info(("No NLL file for channel "
+                                  "{CH}. Ignoring.").format(CH=ch))
                     continue
                 outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
                 
@@ -343,41 +348,42 @@ if __name__=='__main__':
                        '-nll',args.output_nll,
                        '-obs',obs,
                        '--rebin',str(args.rebin),
+                       '--message',args.message,
                        '-o', '{DIR}/{OBS}'.format(DIR=args.output_match,
                                                   OBS=obs),
                        '-ch']+args.channels
-            print " ".join(command)
+            logging.info(" ".join(command))
             subprocess.call(command)
 
-    fs = {}
-    for obs in args.observable:
-        for f in glob.glob("{DIR}/{OBS}/*.yoda".format(DIR=args.output_match,
-                                                      OBS=obs)):
-            name = f.split("/")[-1]
-            if not name in fs:
-                fs[name] = yoda.readYODA(f,asdict=False)
-            else:
-                fs[name] += yoda.readYODA(f,asdict=False)
+            fs = {}
+            for obs in args.observable:
+                for f in glob.glob("{DIR}/{OBS}/*.yoda".format(DIR=args.output_match,
+                                                               OBS=obs)):
+                    name = f.split("/")[-1]
+                    if not name in fs:
+                        fs[name] = yoda.readYODA(f,asdict=False)
+                    else:
+                        fs[name] += yoda.readYODA(f,asdict=False)
 
-    dirName = "{DIR}/Summary".format(DIR=args.output_match)
-    if not os.path.exists(dirName): os.makedirs(dirName)
-    for key in fs:
-        yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
-                                                     NAME=key))
+            dirName = "{DIR}/Summary".format(DIR=args.output_match)
+            if not os.path.exists(dirName): os.makedirs(dirName)
+            for key in fs:
+                yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
+                                                             NAME=key))
 
-    for ch in args.channels:
-        fs = {}
-        for obs in args.observable:
-            for f in glob.glob("{DIR}/{OBS}-{CH}/*.yoda".format(DIR=args.output_match,
-                                                               OBS=obs,CH=ch)):
-                name = f.split("/")[-1]
-                if not name in fs:
-                    fs[name] = yoda.readYODA(f,asdict=False)
-                else:
-                    fs[name] += yoda.readYODA(f,asdict=False)
+            for ch in args.channels:
+                fs = {}
+                for obs in args.observable:
+                    for f in glob.glob("{DIR}/{OBS}-{CH}/*.yoda".format(DIR=args.output_match,
+                                                                        OBS=obs,CH=ch)):
+                        name = f.split("/")[-1]
+                        if not name in fs:
+                            fs[name] = yoda.readYODA(f,asdict=False)
+                        else:
+                            fs[name] += yoda.readYODA(f,asdict=False)
 
-        dirName = "{DIR}/Summary-{CH}".format(DIR=args.output_match,CH=ch)
-        if not os.path.exists(dirName): os.makedirs(dirName)
-        for key in fs:
-            yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
-                                                     NAME=key))
+                dirName = "{DIR}/Summary-{CH}".format(DIR=args.output_match,CH=ch)
+                if not os.path.exists(dirName): os.makedirs(dirName)
+                for key in fs:
+                    yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
+                                                                 NAME=key))
