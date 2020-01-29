@@ -29,25 +29,6 @@ namespace RESUM {
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;
-    enum MODE {
-               DEFAULT = 0,
-               SKIP_REAL = 1        << 0,  // skip the real correction
-               SKIP_SUBT = 1        << 1,  // skip all subtraction terms
-               SKIP_SCOL = 1        << 2,  // skip the term related to the soft part of the splitting function
-               SKIP_COLL = 1        << 3,  // skip the term related to the collinear part if the splitting function
-               SKIP_NORM = 1        << 4,  // skip the term related to the normalization of the observable (dbar - b log(...))
-               SKIP_SOFT = 1        << 5,  // skip the soft anomalous dimenstion matrix
-               SKIP_PDFR = 1        << 6   // skip the pdf ratio
-    };
-
-    const std::map<std::string,MODE> m_ModeToEnum = {{"DEFAULT", MODE::DEFAULT},
-                                                     {"SKIP_REAL", MODE::SKIP_REAL},
-                                                     {"SKIP_SUBT", MODE::SKIP_SUBT},
-                                                     {"SKIP_SCOL", MODE::SKIP_SCOL},
-                                                     {"SKIP_COLL", MODE::SKIP_COLL},
-                                                     {"SKIP_NORM", MODE::SKIP_NORM},
-                                                     {"SKIP_SOFT", MODE::SKIP_SOFT},
-                                                     {"SKIP_PDFR", MODE::SKIP_PDFR}};
 
 
     void PrintHistos() {
@@ -68,8 +49,6 @@ namespace RESUM {
 
     std::map<std::string,std::vector<std::vector<double>>> m_sigma;
     
-    MODE m_mode = MODE::DEFAULT;
-
     double EtaBeam(const ATOOLS::Vec4D& p, size_t beamId);
     
     std::vector<ChannelAlgorithm_Base::Ptr> m_channelAlgs;
@@ -104,23 +83,15 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   DEBUG_FUNC(this);
   m_name+="_Resum";
   Data_Reader reader(",",";","!","=");
-  const std::string& mode = reader.GetValue<std::string>("MATCHING_TEST","DEFAULT");
- 
-  if(is_int(mode)) {
-    m_mode = static_cast<MODE>(to_type<int>(mode));
-  }
-  else {
-    for(const std::string& m: split(mode,"\\|")) {
-      m_mode = static_cast<MODE>(m_mode | m_ModeToEnum.at(m));
-    }
-  }
   Algebra_Interpreter *ip=reader.Interpreter();
   m_channelAlgs.clear();
   for (size_t i(1);i<params.size();++i) {
     if (params[i][0] == "ChAlg") {
+      std::vector<std::string> ps = {params[i].begin()+1,
+                                     params[i].end()};
       m_channelAlgs.emplace_back(ChAlg_Getter::GetObject(params[i][1],
                                                          {params[i][1],
-                                                          {&params[i][1],&params[i][params.size()-1]}}));
+                                                          ps}));
       continue;
     }
     if (params[i].size()<5) continue;

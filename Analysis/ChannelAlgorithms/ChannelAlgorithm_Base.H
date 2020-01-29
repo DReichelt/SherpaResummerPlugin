@@ -9,6 +9,7 @@
 #include "ATOOLS/Phys/Particle_List.H"
 #include "ATOOLS/Math/Vector.H"
 #include "ATOOLS/Org/Getter_Function.H"
+#include "ATOOLS/Org/Message.H"
 
 namespace RESUM {
 
@@ -19,7 +20,7 @@ namespace RESUM {
                          std::vector<std::string> params)
       : m_key(key), m_params(params) {
       // conventionally remove key from parmas if present
-      if(m_params[0]==m_key) m_params = {m_params.begin()++,m_params.end()};
+      if(m_params[0]==m_key) m_params.erase(m_params.begin());
     }
     std::string m_key = "ChannelAlgorithm";
     std::vector<std::string> m_params;
