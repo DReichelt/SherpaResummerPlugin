@@ -128,8 +128,8 @@ namespace RESUM {
           moms[i] = sub->p_mom[i];
           fl[i] = sub->p_fl[i];
         }
-        // Obs_Params ps(Parameters(moms,fl,sub->m_ijt));
-        // return ps.m_logdbar-ps.m_b/2.0*log(ATOOLS::sqr(2.0*p[0])/sub->m_mu2[ATOOLS::stp::res]);
+        Obs_Params ps(Parameters(moms,fl,sub->m_ijt));
+        return ps.m_logdbar-ps.m_b/2.0*log(ATOOLS::sqr(2.0*p[0])/sub->m_mu2[ATOOLS::stp::res]);
         return 0;
     }
     
