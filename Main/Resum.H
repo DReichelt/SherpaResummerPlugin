@@ -102,12 +102,14 @@ namespace RESUM {
     std::vector<size_t> m_ordered_ids;
     
     enum MODE {
-               RESUM = 0,
-               PDFEXPAND = 1  << 0,
-               COLLEXPAND = 1 << 1,
-               SOFTEXPAND = 1 << 2,
-               LARGENC = 1    << 3,
-               EXPAND = COLLEXPAND | SOFTEXPAND
+               RESUM = 0,               // calculate resummed cumulative
+               PDFEXPAND = 1  << 0,     // include pdf in expansion
+               COLLEXPAND = 1 << 1,     // include collinear pieces in expansion
+               SOFTEXPAND = 1 << 2,     // include soft pieces in expansion
+               LARGENC = 1    << 3,     // calculate in large nc limit
+               CKINV = 1      << 4,     // check the inverse of metric
+               CKCOUL = 1     << 5,     // check effect of coulomb phases
+               EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND // conveninece def.
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
@@ -115,7 +117,11 @@ namespace RESUM {
                                                      {"COLLEXPAND", MODE::COLLEXPAND},
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
                                                      {"LARGENC", MODE::LARGENC},
-                                                     {"EXPAND", MODE::EXPAND}};
+                                                     {"EXPAND", MODE::EXPAND},
+                                                     {"CKINV", MODE::CKINV},
+                                                     {"CKCOUL", MODE::CKCOUL},
+                                                     {"CHECKINVERSE", MODE::CKINV},
+                                                     {"CHECKCOULOMB", MODE::CKCOUL}};
 
     enum MATCH_MODE {
       NONE = 0,
@@ -133,7 +139,7 @@ namespace RESUM {
     MODE m_amode = MODE::RESUM;
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
     
-    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, bool ranCheck=false);
+    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
     double CalcColl(const double L, const double LResum, const int order,
 		    double &Rp, MatrixD& G, double& S1);
     double CalcPDF(const double L, const double LResum, double &PDFexp);

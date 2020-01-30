@@ -223,40 +223,70 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(v > 1)     return;
   const double L = log(1.0/v);
   double Rp = 0.0;
+  // expansion coefficients for collinear part
   MatrixD G(3,3,0);
-  double CollexpLL_LO=0.0;
-  double CollexpNLL_LO=0.0;
-  double CollexpLL_NLO=0.0;
-  double CollexpNLL_NLO=0.0;
+  // expansion coefficents for soft function
   double SoftexpNLL_LO=0.0;
   double SoftexpNLL_NLO=0.0;
+  // expansion coefficient for pdf
   double PDFexp=0.0;
+  // coefficient F_2
   double FexpNLL_NLO = 0.0;
+  // weight for cumulative distribution
   double weight = 1.;
+
+  // calculate collinear piece
   weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
-  // double calcs1 = weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,true);
+  // some checks for colour calculation
+  const double calcs1 = m_amode & MODE::CKINV ?
+    weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,MODE::CKINV) : 0;
+  const double calcs2 = m_amode & MODE::CKCOUL ?
+    weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,MODE::CKCOUL) : 0;
+  // actually calculate soft function
+  SoftexpNLL_LO=0.0;
+  SoftexpNLL_NLO=0.0;
   weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
-  // msg_Out()<<"Check independence of colour inversion: "<<weight-calcs1<<"\n";
-  // if(!IsZero(weight-calcs1,1e-2)) THROW(fatal_error, "Color inversion check failed -> "+ToString(weight-calcs1))
-  // weight*=1 //non-global logs  
+  // evaluate tests if needed
+  if(m_amode & MODE::CKINV) {
+    msg_Out()<<"Check inversion -> "<<weight-calcs1<<".\n";
+    if(!IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
+                                               <<weight-calcs1<<" ratio = "<<(weight-calcs1)/weight<<".\n";
+  }
+  if(m_amode & MODE::CKCOUL) {
+    msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
+    if(!IsZero(weight-calcs2,1e-6)) {
+      if(p_ampl->Leg(0)->Flav().StrongCharge()==0 or p_ampl->Leg(1)->Flav().StrongCharge()==0) {
+        msg_Error()<<"Coulomb phases did not cancel despite singlet initial state -> "
+                   <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+      }
+    }
+    if(IsZero(weight-calcs2,1e-6) and p_ampl->Leg(0)->Flav().StrongCharge()!=0 and p_ampl->Leg(1)->Flav().StrongCharge()!=0)
+      msg_Out()<<"Complete cancellation of coulomb phases with non-singlet II states ->"
+               <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+  }
+
+  // non-global logs, maybe some day
+  // weight*=1
+
   //calc PDF factor for IS legs
   weight *= CalcPDF(L, LResum, PDFexp);
-  //calc collinear piece
 
+  // evaluate possible endpoint corrections
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
   const double beta0 = m_params.beta0(p_ampl->MuR2());
-  double expon = 0;
   if(m_mmode & MATCH_MODE::ADD) {
-    expon = exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO)*exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*PDFexp);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
   }
+
   if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
-  else m_F(0,FexpNLL_NLO); // even if Rp diverges the leading order expansion of F can be determined
-  double tmp = weight;
+  else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
+
+  // store resummed result
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
 
+  // calculate expansion
   MatrixD H(4,4,0);
 
   H(0,1) = pow(as,1)*pow(L,2) * ( G(0,1) );
@@ -265,6 +295,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(m_mmode & MATCH_MODE::ADD) {
     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * ( G(0,0)  + 4./m_a[0]*SoftexpNLL_LO);
   }
+
+  // store leading order expansion
   m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
   
   H(1,3) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(0,1),2) );
@@ -277,6 +309,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(m_mmode & MATCH_MODE::ADD) {
     m_resExpNLO[m_n][i] += (H(0,0)+H(0,1))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(0,0)+PDFexp)))+pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) +PDFexp)),2)/2.;
   }
+  // store next-to-leading order expansion
+  m_resExpNLO[m_n][i] = std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
 }
 
 
@@ -479,7 +513,7 @@ double Resum::T(const double x)
 
 
 
-double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, bool ranCheck) 
+double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check)
 {
   DEBUG_FUNC(L);
   const size_t numlegs = n_g + n_q + n_aq;
@@ -495,7 +529,8 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   const MatrixD& met = p_cmetric->CMetric();
   InverseLowerTriangular(met);
   MatrixC ICmetric = p_cmetric->Imetric();
-  if(ranCheck) ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
+  if(Check & MODE::CKINV)
+    ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
 
   
   const size_t dim = met.numCols();
@@ -582,6 +617,10 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   if(msg_LevelIsDebugging()) {
     msg_Debugging()<<"Gamma = \n"<<Gamma<<"\n";
   }
+  if(Check & MODE::CKCOUL) {
+    Gamma_exp = MatrixC(Gamma_exp.real());
+    Gamma = MatrixC(Gamma.real());
+  }
     
   //Hard Matrix in T-basis
   MatrixD Hard = MatrixC(m_comix.ComputeHardMatrix(p_ampl,
@@ -605,7 +644,9 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   MatrixC conjGamma = Conjugate(Gamma_exp);
   if((m_amode & MODE::SOFTEXPAND) && (m_mmode & MATCH_MODE::NLO)) {
     SoftexpNLL_NLO *= (SoftexpNLL_LO-SoftexpNLL_NLO/2.);
-    SoftexpNLL_NLO += 4.*(Trace(Hard,real(conjGamma*ICmetric*conjGamma)) + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp)) + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
+    SoftexpNLL_NLO += 4.*(Trace(Hard,real(conjGamma*ICmetric*conjGamma))
+                          + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp))
+                          + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
   }
  
   // Calculate Soft matrix
