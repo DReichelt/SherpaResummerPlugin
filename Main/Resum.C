@@ -71,7 +71,7 @@ Resum::Resum(ISR_Handler *const isr,
 
   Data_Reader read(" ",";","#","=");
   // by default calculate all expansion parts and the resummed distribution
-  // also check for RESUM_EXPAND for backwards compatibility
+  // also check for RESUM_MODE for backwards compatibility
   const string& mode = read.GetValue<string>("RESUM::MODE",
                                              read.GetValue<string>("RESUM_MODE",
                                                                    "RESUM|EXPAND"));
@@ -243,6 +243,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
 
   // calculate collinear piece
   weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
+
   // some checks for colour calculation
   const double calcs1 = m_amode & MODE::CKINV ?
     weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,MODE::CKINV) : 0;
@@ -293,16 +294,18 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
-
   if(!(m_amode & MODE::COLLEXPAND)) {
+    msg_Out()<<"Ignore coll. expansion.\n";
     G = MatrixD(3,3,0);
     FexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::SOFTEXPAND)) {
+    msg_Out()<<"Ignore soft expansion.\n";
     SoftexpNLL_LO = 0;
     SoftexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::PDFEXPAND)) {
+    msg_Out()<<"Ignore pdf expansion.\n";
     PDFexp = 0;
   }
 

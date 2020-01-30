@@ -185,14 +185,17 @@ if __name__=='__main__':
     parser.add_argument('--message', '-m', default='warning')
     
     args = parser.parse_args(sys.argv[1:])
-    args.channels = [ch for chs in args.channels for ch in chs.split()]
+    if args.channels is None: 
+        args.channels = []
+    else:
+        args.channels = [ch for chs in args.channels for ch in chs.split()]
     args.observable = [ob for obs in args.observable for ob in obs.split()]
     if args.message.startswith('d'): logging.basicConfig(level=logging.DEBUG)
     if args.message.startswith('i'): logging.basicConfig(level=logging.INFO)
     if args.message.startswith('w'): logging.basicConfig(level=logging.WARNING)
     if args.message.startswith('e'): logging.basicConfig(level=logging.ERROR)
     if args.message.startswith('c'): logging.basicConfig(level=logging.CRITICAL)
-
+    
 
     
     for obs in args.observable:

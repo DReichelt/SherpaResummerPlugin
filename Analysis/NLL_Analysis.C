@@ -149,7 +149,7 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
       }
     }
   }
-  // get results from resum an fill
+  // get results from resum and fill
   for(size_t k=0; k<m_nObs; k++) {
     const std::string& name = m_ObsNames[k];
     const std::vector<double>& resNLL = p_resum->m_resNLL[k];
