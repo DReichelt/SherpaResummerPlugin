@@ -206,9 +206,9 @@ namespace RESUM {
     /// Matrix multiplication.
     Matrix<T>& operator*=(const Matrix<T>& other) {
       assert(numCols() == other.numRows());
-      size_t rows = numRows();
-      size_t cols = numCols();
-      size_t ocols = other.numCols();
+      const size_t rows = numRows();
+      const size_t cols = numCols();
+      const size_t ocols = other.numCols();
       Matrix<T> tmp(rows,ocols,T(0));
       transposeInPlace();
       this->swap(tmp);

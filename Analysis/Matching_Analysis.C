@@ -112,7 +112,7 @@ Matching_Analysis::Matching_Analysis(const Argument_Matrix &params):
   }
   
 #ifdef USING__ROOT
-  if (MYROOT::myroot==NULL) {
+  if (MYROOT::myroot==nullptr) {
     MYROOT::myroot = new MYROOT::My_Root();
     MYROOT::myroot->InitFile();
     ATOOLS::exh->AddTerminatorObject(MYROOT::myroot);
@@ -128,7 +128,7 @@ Matching_Analysis::~Matching_Analysis()
   if (MYROOT::myroot) {
     exh->RemoveTerminatorObject(MYROOT::myroot);
     delete MYROOT::myroot;
-    MYROOT::myroot=NULL;
+    MYROOT::myroot=nullptr;
   }
 #endif
   for (size_t i(0);i<m_obss.size();++i) delete m_obss[i];

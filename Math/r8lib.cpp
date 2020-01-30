@@ -7059,13 +7059,13 @@ double *r82vec_max ( int n, double a[] )
 {
 # define DIM_NUM 2
 
-  double *amax = NULL;
+  double *amax = nullptr;
   int i;
   int j;
 
   if ( n <= 0 )
   {
-    return NULL;
+    return nullptr;
   }
 
   amax = new double[DIM_NUM];
@@ -7121,13 +7121,13 @@ double *r82vec_min ( int n, double a[] )
 {
 # define DIM_NUM 2
 
-  double *amin = NULL;
+  double *amin = nullptr;
   int i;
   int j;
 
   if ( n <= 0 )
   {
-    return NULL;
+    return nullptr;
   }
 
   amin = new double[DIM_NUM];
@@ -7800,7 +7800,7 @@ int *r82vec_sort_heap_index_a ( int n, int base, double a[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = new int[n];
@@ -8081,13 +8081,13 @@ double *r83vec_max ( int n, double a[] )
 {
 # define DIM_NUM 3
 
-  double *amax = NULL;
+  double *amax = nullptr;
   int i;
   int j;
 
   if ( n <= 0 )
   {
-    return NULL;
+    return nullptr;
   }
 
   amax = new double[DIM_NUM];
@@ -8143,13 +8143,13 @@ double *r83vec_min ( int n, double a[] )
 {
 # define DIM_NUM 3
 
-  double *amin = NULL;
+  double *amin = nullptr;
   int i;
   int j;
 
   if ( n <= 0 )
   {
-    return NULL;
+    return nullptr;
   }
 
   amin = new double[DIM_NUM];
@@ -8807,7 +8807,7 @@ double ***r8block_new ( int l, int m, int n )
 
   a = new double **[l];
 
-  if ( a == NULL )
+  if ( a == nullptr )
   {
     cerr << "\n";
     cerr << "R8BLOCK_NEW - Fatal error!\n";
@@ -8818,7 +8818,7 @@ double ***r8block_new ( int l, int m, int n )
   for ( i = 0; i < l; i++ )
   {
     a[i] = new double *[m];
-    if ( a[i] == NULL )
+    if ( a[i] == nullptr )
     {
       cerr << "\n";
       cerr << "R8BLOCK_NEW - Fatal error!\n";
@@ -8832,7 +8832,7 @@ double ***r8block_new ( int l, int m, int n )
     for ( j = 0; j < m; j++ )
     {
       a[i][j] = new double[n];
-      if ( a[i][j] == NULL )
+      if ( a[i][j] == nullptr )
       {
         cerr << "\n";
         cerr << "R8BLOCK_NEW - Fatal error!\n";
@@ -9056,7 +9056,7 @@ double **r8cmat_new ( int m, int n )
 
   a = new double *[n];
 
-  if ( a == NULL )
+  if ( a == nullptr )
   {
     cerr << "\n";
     cerr << "R8CMAT_NEW - Fatal error!\n";
@@ -9067,7 +9067,7 @@ double **r8cmat_new ( int m, int n )
   for ( j = 0; j < n; j++ )
   {
     a[j] = new double[m];
-    if ( a[j] == NULL )
+    if ( a[j] == nullptr )
     {
       cerr << "\n";
       cerr << "R8CMAT_NEW - Fatal error!\n";
@@ -10825,7 +10825,7 @@ int *r8col_sort_heap_index_a ( int m, int n, int base, double a[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = new int[n];
@@ -13186,7 +13186,7 @@ double *r8mat_border_cut ( int m, int n, double table[] )
 
   if ( m <= 2 || n <= 2 )
   {
-    return NULL;
+    return nullptr;
   }
 
   table2 = new double[(m-2)*(n-2)];
@@ -13395,7 +13395,7 @@ double *r8mat_cholesky_factor_upper ( int n, double a[], int &flag )
         if ( sum2 <= 0.0 )
         {
           flag = 1;
-          return NULL;
+          return nullptr;
         }
         c[j+i*n] = sqrt ( sum2 );
       }
@@ -16580,7 +16580,7 @@ double *r8mat_inverse_2d ( double a[] )
 //
   if ( det == 0.0 )
   {
-    return NULL;
+    return nullptr;
   }
 //
 //  Compute the entries of the inverse matrix using an explicit formula.
@@ -16646,7 +16646,7 @@ double *r8mat_inverse_3d ( double a[] )
 
   if ( det == 0.0 )
   {
-    return NULL;
+    return nullptr;
   }
 
   b = new double[3*3];
@@ -16710,7 +16710,7 @@ double *r8mat_inverse_4d ( double a[] )
 //
   if ( det == 0.0 )
   {
-    return NULL;
+    return nullptr;
   }
 //
 //  Compute the entries of the inverse matrix using an explicit formula.
@@ -20988,7 +20988,7 @@ double *r8mat_solve_2d ( double a[], double b[], double *det )
 //
   if ( *det == 0.0 )
   {
-    return NULL;
+    return nullptr;
   }
 //
 //  Compute the solution.
@@ -21058,7 +21058,7 @@ double *r8mat_solve_3d ( double a[], double b[], double *det )
 //
   if ( *det == 0.0 )
   {
-    return NULL;
+    return nullptr;
   }
 //
 //  Compute the solution.
@@ -23765,7 +23765,7 @@ double *r8poly_deriv ( int n, double c[], int p )
 
   if ( n < p )
   {
-    return NULL;
+    return nullptr;
   }
   cp_temp = r8vec_copy_new ( n+1, c );
 
@@ -25278,7 +25278,7 @@ double **r8pp_new ( int m, int n )
 
   a = new double *[m];
 
-  if ( a == NULL )
+  if ( a == nullptr )
   {
     cerr << "\n";
     cerr << "R8PP_NEW - Fatal error!\n";
@@ -25289,7 +25289,7 @@ double **r8pp_new ( int m, int n )
   for ( i = 0; i < m; i++ )
   {
     a[i] = new double[n];
-    if ( a[i] == NULL )
+    if ( a[i] == nullptr )
     {
       cerr << "\n";
       cerr << "R8PP_NEW - Fatal error!\n";
@@ -26071,7 +26071,7 @@ double **r8rmat_new ( int m, int n )
 
   a = new double *[m];
 
-  if ( a == NULL )
+  if ( a == nullptr )
   {
     cerr << "\n";
     cerr << "R8RMAT_NEW - Fatal error!\n";
@@ -26082,7 +26082,7 @@ double **r8rmat_new ( int m, int n )
   for ( i = 0; i < m; i++ )
   {
     a[i] = new double[n];
-    if ( a[i] == NULL )
+    if ( a[i] == nullptr )
     {
       cerr << "\n";
       cerr << "R8RMAT_NEW - Fatal error!\n";
@@ -38140,7 +38140,7 @@ int *r8vec_sort_heap_index_a_new ( int n, double a[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = new int[n];
@@ -38403,7 +38403,7 @@ int *r8vec_sort_heap_index_d_new ( int n, double a[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = new int[n];
@@ -38540,12 +38540,12 @@ int *r8vec_sort_heap_mask_a ( int n, double a[], int mask_num, int mask[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   if ( mask_num < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   if ( mask_num == 1 )
@@ -38725,7 +38725,7 @@ int *r8vec_sort_insert_index_a ( int n, double a[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = i4vec_indicator_new ( n );
@@ -39069,7 +39069,7 @@ double *r8vec_sorted_merge_a ( int na, double a[], int nb, double b[], int *nc )
     cerr << "\n";
     cerr << "R8VEC_SORTED_MERGE_A - Fatal error!\n";
     cerr << "  The input array A is not ascending sorted.\n";
-    return NULL;
+    return nullptr;
   }
 
   order = r8vec_order_type ( nb2, b );
@@ -39079,7 +39079,7 @@ double *r8vec_sorted_merge_a ( int na, double a[], int nb, double b[], int *nc )
     cerr << "\n";
     cerr << "R8VEC_SORTED_MERGE_A - Fatal error!\n";
     cerr << "  The input array B is not ascending sorted.\n";
-    return NULL;
+    return nullptr;
   }
 
   for ( ; ; )
@@ -39779,7 +39779,7 @@ double *r8vec_sorted_unique ( int n, double a[], double tol, int *unique_num )
 
   if ( n <= 0 )
   {
-    return NULL;
+    return nullptr;
   }
 //
 //  Determine the number of unique elements.
@@ -42107,7 +42107,7 @@ int *r8vec2_sort_heap_index_a ( int n, int base, double x[], double y[] )
 
   if ( n < 1 )
   {
-    return NULL;
+    return nullptr;
   }
 
   indx = new int[n];
@@ -42723,7 +42723,7 @@ void timestamp ( )
   size_t len;
   std::time_t now;
 
-  now = std::time ( NULL );
+  now = std::time ( nullptr );
   tm_ptr = std::localtime ( &now );
 
   len = std::strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm_ptr );

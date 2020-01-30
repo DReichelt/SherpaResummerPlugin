@@ -371,7 +371,7 @@ double *r8mat_expm3 ( int n, double a[] )
 //    Output, double R8MAT_EXPM3[N*N], the estimate for exp(A).
 //
 {
-  double *e = NULL;
+  double *e = nullptr;
 //
 //  [ V, D ] = eig ( A );
 //  E = V * diag ( exp ( diag ( D ) ) ) / V;

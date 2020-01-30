@@ -3161,7 +3161,7 @@ float smach ( int job )
 //   size_t len;
 //   std::time_t now;
 
-//   now = std::time ( NULL );
+//   now = std::time ( nullptr );
 //   tm_ptr = std::localtime ( &now );
 
 //   len = std::strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm_ptr );

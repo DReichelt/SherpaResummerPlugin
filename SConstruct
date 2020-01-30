@@ -18,8 +18,7 @@ Help(vars.GenerateHelpText(env))
 vars.Save('.SConstruct',env)
 env['ENV']=os.environ
 if env['PLATFORM']=='darwin':
-   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup','-L/opt/local/lib', '-lgmp', '-lgmpxx',
-                         '-lmpfr'])
+   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup'])
 
 resumlib = env.SharedLibrary('SherpaResum',
 	                     ['Math/r8lib.cpp',
@@ -46,8 +45,11 @@ resumlib = env.SharedLibrary('SherpaResum',
 analysislib = env.SharedLibrary('ResumAnalysis',
           ['Analysis/Observable_Base.C',
 	   'Analysis/Observable_Selector.C',
+           'Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.C',
+           'Analysis/ChannelAlgorithms/KT2_ee.C',
            'Analysis/NLO_Analysis.C',
            'Analysis/Matching_Analysis.C',
+           'Analysis/NLL_Analysis.C',
            'Analysis/Resum_Enhance_Observable.C',
            'Scales/Resum_Scale_Setter.C',
            'Scales/Resum_Scale_Setter_Durham.C',
@@ -79,19 +81,19 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
-	['Math/r8lib.cpp',
-	'Math/c8lib.cpp',
-	'Math/matexp.cpp',
-	'Math/asa007.cpp',
-	'Tools/CBasis.C',
-	'Tools/CMetric_Base.C',
-	'Tools/Hard_Matrix.C',
-        'Tools/StringTools.C',
-        'Tools/Reader.C',
-        'Bases/QCD_Generic.C',  
-	'Main/Comix_Interface.C',
-        'RRatios/RRatios.C',
-	'Main/Cluster_Definitions.C'])
+	                      ['Math/r8lib.cpp',
+	                       'Math/c8lib.cpp',
+	                       'Math/matexp.cpp',
+	                       'Math/asa007.cpp',
+	                       'Tools/CBasis.C',
+	                       'Tools/CMetric_Base.C',
+	                       'Tools/Hard_Matrix.C',
+                               'Tools/StringTools.C',
+                               'Tools/Reader.C',
+                               'Bases/QCD_Generic.C',  
+	                       'Main/Comix_Interface.C',
+                               'RRatios/RRatios.C',
+	                       'Main/Cluster_Definitions.C'])
 
 def replace(target, source, env, old, new):
     with open(str(source[0]), "rt") as fin:
@@ -119,16 +121,25 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 
+env.Command(target='${sherpa}/bin/resum-combine', source="Scripts/resum-combine",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
 
-env.Command(target='Analysis/RivetResumAnalysis.so',
-            source='Analysis/Resum.cc',
-            action="cd Analysis && ${sherpa}/bin/rivet-buildplugin RivetResumAnalysis.so Resum.cc -I${sherpa}/include/SHERPA-MC -I..")
+env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
 
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',
+                      '${sherpa}/bin/resum-combine',
+                      '${sherpa}/bin/resum-match',
                       '${sherpa}/share/RESUM',
-                      '${sherpa}/lib/SHERPA-MC',
-                      'Analysis/RivetResumAnalysis.so'])
-
+                      '${sherpa}/lib/SHERPA-MC'])

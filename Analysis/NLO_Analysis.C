@@ -1,5 +1,6 @@
 #include "AddOns/Analysis/Analyses/Analysis_Base.H"
 #include "Analysis/Observable_Base.H"
+#include "Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.H"
 
 namespace RESUM {
 
@@ -20,10 +21,7 @@ namespace RESUM {
                         const std::vector<ATOOLS::Flavour>& fl,
                         const size_t &nin,
                         int njets, int mode);
-    double KT2(const ATOOLS::Vec4D &p1, const ATOOLS::Vec4D &p2, const std::vector<int>& fl1, const std::vector<int>& fl2, 
-               int mode, int num_flavd) const;
-    bool flavd(const std::vector<int>& fls) const;
-    int num_flavd(const std::vector<std::vector<int>>& flavs) const;
+
     void Fill(int i, double value, double weight, double ncount, int mode);
     std::map<std::string, NLO_Analysis*> m_channels;
     Primitive_Observable_Base * Copy() const;
@@ -31,25 +29,6 @@ namespace RESUM {
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;
-    enum MODE {
-               DEFAULT = 0,
-               SKIP_REAL = 1        << 0,  // skip the real correction
-               SKIP_SUBT = 1        << 1,  // skip all subtraction terms
-               SKIP_SCOL = 1        << 2,  // skip the term related to the soft part of the splitting function
-               SKIP_COLL = 1        << 3,  // skip the term related to the collinear part if the splitting function
-               SKIP_NORM = 1        << 4,  // skip the term related to the normalization of the observable (dbar - b log(...))
-               SKIP_SOFT = 1        << 5,  // skip the soft anomalous dimenstion matrix
-               SKIP_PDFR = 1        << 6   // skip the pdf ratio
-    };
-
-    const std::map<std::string,MODE> m_ModeToEnum = {{"DEFAULT", MODE::DEFAULT},
-                                                     {"SKIP_REAL", MODE::SKIP_REAL},
-                                                     {"SKIP_SUBT", MODE::SKIP_SUBT},
-                                                     {"SKIP_SCOL", MODE::SKIP_SCOL},
-                                                     {"SKIP_COLL", MODE::SKIP_COLL},
-                                                     {"SKIP_NORM", MODE::SKIP_NORM},
-                                                     {"SKIP_SOFT", MODE::SKIP_SOFT},
-                                                     {"SKIP_PDFR", MODE::SKIP_PDFR}};
 
 
     void PrintHistos() {
@@ -70,11 +49,9 @@ namespace RESUM {
 
     std::map<std::string,std::vector<std::vector<double>>> m_sigma;
     
-    MODE m_mode = MODE::DEFAULT;
-
     double EtaBeam(const ATOOLS::Vec4D& p, size_t beamId);
     
-
+    std::vector<ChannelAlgorithm_Base::Ptr> m_channelAlgs;
   };// end of class NLO_Analysis
 
 }// end of namespace RESUM
@@ -106,34 +83,17 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   DEBUG_FUNC(this);
   m_name+="_Resum";
   Data_Reader reader(",",";","!","=");
-  const std::string& mode = reader.GetValue<std::string>("MATCHING_TEST","DEFAULT");
-  m_nborn = reader.GetValue<int>("RESUM::NBORN", -1);
-  if(m_nborn > 0) {
-    if(rpa->gen.Variable("RESUM::ANALYSIS_DO_CHANNELS")!="NO") {
-      rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","NO");
-      for(int j=0; j<=m_nborn; j+=2) {
-        m_channels.emplace(std::string(m_nborn-j,'g')+std::string(j,'q'),
-                           dynamic_cast<NLO_Analysis*>(Copy()));
-        m_channels.emplace(std::string(m_nborn-j,'g')+std::string(j,'q')+std::string("_BLAND"),
-                           dynamic_cast<NLO_Analysis*>(Copy()));
-        if(j>0)
-          m_channels.emplace(std::string(m_nborn-j,'g')+std::string(j,'q')+std::string("_BLAND_Z"),
-                             dynamic_cast<NLO_Analysis*>(Copy()));
-      }
-      m_channels.emplace("other",dynamic_cast<NLO_Analysis*>(Copy()));
-      rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","YES"); 
-    }
-  }
-  if(is_int(mode)) {
-    m_mode = static_cast<MODE>(to_type<int>(mode));
-  }
-  else {
-    for(const std::string& m: split(mode,"\\|")) {
-      m_mode = static_cast<MODE>(m_mode | m_ModeToEnum.at(m));
-    }
-  }
   Algebra_Interpreter *ip=reader.Interpreter();
+  m_channelAlgs.clear();
   for (size_t i(1);i<params.size();++i) {
+    if (params[i][0] == "ChAlg") {
+      std::vector<std::string> ps = {params[i].begin()+1,
+                                     params[i].end()};
+      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject(params[i][1],
+                                                         {params[i][1],
+                                                          ps}));
+      continue;
+    }
     if (params[i].size()<5) continue;
     Observable_Base *obs(Observable_Getter::GetObject
 			 (params[i][0],Observable_Key(params[i][0])));
@@ -152,6 +112,33 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
     for(int j=0; j<nbin; j++)
       m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,params[i][0]+"_Sigma"));
     m_obss.push_back(obs);
+  }
+  // to stay consistent with previous defaults
+  if(m_channelAlgs.size()==0 &&
+     reader.GetValue<std::string>("RESUM::SORT_CHANNELS","YES")!="NO") {
+    int nborn = reader.GetValue<int>("RESUM::NBORN",-1);
+    if(nborn>0) {
+      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
+                                                         {"KT2_ee",
+                                                          {std::to_string(nborn),
+                                                           ""}}));
+      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
+                                                         {"KT2_ee",
+                                                          {std::to_string(nborn),
+                                                           "BLAND"}}));
+      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
+                                                         {"KT2_ee",
+                                                          {std::to_string(nborn),
+                                                           "BLAND_Z"}}));
+    }
+  }
+  // get channels
+  if(rpa->gen.Variable("RESUM::ANALYSIS_DO_CHANNELS")!="NO") {
+    rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","NO");
+    for(ChannelAlgorithm_Base::Ptr alg: m_channelAlgs)
+      for(const std::string& ch: alg->ChannelNames())
+        m_channels.emplace(ch,dynamic_cast<NLO_Analysis*>(Copy()));
+    rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","YES"); 
   }
 }
 
@@ -173,150 +160,6 @@ double NLO_Analysis::EtaBeam(const Vec4D& p, size_t beamId) {
   return eta;
 }
 
-
-bool NLO_Analysis::flavd(const std::vector<int>& fls) const {
-  for (int f: fls) {
-    if(f!=0) return true;
-  }
-  return false;
-}
-
-
-double NLO_Analysis::KT2(const Vec4D &p1, const Vec4D &p2, 
-                         const std::vector<int>& fl1, const std::vector<int>& fl2,
-                         int mode, int num_flavd) const {
-  // msg_Out()<<mode<<" "<<num_flavd;
-  // msg_Out()<<" "<<fl1<<" "<<fl2<<" ";
-  if(mode&2 and num_flavd < 3 and flavd(fl1) and flavd(fl2)) {
-    // msg_Out()<<" "<<"lksdjflakjsf\n";
-    return std::numeric_limits<double>::infinity();
-  }
-  // msg_Out()<<"\n";
-  std::vector<int> nfl(6,0);
-  for(int i=0; i<6; i++) nfl[i] = fl1[i]+fl2[i];
-  if(p1[0] < p2[0]) {
-    if(flavd(fl1)) {
-      if(mode&1 and flavd(nfl) and flavd(fl2)) return std::numeric_limits<double>::infinity();
-      return 2.0*sqr(p2[0])*(1.0-p1.CosTheta(p2));
-    }
-    else return 2.0*sqr(p1[0])*(1.0-p1.CosTheta(p2));
-  }
-  else {
-    if(flavd(fl2)) {
-      if(mode&1 and flavd(nfl) and flavd(fl1)) return std::numeric_limits<double>::infinity();
-      return 2.0*sqr(p1[0])*(1.0-p1.CosTheta(p2));
-    }
-    else return 2.0*sqr(p2[0])*(1.0-p1.CosTheta(p2));
-  }
-}
-
-
-std::string NLO_Analysis::Channel(const std::vector<Vec4D>& ip,
-                                  const std::vector<Flavour>& fl,
-                                  const size_t &nin,
-                                  int njets, int mode) {
-  Vec4D sum;
-  size_t nn = ip.size();
-  Vec4D_Vector p(&ip[nin],&ip[nn]);
-  if(p.size() < njets) return "None";
-  std::vector<std::vector<int>> f(p.size(),std::vector<int>(6,0));
-  for (size_t i(0);i<p.size();++i) {
-    if(fl[i+nin] == 1) f[i][0] += 1;
-    if(fl[i+nin] == -1) f[i][0] -= 1;
-    if(fl[i+nin] == 2) f[i][1] += 1;
-    if(fl[i+nin] == -2) f[i][1] -= 1;
-    if(fl[i+nin] == 3) f[i][2] += 1;
-    if(fl[i+nin] == -3) f[i][2] -= 1;
-    if(fl[i+nin] == 4) f[i][3] += 1;
-    if(fl[i+nin] == -4) f[i][3] -= 1;
-    if(fl[i+nin] == 5) f[i][4] += 1;
-    if(fl[i+nin] == -5) f[i][4] -= 1;
-    if(fl[i+nin] == 6) f[i][5] += 1;
-    if(fl[i+nin] == -6) f[i][5] -= 1;
-    sum+=p[i];
-  }
-  int num_flavd = 0;
-  msg_Debugging()<<"Cluster input: mode = "<<mode<<"\n";
-  for(int i=0; i<f.size(); i++) {
-    if(flavd(f[i])) num_flavd++;
-    msg_Debugging()<<p[i]<<" "<<f[i]<<"\n";
-  }
-  Poincare cms(sum);
-  for (size_t i(0);i<p.size();++i) cms.Boost(p[i]);
-  double Q2(sum.Abs2());
-  std::vector<int> imap(p.size());
-  for (int i=0;i<imap.size();++i) imap[i]=i;
-  std::vector<std::vector<double> > kt2ij
-    (imap.size(),std::vector<double>(imap.size()));
-  int ii=0, jj=0, n=p.size();
-  double dmin=Q2;
-  for (int i=0;i<n;++i)
-    for (int j=0;j<i;++j) {
-      double dij=kt2ij[i][j]=KT2(p[i],p[j],f[i],f[j],mode,num_flavd);
-      // msg_Out()<<f[i]<<" "<<f[j]<<" "<<dij<<"\n";
-      if (dij<dmin) { dmin=dij; ii=i; jj=j; }
-    }
-  // msg_Out()<<"\n\n";
-  while (n>njets) {
-    if (ii!=jj) {
-      p[imap[jj]]+=p[imap[ii]];
-      for(int i=0; i<6; i++) f[imap[jj]][i] += f[imap[ii]][i];
-    }
-    else {
-      msg_Error()<<"\n\n\nSomething went wrong clustering the following: \n";
-      msg_Error()<<"ii = "<<ii<<", jj = "<<jj<<"\n";
-      for(size_t i=0; i<ip.size(); i++) msg_Error()<<ip[i]<<" "<<fl[i]<<"\n";
-      THROW(fatal_error,"Invalid clustering");
-    }
-    --n;
-    for (int i=ii;i<n;++i) imap[i]=imap[i+1];
-    num_flavd = 0;
-    for(int i=0; i<n; i++) if(flavd(f[imap[i]])) num_flavd++;
-    // int jjx=imap[jj];
-    // for (int j=0;j<jj;++j) kt2ij[jjx][imap[j]]=KT2(p[jjx],p[imap[j]],f[jjx],f[imap[j]],mode,num_flavd);
-    // for (int i=jj+1;i<n;++i) kt2ij[imap[i]][jjx]=KT2(p[imap[i]],p[jjx],f[imap[i]],f[jjx],mode,num_flavd);
-    ii=jj=0; dmin=Q2;
-    for (int i=0;i<n;++i)
-      for (int j=0;j<i;++j) {
-        double dij=kt2ij[imap[i]][imap[j]]=KT2(p[imap[i]],p[imap[j]],f[imap[i]],f[imap[j]],mode,num_flavd);
-        // msg_Out()<<dij<<" "<<dmin<<" "<<f[imap[i]]<<" "<<f[imap[j]]<<"\n";
-        if (dij<dmin) { dmin=dij; ii=i; jj=j; }
-      }
-  }
-  std::string channel = "";
-  msg_Debugging()<<"Clustered:\n";
-  for(int i=0; i<n; i++) {
-      msg_Debugging()<<p[imap[i]]<<" "<<f[imap[i]]<<"\n";
-    if(flavd(f[imap[i]])) {
-      if(mode&1) channel += "q";
-      else {
-        bool found = false;
-        for(int fla: f[imap[i]]) {
-          // msg_Out()<<fla<<" ";
-          if(fla != 0) {
-            if(found or abs(fla) > 1) {
-              // msg_Out()<<"other\n";
-              channel = "other";
-              break;
-            }
-            else found = true;
-          }
-        }
-        // msg_Out()<<"\n";
-        if(channel != "other") {
-          // msg_Out()<<"not other\n";
-          channel += "q";
-        }
-        else break;
-      }
-    }
-    else channel = "g"+channel;
-  }
-  msg_Debugging()<<"Channel = "<<channel<<"\n\n";
-  return channel;
-}
-
-
 void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
 {
   DEBUG_FUNC("mode = "<<mode);
@@ -333,56 +176,38 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
   }
   fl[0]=rpa->gen.Beam1();
   fl[1]=rpa->gen.Beam2();
-  std::string ch = "";
-  std::string ch_bland = "";
-  std::string ch_bland_z = "";
-  if(m_nborn > 0) {
-    ch = Channel(mom,fl,2,m_nborn,0); 
-    if(m_channels.find(ch) == m_channels.end()) {
-      msg_Error()<<"Channel not found: "<<ch<<"\n";
+  std::vector<std::string> ch(m_channelAlgs.size(),"");
+  for(size_t i=0; i<ch.size(); i++) {
+    ch[i] = m_channelAlgs[i]->Channel(mom,fl,2);
+    if(m_channels.find(ch[i]) == m_channels.end()) {
+      msg_Error()<<"Channel not found: "<<ch[i]<<"\n";
       msg_Error()<<"Available:\n";
       for(auto& c: m_channels) msg_Error()<<c.first<<"\n";
     } 
-    ch_bland = Channel(mom,fl,2,m_nborn,0|1)+"_BLAND"; 
-    if(m_channels.find(ch_bland) == m_channels.end()) {
-      msg_Error()<<"Channel not found: "<<ch_bland<<"\n";
-      msg_Error()<<"Available:\n";
-      for(auto& c: m_channels) msg_Error()<<c.first<<"\n";
-    }
-    ch_bland_z = Channel(mom,fl,2,m_nborn,0|1|2)+"_BLAND_Z"; 
-    if(m_channels.find(ch_bland_z) == m_channels.end()) {
-      msg_Error()<<"Channel not found: "<<ch_bland_z<<"\n";
-      msg_Error()<<"Available:\n";
-      for(auto& c: m_channels) msg_Error()<<c.first<<"\n";
-    }
-    
-    for(auto& c: m_channels) {
-      if(c.first != ch and c.first != ch_bland and c.first != ch_bland_z)  {
-        c.second->AddZeroPoint(ncount,mode);
-      }
-    }
-
   }
+  for(auto& c: m_channels) {
+    bool found = false;
+    for(const std::string& cname: ch)
+      if(c.first == cname) {
+        found = true;
+        break;
+      }
+    if(!found) c.second->AddZeroPoint(ncount,mode);                          
+  }
+
   int obsId = 0;
   for (size_t i=0; i<m_histos.size(); i+=2+m_histos[i]->Nbin()) {
     if(mode == 0) m_fills += ncount;
     if(mode == 1) m_fills_tmp = ncount;
     const double value = m_obss[obsId]->Value(mom, fl);
-    // msg_Out()<<ch<<"\n";
-    // if(ch=="qqqq") exit(1);
     msg_Debugging()<<"value["<<i<<"] = "<<value
                    <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
     Fill(i,value,weight,ncount,mode);
-    if(m_nborn > 0) {
-      msg_Debugging()<<"Filling "<<ch<<"\n";
-      m_channels.at(ch)->Fill(i,value,weight,ncount,mode);
-      msg_Debugging()<<"Filling "<<ch_bland<<"\n";
-      m_channels.at(ch_bland)->Fill(i,value,weight,ncount,mode);
-      msg_Debugging()<<"Filling "<<ch_bland_z<<"\n";
-      m_channels.at(ch_bland_z)->Fill(i,value,weight,ncount,mode);
+    for(const std::string& c: ch) {
+      msg_Debugging()<<"Filling "<<c<<"\n";
+      m_channels.at(c)->Fill(i,value,weight,ncount,mode);
     }
     obsId++;
-    // if(value > 0) exit(1);
   }
   return;
 }

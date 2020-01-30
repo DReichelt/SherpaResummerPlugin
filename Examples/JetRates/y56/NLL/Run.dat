@@ -12,8 +12,7 @@
   murfac:=1;
   muqfac:=1
   SCALES ResumDurham{5,murfac,muqfac};
-  ANALYSIS Rivet; 
-  SHERPA_LDADD ResumAnalysis
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis
   PDF_LIBRARY = None;
   RESUM::MODE RESUM|SOFTEXPAND|EXPAND;
   RESUM::LOGFAC = lambda;
@@ -23,7 +22,6 @@
   RESUM::Y6_Durham::ENDPOINT = 1;
   RESUM::pre_calc = pre_calc/trace_basis;
   RESUM::FFUNCTION::VARIATION = fvar;
-  RESUM::Observables Obs[Y6_Durham&-12&0&100&LnErr]
 }(run);
 
 (processes){
@@ -37,7 +35,10 @@
 }(selector);
 
 (analysis){
-    BEGIN_RIVET {
-      -a Resum
-    } END_RIVET
-}(analysis)
+  BEGIN_ANALYSIS {
+    LEVEL MENLO;
+    NLLResum { FinalState;
+      Y6_Durham exp(-12) 1 100 LnErr;
+      }
+  } END_ANALYSIS;
+}(analysis);

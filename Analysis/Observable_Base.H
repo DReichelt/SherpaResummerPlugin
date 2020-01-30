@@ -247,5 +247,3 @@ namespace RESUM {
 }// end of namespace RESUM
 
 #endif
-
-
