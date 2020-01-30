@@ -67,8 +67,11 @@ Resum::Resum(ISR_Handler *const isr,
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
 
   Data_Reader read(" ",";","#","=");
+  // by default calculate all expansion parts and the resummed distribution
+  // also check for RESUM_EXPAND for backwards compatibility
   const string& mode = read.GetValue<string>("RESUM::MODE",
-                                             read.GetValue<string>("RESUM_MODE","RESUM"));
+                                             read.GetValue<string>("RESUM_MODE",
+                                                                   "RESUM|EXPAND"));
   if(is_int(mode)) {
     m_amode = static_cast<MODE>(to_type<int>(mode));
   }
@@ -86,7 +89,7 @@ Resum::Resum(ISR_Handler *const isr,
       m_mmode = static_cast<MATCH_MODE>(m_mmode | m_MModeToEnum.at(m));
     }
   }
-
+  
   rpa->gen.SetVariable("SCALES", read.GetValue<string>("SCALES", "VAR{sqr(91.188)}"));
   rpa->gen.SetVariable("RESUM::pre_calc", read.GetValue<string>("RESUM::pre_calc", "pre_calc"));
   rpa->gen.SetVariable("RESUM::FFUNCTION::VARIATION",read.GetValue<string>("RESUM::FFUNCTION::VARIATION","0"));
