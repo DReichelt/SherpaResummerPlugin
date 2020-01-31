@@ -245,13 +245,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
 
   // some checks for colour calculation
+  double dummy1, dummy2;
   const double calcs1 = m_amode & MODE::CKINV ?
-    weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,MODE::CKINV) : 0;
+    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
   const double calcs2 = m_amode & MODE::CKCOUL ?
-    weight*CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO,MODE::CKCOUL) : 0;
+    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
   // actually calculate soft function
-  SoftexpNLL_LO=0.0;
-  SoftexpNLL_NLO=0.0;
   weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
   // evaluate tests if needed
   if(m_amode & MODE::CKINV) {
