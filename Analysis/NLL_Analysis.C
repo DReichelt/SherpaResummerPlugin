@@ -124,14 +124,14 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   if(!p_resum->Initialized()) return;
   m_Ncount += ncount;
   m_sumW += weight;
-  m_sumW2 =+ sqr(weight);
+  m_sumW2 += sqr(weight);
   Particle_List* all = p_ana->GetParticleList(m_listname);
   if (all == nullptr) AddZero(ncount,0);
 
   // find out channels
-  vector<string> channels;
-  for(const auto& alg: m_channelAlgs) {
-    channels.push_back(alg->Channel(*all));
+  vector<string> channels(m_channelAlgs.size());
+  for(size_t i=0; i<channels.size(); i++) {
+    channels[i] = m_channelAlgs[i]->Channel(*all);
   }
 
   for(const string& channel: channels) {
@@ -142,7 +142,7 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
       m_NLL_channels[channel] = ObsDist();
       m_expLO_channels[channel] = ObsDist();
       m_expNLO_channels[channel] = ObsDist();
-      for(std::string& name: m_ObsNames) {
+      for(const std::string& name: m_ObsNames) {
         m_NLL_channels[channel][name] = CumDist(m_NLL[name].size(),{0,0});
         m_expLO_channels[channel][name] = CumDist(m_expLO[name].size(),{0,0});
         m_expNLO_channels[channel][name] = CumDist(m_expNLO[name].size(),{0,0});
