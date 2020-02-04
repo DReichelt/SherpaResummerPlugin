@@ -153,7 +153,9 @@ namespace RESUM {
       return CalcColl(L, LResum, order, Rp, G, S1, 0, 0);
     }
     double CalcColl(const double L, const double LResum, const int order,
-                    double& ExpAtEnd, double& RAtEnd);
+                    MatrixD& G, double& ExpAtEnd, double& RAtEnd) {
+      return CalcColl(L, LResum, order, 0, G, 0, ExpAtEnd, RAtEnd);
+    }
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, double& S1,
                     double& ExpAtEnd, double& RAtEnd);
