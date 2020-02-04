@@ -22,13 +22,13 @@ namespace RESUM {
   }
 
   template <typename T>
-  inline T epsilon(T ref) { return T("1e-2000"); };
+  inline T epsilon(T ref) { return T("1e-2000"); }
 
   template <>
   inline double epsilon(double ref) { return 1e-12; }
   
   template <typename T>
-  class ThrustFinder : public Algorithm {
+  class ThrustFinder : public Algorithm<T> {
   public:
 
     typedef std::shared_ptr<ThrustFinder> Ptr;
@@ -69,6 +69,7 @@ namespace RESUM {
       _calcThrust(p,Q,m_axis,m_t);
       _calcThrustMajor(p,Q);
       _calcThrustMinor(p,Q);
+      return m_t;
     }
 
     T _calcThrustMajor(const std::vector<ATOOLS::Vec3<T>>& p, const ATOOLS::Vec4<T>& Q) {
@@ -91,6 +92,7 @@ namespace RESUM {
           m_tMin += RESUM::abs(m_axisMin*q)/Q.Abs();
         }
       }
+      return m_tMin;
     }
     
     T _calcThrust(std::vector<ATOOLS::Vec3<T>> p, ATOOLS::Vec4<T> Q, ATOOLS::Vec3<T>& axis, T& t) {
@@ -139,22 +141,38 @@ namespace RESUM {
     }
 
 
-    void _getJets(const std::vector<ATOOLS::Vec4<T>>& momenta, const size_t nin=2) {
-      m_jets = std::vector<std::set<size_t>>(2);
-
+    void _getJets(const std::vector<ATOOLS::Vec4<T>>& momenta,
+                  const size_t nin=2) {
+      Algorithm<T>::m_jets = std::vector<std::set<size_t>>(2);
+      ATOOLS::Vec4<T> hem1 = {T(0),T(0),T(0),T(0)};
+      ATOOLS::Vec4<T> hem2 = {T(0),T(0),T(0),T(0)};
+      T broad1 = T(0);
+      T broad2 = T(0);
       for(size_t i=0; i<momenta.size(); i++) {
-        if(ATOOLS::Vec3<T>(momenta[i])*m_axis < 0) m_jets.at(0).insert(i+nin);
-        else m_jets.at(1).insert(i+nin);
+        ATOOLS::Vec3<T> mom(momenta[i]);
+        if(mom*m_axis < T(0)) {
+          hem1 += momenta[i];
+          broad1 += cross(mom,m_axis).Abs();
+          Algorithm<T>::m_jets.at(0).insert(i);
+        }
+        else {
+          hem2 += momenta[i];
+          broad2 += cross(mom,m_axis).Abs();
+          Algorithm<T>::m_jets.at(1).insert(i);
+        }
       }
-      
+      Algorithm<T>::m_jetAxes = {-m_axis,m_axis};
+      Algorithm<T>::m_jetMasses = {hem1.Abs2(),hem2.Abs2()};
+      Algorithm<T>::m_jetBroads = {broad1/(hem1+hem2).Abs(),broad2/(hem1+hem2).Abs()};
+      Algorithm<T>::m_Q2 = (hem1+hem2).Abs2();
     }
     
-    ATOOLS::Vec3<T> m_axis = {0,0,0};
-    ATOOLS::Vec3<T> m_axisMaj = {0,0,0};
-    ATOOLS::Vec3<T> m_axisMin = {0,0,0};
-    T m_t = 1;
-    T m_tMaj = 1;
-    T m_tMin = 1;
+    ATOOLS::Vec3<T> m_axis = {T(0),T(0),T(0)};
+    ATOOLS::Vec3<T> m_axisMaj = {T(0),T(0),T(0)};
+    ATOOLS::Vec3<T> m_axisMin = {T(0),T(0),T(0)};
+    T m_t = T(1);
+    T m_tMaj = T(1);
+    T m_tMin = T(1);
   };
 
   

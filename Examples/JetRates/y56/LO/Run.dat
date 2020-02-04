@@ -1,0 +1,36 @@
+(run){
+  RLIMIT_AS=3 GB;
+  TIMEOUT=3300;
+  EVENTS 10M; EVENT_GENERATION_MODE W;
+  ERROR = 0.1;
+  FRAGMENTATION Off; BEAM_REMNANTS 0;
+  BEAM_1 11 45.6; BEAM_2 -11 45.6;
+  SHOWER_GENERATOR None;
+  RESPECT_MASSIVE_FLAG 1;
+  murfac:=1'
+  SCALES ResumDurham{5,murfac};
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis
+  PDF_LIBRARY = None;
+  RESUM::NBORN 5;
+}(run);
+
+(processes){
+  Process 11 -11 -> 93 93 93 93 93;
+  NLO_QCD_Mode Fixed_Order; NLO_QCD_Part BVIRS;
+  Loop_Generator OpenLoops;
+  Order (*,2);
+  End process;
+}(processes);
+
+(selector){
+  ResumObs Y5_Durham 0.02;
+}(selector);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO; PATH_PIECE LO/;
+    NLOResum { FinalState;
+      Y6_Durham exp(-12) 1 100 LnErr;
+      }
+  } END_ANALYSIS;
+}(analysis);

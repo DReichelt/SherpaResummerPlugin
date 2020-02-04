@@ -26,8 +26,10 @@ namespace RESUM {
       return Obs_Params(2.0,0.0,0.0,0.0);
     }
 
-    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
-                                            const std::vector<ATOOLS::Flavour>& fl) {
+    std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+                                                    const std::vector<ATOOLS::Flavour>& fl, 
+                                                    const RESUM::Params& params) {
+      // @TODO is this correct??
       return FFUNCTION::Additive;
     }
 

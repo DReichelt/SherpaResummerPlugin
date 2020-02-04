@@ -15,7 +15,7 @@ namespace PHASIC {
     RESUM::Observable_Base *p_tau;
 
     double m_taumin;
-
+    double m_taumax = std::numeric_limits<double>::infinity();
   public:
 
     Observable_Selector(const Selector_Key &key): 
@@ -26,8 +26,10 @@ namespace PHASIC {
       m_sel_log=new Selector_Log(m_name);
       p_tau = RESUM::Observable_Getter::GetObject
 	(key[0][0],RESUM::Observable_Key(key[0][0]));
-      if (p_tau==NULL) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
+      if (p_tau==nullptr) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
       m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
+      if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));
+      
     }
 
     ~Observable_Selector() { delete p_tau; }
@@ -39,11 +41,12 @@ namespace PHASIC {
 
     bool Trigger(const ATOOLS::Vec4D_Vector &p)
     {
-      /* if (p_proc->Process()->Name().find("QCD(S)") != std::string::npos) { */
-      /*   return true; */
-      /* } */
+      // if (p_proc->Process()->Name().find("QCD(S)") != std::string::npos) {
+      //   return true;
+      // }
+      //msg_Out()<<p<<"\n";
       double tau=p_tau->Value(&p.front(),m_fl,p.size(),p_proc->NIn());
-      bool pass=tau>m_taumin;
+      bool pass=tau>m_taumin && tau<m_taumax;
       m_sel_log->Hit(1-pass);
       return pass;
     }
@@ -51,10 +54,12 @@ namespace PHASIC {
     bool JetTrigger(const ATOOLS::Vec4D_Vector &p,
 		    ATOOLS::NLO_subevtlist *const sub)
     {
-      if (sub->back()->m_i!=sub->back()->m_j) return true;
+      //msg_Out()<<p<<"\n";
+      //if (sub->back()->m_i!=sub->back()->m_j) return true;
+      //msg_Out()<<"Bla\n";
       double tau=p_tau->Value(&p.front(),sub->back()->p_fl,
 			      sub->back()->m_n,p_proc->NIn());
-      bool pass=tau>m_taumin;
+      bool pass=tau>m_taumin && tau<m_taumax;
       m_sel_log->Hit(1-pass);
       return pass;
     }

@@ -6,6 +6,3 @@ using namespace RESUM;
 #define OBJECT_TYPE RESUM::Observable_Base
 #define PARAMETER_TYPE RESUM::Observable_Key
 #include "ATOOLS/Org/Getter_Function.C"
-
-#include "ATOOLS/Math/Poincare.H"
-

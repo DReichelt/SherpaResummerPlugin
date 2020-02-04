@@ -1,5 +1,3 @@
-#include <algorithm>
-using std::max;
 #include "CParameter.H"
 
 
@@ -13,5 +11,5 @@ operator()(const Parameter_Type &args) const
 { return new CParameter(args); }
 void ATOOLS::Getter<Observable_Base,Observable_Key,CParameter>::
 PrintInfo(std::ostream &str,const size_t width) const
-{ str<<"Heavy Jet Mass"; }
+{ str<<"CParameter"; }
 

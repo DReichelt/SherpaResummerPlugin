@@ -104,14 +104,15 @@ Matching_Analysis::Matching_Analysis(const Argument_Matrix &params):
     double xmax = ToType<double>(ip->Interprete(params[i][2]));
     size_t nbin = ToType<size_t>(ip->Interprete(params[i][3]));
     int tp = HistogramType(params[i][4]);
-    msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp
+    msg_Out()<<"Init '"<<params[i][0]<<"', type "<<tp
 		   <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
     m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,params[i][0]));
     m_obss.push_back(obs);
+    msg_Out()<<rpa->gen.Accu()<<"\n";
   }
   
 #ifdef USING__ROOT
-  if (MYROOT::myroot==NULL) {
+  if (MYROOT::myroot==nullptr) {
     MYROOT::myroot = new MYROOT::My_Root();
     MYROOT::myroot->InitFile();
     ATOOLS::exh->AddTerminatorObject(MYROOT::myroot);
@@ -127,7 +128,7 @@ Matching_Analysis::~Matching_Analysis()
   if (MYROOT::myroot) {
     exh->RemoveTerminatorObject(MYROOT::myroot);
     delete MYROOT::myroot;
-    MYROOT::myroot=NULL;
+    MYROOT::myroot=nullptr;
   }
 #endif
   for (size_t i(0);i<m_obss.size();++i) delete m_obss[i];
@@ -180,8 +181,9 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
   if (sub==nullptr) THROW(fatal_error,"Missing subtraction info.");
   msg_Debugging()<<*sub<<"\n"<<*real<<"\n";
   for (size_t i=0; i<m_obss.size(); i++) {
-    RESUM::Obs_Params ps = m_obss[i]->Parameters(sub->p_mom,sub->p_fl,
-                                                 sub->m_n,sub->m_ijt);
+    RESUM::Obs_Params ps = m_obss[i]->Parameters({sub->p_mom,sub->p_mom+sub->m_n},
+                                                 {sub->p_fl,sub->p_fl+sub->m_n},
+                                                 sub->m_ijt);
     const double y = sub->m_y;
     double z = sub->m_z;
     double tau = y;
@@ -248,22 +250,6 @@ void Matching_Analysis::Evaluate(double weight,double ncount,int mode)
       if (pow(tau,1.0/ps.m_a) < z) lrat+=sub->m_lt[3]/sub->m_lt[0];
     }
 
-    const double Lt = -log(tau);
-    // @TODO: Endpoint needs to be done more carefully for inital state stuff
-    tau = m_obss[i]->ObsVal(tau,
-                            {sub->p_mom, sub->p_mom+sub->m_n},
-                            {sub->p_fl, sub->p_fl+sub->m_n});
-    const double L = -log(tau);
-    // subtraction from scale variations
-    const double p = m_obss[i]->LogPow();
-    const double x = m_obss[i]->LogFac();    
-    const double e = m_obss[i]->Endpoint({sub->p_mom, sub->p_mom+sub->m_n},
-                                         {sub->p_fl, sub->p_fl+sub->m_n});
-    lrat += -2.*log(x)/sub->m_lt[0]/ps.m_a;
-    // lrat += -2.*2.*Lt/sub->m_lt[0]/ps.m_a;
-    // lrat += 2.*(L+Lt/(1-pow(y,p)-pow(x*y/e,p)))/sub->m_lt[0]/ps.m_a;
-
-    // lrat += -2.*(2.*Lt-(L+Lt/(1-pow(y,p)+pow(x*y/e,p))))/sub->m_lt[0]/ps.m_a;
 
     lrat *= 2.0/(ps.m_a+ps.m_b);
     

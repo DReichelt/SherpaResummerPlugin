@@ -1778,7 +1778,7 @@ double *d3_np_fs ( int n, double a[], double b[] )
   {
     if ( a[1+i*3] == 0.0 )
     {
-      return NULL;
+      return nullptr;
     }
   }
   x = new double[n];
@@ -6776,7 +6776,7 @@ void spline_quadratic_val ( int ndata, double tdata[], double ydata[],
 //   size_t len;
 //   std::time_t now;
 
-//   now = std::time ( NULL );
+//   now = std::time ( nullptr );
 //   tm_ptr = std::localtime ( &now );
 
 //   len = std::strftime ( time_buffer, TIME_SIZE, "%d %B %Y %I:%M:%S %p", tm_ptr );

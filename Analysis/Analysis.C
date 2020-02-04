@@ -49,7 +49,7 @@ Analysis::Analysis(const Argument_Matrix& params):
   Data_Reader reader(",",";","!","=");
   Algebra_Interpreter* ip = reader.Interpreter();
   p_resum=(Resum*)ToType<void*>(rpa->gen.Variable("SHOWER_GENERATOR"));
-
+  p_resum->ResetObservables();
   if (dynamic_cast<Resum*>(p_resum) == nullptr) {
     THROW(fatal_error,"Resummer plugin not loaded");
   }
@@ -87,8 +87,9 @@ void Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   for (size_t n=0; n<m_obss.size(); n++) {
     const std::pair<int, double>& res = p_resum->Result(n);
     msg_Debugging()<<"Fill '"<<m_obss[n]<<"' -> "<<res.first<<" "<<res.second<<"\n";
+
     FillHisto(n, res.first, weight*res.second, ncount, 0);
-//     FillHisto(n, res.first, res.second, ncount, 0);
+    //     FillHisto(n, res.first, res.second, ncount, 0);
   }
 }
 
@@ -103,7 +104,7 @@ Primitive_Observable_Base *ATOOLS::Getter
 <Primitive_Observable_Base,Argument_Matrix,Analysis>::
 operator()(const Argument_Matrix &parameters) const
 {
-  if (parameters.size()==0 || parameters[0].size()<1) return NULL;
+  if (parameters.size()==0 || parameters[0].size()<1) return nullptr;
   return new Analysis(parameters);
 }
 

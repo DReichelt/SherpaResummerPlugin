@@ -6,7 +6,8 @@ vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
-vars.Add(PathVariable('include','directories that will be passed to the compiler with the -I option.','.'))
+vars.Add(PathVariable('include','directories that will be passed to the compilerwith the -I option.','.'))
+
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
 vars.Add('CXX','The C++ Compiler',
@@ -17,8 +18,7 @@ Help(vars.GenerateHelpText(env))
 vars.Save('.SConstruct',env)
 env['ENV']=os.environ
 if env['PLATFORM']=='darwin':
-   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup','-L/opt/local/lib', '-lgmp', '-lgmpxx',
-                         '-lmpfr'])
+   env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup'])
 
 resumlib = env.SharedLibrary('SherpaResum',
 	                     ['Math/r8lib.cpp',
@@ -27,6 +27,9 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Math/asa007.cpp',
                               'Math/spline.cpp',
                               'Math/InterpolationWrapper.C',
+                              'Math/linpack_d.cpp',
+                              'Math/blas0.cpp',
+                              'Math/blas1_d.cpp',
 	                      'Tools/CBasis.C',
 	                      'Tools/CMetric_Base.C',
 	                      'Tools/Hard_Matrix.C',
@@ -35,35 +38,44 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Bases/QCD_Generic.C',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
-                              'Main/Cluster_Definitions.C',
-                              'Scales/Resum_Scale_Setter.C'
+                              'Main/Cluster_Definitions.C'
                              ])
 
 
 analysislib = env.SharedLibrary('ResumAnalysis',
-          ['Analysis/Analysis.C',
-	   'Analysis/Observable_Base.C',
-	   'Analysis/Matching_Analysis.C',
+          ['Analysis/Observable_Base.C',
 	   'Analysis/Observable_Selector.C',
-	   'Observables/Y3_FF.C',
+           'Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.C',
+           'Analysis/ChannelAlgorithms/KT2_ee.C',
+           'Analysis/ChannelAlgorithms/KT2_pp.C',
+           'Analysis/NLO_Analysis.C',
+           # 'Analysis/Matching_Analysis.C',
+           'Analysis/NLL_Analysis.C',
+           'Analysis/Resum_Enhance_Observable.C',
+           'Scales/Resum_Scale_Setter.C',
+           'Scales/Resum_Scale_Setter_Durham.C',
 	   'Observables/Y2_IF.C',
 	   'Observables/Y1_II.C',
 	   'Observables/Thrust_FF.C',
+           'Observables/ColorSinglet/Thrust.C',
 	   'Observables/Thrust_IF.C',
 	   'Observables/Thrust_II.C',
 	   'Observables/TThrust_FF.C',
-           'Observables/Thrust_F_table.C',
 	   'Observables/Thrust.C',
 	   'Observables/SD_Thrust.C',
            'Observables/SD_Thrust_FF.C',
            'Tools/StringTools.C',
 	   'Observables/HeavyJetMass.C',
-           'Observables/Durham_3Jet_res.C',
            'Observables/YN_CambridgeAachen.C',
            'Observables/YN_Durham.C',
            'Observables/CParameter.C',
+           'Observables/EParameter.C',
            'Observables/ThrustMajor.C',
            'Observables/ThrustMinor.C',
+           'Observables/WideBroad.C',
+           'Observables/TotBroad.C',
+           'Observables/HeavyMinusLightHemMass.C',
+           'Observables/Oblateness.C',
            'FFunction/FFunctions.C'
           ],
 	LIBPATH=['${sherpa}/lib/SHERPA-MC'],
@@ -72,19 +84,19 @@ analysislib = env.SharedLibrary('ResumAnalysis',
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
-	['Math/r8lib.cpp',
-	'Math/c8lib.cpp',
-	'Math/matexp.cpp',
-	'Math/asa007.cpp',
-	'Tools/CBasis.C',
-	'Tools/CMetric_Base.C',
-	'Tools/Hard_Matrix.C',
-        'Tools/StringTools.C',
-        'Tools/Reader.C',
-        'Bases/QCD_Generic.C',  
-	'Main/Comix_Interface.C',
-        'RRatios/RRatios.C',
-	'Main/Cluster_Definitions.C'])
+	                      ['Math/r8lib.cpp',
+	                       'Math/c8lib.cpp',
+	                       'Math/matexp.cpp',
+	                       'Math/asa007.cpp',
+	                       'Tools/CBasis.C',
+	                       'Tools/CMetric_Base.C',
+	                       'Tools/Hard_Matrix.C',
+                               'Tools/StringTools.C',
+                               'Tools/Reader.C',
+                               'Bases/QCD_Generic.C',  
+	                       'Main/Comix_Interface.C',
+                               'RRatios/RRatios.C',
+	                       'Main/Cluster_Definitions.C'])
 
 def replace(target, source, env, old, new):
     with open(str(source[0]), "rt") as fin:
@@ -99,6 +111,8 @@ def make_exe(target, source, env, cp=copy):
    cp(target, source, env)
    subprocess.check_output(['chmod', 'ug+x', str(target[0])])
 
+
+
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
             action=partial(replace, old='@share_dir',
 	    			    new=os.path.join(env.subst('${sherpa}'),
@@ -109,10 +123,26 @@ env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
                                       old="-*- mode: python-*-",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
+
+env.Command(target='${sherpa}/bin/resum-combine', source="Scripts/resum-combine",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
+
+env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
+	    action=partial(make_exe,
+                           cp=partial(replace,
+                                      old="-*- mode: python-*-",
+		                      new="!"+subprocess.check_output(['which',
+                                                                       'python']))))
+
 env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',
+                      '${sherpa}/bin/resum-combine',
+                      '${sherpa}/bin/resum-match',
                       '${sherpa}/share/RESUM',
                       '${sherpa}/lib/SHERPA-MC'])
-

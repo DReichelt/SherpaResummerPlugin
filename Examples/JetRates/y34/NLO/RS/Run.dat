@@ -1,0 +1,38 @@
+(run){
+  EVENTS 10M; EVENT_GENERATION_MODE W;
+  ERROR = 0.05;
+  FRAGMENTATION Off; BEAM_REMNANTS 0;
+  BEAM_1 11 45.6; BEAM_2 -11 45.6;
+  SHOWER_GENERATOR None;
+  RESPECT_MASSIVE_FLAG 1;
+  murfac:=1;
+  SCALES ResumDurham{3,murfac};
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+  PDF_LIBRARY = None;
+  RESUM::NBORN 3;
+  DIPOLE_ALPHA = 0.02;
+  PSI_ITMIN=50000;
+}(run);
+(processes){
+  Process 11 -11 -> 93 93 93 93;
+  NLO_QCD_Mode Fixed_Order; NLO_QCD_Part RS;
+  Enhance_Function Resum{sqr(log(Obs[Y4_Durham]))};
+  Loop_Generator OpenLoops;
+  Order (*,2);
+  End process;
+}(processes);
+
+(selector){
+  ResumObs Y3_Durham 0.02;
+  ResumObs Y4_Durham exp(-12);
+}(selector)
+
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO; PATH_PIECE NLO_RS/;
+    NLOResum { FinalState;
+      Y4_Durham exp(-12) 1 100 LnErr;
+      }
+  } END_ANALYSIS;
+}(analysis);

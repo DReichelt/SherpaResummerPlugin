@@ -1,5 +1,3 @@
-#include <algorithm>
-using std::max;
 #include "ThrustMinor.H"
 
 
@@ -13,5 +11,5 @@ operator()(const Parameter_Type &args) const
 { return new ThrustMinor(args); }
 void ATOOLS::Getter<Observable_Base,Observable_Key,ThrustMinor>::
 PrintInfo(std::ostream &str,const size_t width) const
-{ str<<"Thrust Major"; }
+{ str<<"Thrust Minor"; }
 

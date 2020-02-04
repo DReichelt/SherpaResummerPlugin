@@ -47,6 +47,6 @@ CMetric_Base* CMetric_Base::GetCM(const CMetric_Key &args)
     CMetric_Base *cm=(*git)->GetObject(args);
     if (cm) return cm;
   }
-  return NULL;
+  return nullptr;
 }
 

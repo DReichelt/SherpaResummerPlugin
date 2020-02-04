@@ -8,10 +8,8 @@
 #include "ATOOLS/Org/Data_Reader.H"
 #include "Observables/Algorithms/Algorithm.H"
 #include "Tools/StringTools.H"
+#include "Main/Resum.H"
 #include <functional>
-
-using ATOOLS::sqr;
-using ATOOLS::stp;
 
 namespace RESUM {
   
@@ -48,6 +46,7 @@ namespace RESUM {
     double m_logfac = 1.;
     double m_logpow = 1.;
     double m_endpoint = 1.;
+    bool m_unitNorm = true;
 
     enum EP_MODE {
                   FIXED = 0,
@@ -72,6 +71,7 @@ namespace RESUM {
       ATOOLS::Data_Reader read(" ",";","#","=");
       m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
       m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
+      m_unitNorm = bool(read.GetValue<int>("RESUM::UNITNORM",1));
       m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",1.);
       const std::string& ep_mode = read.GetValue<std::string>("RESUM::"+m_name+"::EP_MODE","FIXED");
       if(is_int(ep_mode)) {
@@ -107,26 +107,48 @@ namespace RESUM {
     virtual ~Observable_Base_Template() {};
 
     // deprecated
-    Obs_Params Parameters
-    (const Vec4T *p,const ATOOLS::Flavour *fl,
-     const size_t &n,const size_t &l) {
-      std::vector<Vec4T> moms;
-      std::vector<ATOOLS::Flavour> flavs;
-      for(size_t i=0; i<n; i++) {
-        moms.push_back(p[i]);
-        flavs.push_back(fl[i]);
+    // Obs_Params Parameters
+    // (const Vec4T *p,const ATOOLS::Flavour *fl,
+    //  const size_t &n,const size_t &l) {
+    //   std::vector<Vec4T> moms;
+    //   std::vector<ATOOLS::Flavour> flavs;
+    //   for(size_t i=0; i<n; i++) {
+    //     moms.push_back(p[i]);
+    //     flavs.push_back(fl[i]);
+    //   }
+    //   return Parameters(moms,flavs,l);
+    // }
+
+    // // use this
+    // virtual Obs_Params Parameters
+    // (const std::vector<Vec4T>& p,
+    //  const std::vector<ATOOLS::Flavour>& fl,
+    //  const size_t &l) = 0;
+
+    Obs_Params Parameters(ATOOLS::Cluster_Amplitude* ampl, 
+                          const size_t l) {
+      DEBUG_FUNC(this);
+      // return this->Parameters(ampl,l);
+      std::vector<Vec4T> moms(ampl->Legs().size());
+      std::vector<ATOOLS::Flavour> flavs(ampl->Legs().size());
+      Vec4T cme = {T(0),T(0),T(0),T(0)};
+      for (size_t i=0; i<ampl->Legs().size(); ++i) {
+        if(i<ampl->NIn()) cme += -ampl->Leg(i)->Mom();
+        moms[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
+        flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
-      return Parameters(moms,flavs,l);
+      Obs_Params p = Parameters(moms,flavs,l);
+      double logdbar = p.m_logdbar + p.m_a/2.*log(ampl->MuQ2()/cme.Abs2()); 
+      return {p.m_a,p.m_b,logdbar,p.m_g};
     }
 
-    // use this
-    virtual Obs_Params Parameters
-    (const std::vector<Vec4T>& p,
-     const std::vector<ATOOLS::Flavour>& fl,
-     const size_t &l) = 0;
+    virtual Obs_Params Parameters(const std::vector<Vec4T>& p,
+                                  const std::vector<ATOOLS::Flavour>& fl,
+                                  const size_t& l) = 0;
 
-    virtual std::function<double(double)> FFunction(const std::vector<Vec4T>& p,
-                                                    const std::vector<ATOOLS::Flavour>& fl) = 0;
+    virtual std::function<double(double,double&)> FFunction(const std::vector<Vec4T>& p,
+                                                            const std::vector<ATOOLS::Flavour>& fl,
+                                                            const RESUM::Params& params) = 0;
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
         ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);
@@ -139,23 +161,27 @@ namespace RESUM {
           fl[i] = sub->p_fl[i];
         }
         Obs_Params ps(Parameters(moms,fl,sub->m_ijt));
-        return ps.m_logdbar-ps.m_b/2.0*log(sqr(2.0*p[0])/sub->m_mu2[stp::res]);
+        return ps.m_logdbar-ps.m_b/2.0*log(ATOOLS::sqr(2.0*p[0])/sub->m_mu2[ATOOLS::stp::res]);
+        return 0;
     }
     
-    double LogArg(double v, const std::vector<Vec4T>& p,
-                          const std::vector<ATOOLS::Flavour>& fl) {
-      return LogArg(v, Endpoint(p,fl));
+    double LogArg(double v, ATOOLS::Cluster_Amplitude* ampl) {
+      double endpoint = Endpoint(ampl);
+      double logfac = LogFac(ampl);
+      double logpow = LogPow(ampl);
+      return LogArg(v, logfac, logpow, endpoint);
     }
 
-    double ObsVal(double logarg, const std::vector<Vec4T>& p,
-                          const std::vector<ATOOLS::Flavour>& fl) {
-      return ObsVal(logarg, Endpoint(p, fl));
+    double ObsVal(double logarg, ATOOLS::Cluster_Amplitude* ampl) {
+      double endpoint = Endpoint(ampl);
+      double logfac = LogFac(ampl);
+      double logpow = LogPow(ampl);
+      return ObsVal(logarg, logfac, logpow, endpoint);
     }
 
-    double Endpoint(const std::vector<Vec4T>& p,
-                            const std::vector<ATOOLS::Flavour>& fl) {
+    double Endpoint(ATOOLS::Cluster_Amplitude* ampl) {
       if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
-        return _Endpoint_Dynamic(p, fl);
+        return _Endpoint_Dynamic(ampl);
       }
       return m_endpoint;
     }
@@ -163,14 +189,35 @@ namespace RESUM {
 
     double LogFac() {return m_logfac;}
     double LogPow() {return m_logpow;}
+
+    virtual double LogFac(ATOOLS::Cluster_Amplitude* ampl) {
+      if(!m_unitNorm) return LogFac();
+      double avg = 0;
+      double n = 0;
+      for(int i=0; i<ampl->Legs().size(); i++) {
+        if(ampl->Leg(i)->Flav().StrongCharge() != 0) {
+          n++;
+          avg += Parameters(ampl,i).m_logdbar;
+        }
+      }
+      avg /= n;
+      return exp(avg)*LogFac();
+    }
     
-    double LogArg(double v, double endpoint) {
+
+    virtual double LogPow(ATOOLS::Cluster_Amplitude* ampl) {
+      return LogPow();
+    }
+
+    double LogArg(double v, double logfac, 
+                  double logpow, double endpoint) {
       double ret = 1;
       if (v < endpoint) {
-        ret += pow(m_logfac/v,m_logpow) - pow(m_logfac/endpoint,m_logpow);
+        ret += pow(logfac/v,logpow) - pow(logfac/endpoint,logpow);
       }
-      return 1./pow(ret,1./m_logpow);                                                   
+      return 1./pow(ret,1./logpow);
     }
+
 
     // stuff for grooming
     virtual GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
@@ -195,13 +242,14 @@ namespace RESUM {
       return std::numeric_limits<T>::infinity();
     }
     
-    double ObsVal(double logarg, double endpoint) {
-      double ret = pow(1./logarg,m_logpow)+pow(m_logfac/endpoint,m_logpow)-1;
-      return m_logfac/pow(ret,1./m_logpow);
+    double ObsVal(double logarg, double logfac, 
+                  double logpow, double endpoint) {
+      double ret = pow(1./logarg,logpow)+pow(logfac/endpoint,logpow)-1;
+      return logfac/pow(ret,1./logpow);
+
     }
 
-    virtual double _Endpoint_Dynamic(const std::vector<Vec4T>& p,
-                                     const std::vector<ATOOLS::Flavour>& fl) {
+    virtual double _Endpoint_Dynamic(ATOOLS::Cluster_Amplitude* ampl) {
       THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
     }
     
@@ -227,7 +275,7 @@ namespace RESUM {
     T Value
     (const std::vector<Vec4T>& p,
      const std::vector<ATOOLS::Flavour>& fl,
-     std::map<std::string, Algorithm::Ptr> algorithms,
+     std::map<std::string, typename Algorithm<T>::Ptr> algorithms,
      const size_t &nin=2) {
       return Value(p, fl, nin);
     }
@@ -256,5 +304,3 @@ namespace RESUM {
 }// end of namespace RESUM
 
 #endif
-
-
