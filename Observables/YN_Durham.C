@@ -1,4 +1,5 @@
 #include "Observables/YN_Durham.H"
+
 using namespace RESUM;
 
 typedef YN_Durham<3> Y3_Durham;

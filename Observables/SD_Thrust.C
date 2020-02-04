@@ -37,29 +37,36 @@ namespace RESUM {
       return Obs_Params(a,b,d,0.0);
     }
 
-    std::function<double(double)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
-                                            const std::vector<ATOOLS::Flavour>& fl) {
+    std::function<double(double, double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
+                                                     const std::vector<ATOOLS::Flavour>& fl,
+                                                     const RESUM::Params& params) {
       return FFUNCTION::Additive;
     }
 
     GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
                          const std::vector<ATOOLS::Flavour>& fl,
                          const size_t &l) {
-       return m_gmode;
+      if(l<2) {
+        return m_gmode;
+      }
+      else {
+        if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
+        else return m_gmode;        
+      }
+      // return m_gmode;
        
-        if(l<2){
-            return m_gmode;
-        }
-        else{
-            if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
-            else return m_gmode;
-        }
+       //  if(l<2){
+       //      return m_gmode;
+       //  }
+       //  else{
+       //      if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
+       //      else return m_gmode;
+       //  }
     }
 
-    double GroomTransitionPoint
-       (const std::vector<ATOOLS::Vec4D>& p,
-       const std::vector<ATOOLS::Flavour>& fl,
-       const size_t &l) {
+    double GroomTransitionPoint(const std::vector<ATOOLS::Vec4D>& p,
+                                const std::vector<ATOOLS::Flavour>& fl,
+                                const size_t &l) {
            
       double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
       

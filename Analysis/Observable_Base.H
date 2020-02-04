@@ -8,10 +8,11 @@
 #include "ATOOLS/Org/Data_Reader.H"
 #include "Observables/Algorithms/Algorithm.H"
 #include "Tools/StringTools.H"
-#include "Main/Resum.H"
 #include <functional>
 
 namespace RESUM {
+
+  struct Params;
   
   struct Observable_Key {
   public:
@@ -29,8 +30,11 @@ namespace RESUM {
   };
 
   enum GROOM_MODE {
-                   NONE = 0,
-                   SD = 1  << 0
+                   NONE    = 0,       // no grooming
+                   SD      = 1 << 0,  // do sd grooming
+                   SD_SOFT = 1 << 1,  // expect non-trivial groomed soft
+                   SD_PDF  = 1 << 2,  // expect non-trivial groomed pdf
+                   SD_COLL = 1 << 3   // expect non-trivial groomed coll 
   };
 
   
@@ -220,6 +224,10 @@ namespace RESUM {
 
 
     // stuff for grooming
+    virtual GROOM_MODE GroomMode() {
+      return m_gmode;
+    }
+    
     virtual GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
                          const std::vector<ATOOLS::Flavour>& fl,
                          const size_t &l) {

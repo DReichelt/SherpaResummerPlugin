@@ -4,6 +4,7 @@
 #include "PDF/Main/Shower_Base.H"
 
 #include "Main/Comix_Interface.H"
+#include "Main/Params.H"
 #include "Tools/CMetric_Base.H"
 #include "Analysis/Observable_Base.H"
 
@@ -21,38 +22,6 @@ namespace PDF {
 
 
 namespace RESUM {
-
-
-  struct Params {
-  private:
-    double m_NC = 3;
-    double m_CF = (m_NC*m_NC-1.)/(2.*m_NC);
-    double m_CA = m_NC;
-    double m_TR = 1./2.;
-    bool m_largeNC = false;
-    MODEL::Running_AlphaS *p_as;
-  public:
-    Params() = default;
-    Params(MODEL::Running_AlphaS *as, bool largeNC=false) : m_largeNC(largeNC) {
-      p_as = as;
-      if(m_largeNC) {
-        m_CF = m_TR*m_NC;
-        m_CA = m_NC;
-        msg_Debugging()<<"Calculate QCD parameters in large NC limit.\n";
-      }
-      else msg_Debugging()<<"Calculate QCD parameters with NC = 3.\n";
-    }
-    double NC() const {return m_NC;}
-    double CA() const {return m_CA;}
-    double CF() const {return m_CF;}
-    double TR() const {return m_TR;}
-    bool largeNC() const {return m_largeNC;}
-    double beta0(double scale2) const;
-    double beta1(double scale2) const;
-    double K_CMW(double scale2) const;
-    double CollDimGlue(double scale2) const;
-    double CollDimQuark(double scale2) const;
-  };
     
   class Cluster_Definitions;
   template <typename T>
@@ -128,21 +97,26 @@ namespace RESUM {
 
     enum MATCH_MODE {
       NONE = 0,
-      LO   = 1          << 1,
-      NLO = 1       << 2,
-      ADD  = 1          << 3,
+      LO   = 1       << 1,
+      NLO = 1        << 2,
+      ADD  = 1       << 3,
+      DERIV = 1      << 4
     };
 
     const std::map<std::string,MATCH_MODE> m_MModeToEnum = {{"NONE", MATCH_MODE::NONE},
-                                                     {"LO", MATCH_MODE::LO},
-                                                     {"NLO", MATCH_MODE::NLO},
-                                                     {"ADD", MATCH_MODE::ADD}};
+                                                            {"LO", MATCH_MODE::LO},
+                                                            {"NLO", MATCH_MODE::NLO},
+                                                            {"ADD", MATCH_MODE::ADD},
+                                                            {"DERIV",MATCH_MODE::DERIV}};
 
       
     MODE m_amode = MODE::RESUM;
     size_t m_LogOrd = 1;
 
+    // prinicipal groom mode
     RESUM::GROOM_MODE m_gmode = GROOM_MODE::NONE;
+    // groom modes for legs, only used if m_gmode not NONE
+    std::vector<RESUM::GROOM_MODE> m_collgmodes;
 
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 
@@ -150,11 +124,13 @@ namespace RESUM {
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, double& S1) {
-      return CalcColl(L, LResum, order, Rp, G, S1, 0, 0);
+      double dummy1, dummy2;
+      return CalcColl(L, LResum, order, Rp, G, S1, dummy1, dummy2);
     }
     double CalcColl(const double L, const double LResum, const int order,
                     MatrixD& G, double& ExpAtEnd, double& RAtEnd) {
-      return CalcColl(L, LResum, order, 0, G, 0, ExpAtEnd, RAtEnd);
+      double dummy1, dummy2;
+      return CalcColl(L, LResum, order, dummy1, G, dummy2, ExpAtEnd, RAtEnd);
     }
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, double& S1,
