@@ -17,10 +17,6 @@ namespace RESUM {
     void EndEvaluation(double scale) override;
     void Output(const std::string& pname) override;
     void EvaluateNLOevt() override;
-    std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
-                        const std::vector<ATOOLS::Flavour>& fl,
-                        const size_t &nin,
-                        int njets, int mode);
 
     void Fill(int i, double value, double weight, double ncount, int mode);
     std::map<std::string, NLO_Analysis*> m_channels;
@@ -56,6 +52,8 @@ namespace RESUM {
 
 }// end of namespace RESUM
 
+#include "AddOns/Analysis/Main/Analysis_Handler.H"
+#include "SHERPA/Single_Events/Event_Handler.H"
 #include "AddOns/Analysis/Main/Primitive_Analysis.H"
 #include "PHASIC++/Process/Single_Process.H"
 #include "PHASIC++/Main/Process_Integrator.H"
@@ -174,8 +172,9 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
     mom[2+i]=all[i]->Momentum();
     fl[2+i]=all[i]->Flav();
   }
-  fl[0]=rpa->gen.Beam1();
-  fl[1]=rpa->gen.Beam2();
+  const ATOOLS::Blob* sig = Analysis()->AnalysisHandler()->EventHandler()->GetBlobs()->FindFirst(btp::Signal_Process);
+  fl[0] = sig->ConstInParticle(0)->Flav();
+  fl[1] = sig->ConstInParticle(1)->Flav();
   std::vector<std::string> ch(m_channelAlgs.size(),"");
   for(size_t i=0; i<ch.size(); i++) {
     ch[i] = m_channelAlgs[i]->Channel(mom,fl,2);

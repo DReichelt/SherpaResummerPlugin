@@ -46,21 +46,21 @@ bool KT2_ee::flavd(const std::vector<int>& fls) const {
 double KT2_ee::KT2(const Vec4D &p1, const Vec4D &p2, 
                          const std::vector<int>& fl1, const std::vector<int>& fl2,
                          int mode, int num_flavd) const {
-  if(mode&2 and num_flavd < 3 and flavd(fl1) and flavd(fl2)) {
+  if(mode&MODE::ZDECAY and num_flavd < 3 and flavd(fl1) and flavd(fl2)) {
     return std::numeric_limits<double>::infinity();
   }
   std::vector<int> nfl(6,0);
   for(int i=0; i<6; i++) nfl[i] = fl1[i]+fl2[i];
   if(p1[0] < p2[0]) {
     if(flavd(fl1)) {
-      if(mode&1 and flavd(nfl) and flavd(fl2)) return std::numeric_limits<double>::infinity();
+      if(mode&MODE::BLAND and flavd(nfl) and flavd(fl2)) return std::numeric_limits<double>::infinity();
       return 2.0*sqr(p2[0])*(1.0-p1.CosTheta(p2));
     }
     else return 2.0*sqr(p1[0])*(1.0-p1.CosTheta(p2));
   }
   else {
     if(flavd(fl2)) {
-      if(mode&1 and flavd(nfl) and flavd(fl1)) return std::numeric_limits<double>::infinity();
+      if(mode&MODE::BLAND and flavd(nfl) and flavd(fl1)) return std::numeric_limits<double>::infinity();
       return 2.0*sqr(p1[0])*(1.0-p1.CosTheta(p2));
     }
     else return 2.0*sqr(p2[0])*(1.0-p1.CosTheta(p2));
@@ -103,7 +103,7 @@ std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
   std::vector<std::vector<double> > kt2ij
     (imap.size(),std::vector<double>(imap.size()));
   int ii=0, jj=0, n=p.size();
-  double dmin=Q2;
+  double dmin=std::numeric_limits<double>::infinity();
   for (int i=0;i<n;++i)
     for (int j=0;j<i;++j) {
       double dij=kt2ij[i][j]=KT2(p[i],p[j],f[i],f[j],m_mode,num_flavd);
@@ -124,7 +124,7 @@ std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
     for (int i=ii;i<n;++i) imap[i]=imap[i+1];
     num_flavd = 0;
     for(int i=0; i<n; i++) if(flavd(f[imap[i]])) num_flavd++;
-    ii=jj=0; dmin=Q2;
+    ii=jj=0; dmin=std::numeric_limits<double>::infinity();
     for (int i=0;i<n;++i)
       for (int j=0;j<i;++j) {
         double dij=kt2ij[imap[i]][imap[j]]=KT2(p[imap[i]],p[imap[j]],f[imap[i]],f[imap[j]],m_mode,num_flavd);
