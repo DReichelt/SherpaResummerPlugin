@@ -922,12 +922,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             const double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
             // TODO: presumably only one version correct? 
             const double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr; // was in SD
-            //double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr); // was in non-SD
+            //double r2=1./m_b[i]*(r2_cmw+r2_beta1+r2_corr); // was in non-SD. This was in the original version of the code, which I believe is a bug
 
             // add NLL parts to R and Rp
             R -= colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])));
             if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
-              R -= colfac*(r1d*m_logdbar[i] + log(Q12/Q)*T(lambdaZ)); // TODO: not sure I understand the last factor
+              R -= colfac*(r1d*m_logdbar[i] + log(Q12/Q)*T(lambdaZ)); // TODO: not sure I understand the last factor. As this is a contribution of soft wide-angle origin this shift lambda/a->lambdaZ
             }
             else {
               R -= colfac*log(Q12/Q)*T(lambda/m_a[i]);
@@ -964,9 +964,14 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       
       if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
         // TODO: sd expansion
-        G(1,2) += -2.*colfac*m_a[i]*m_beta;
-        G(1,1) += -4.*colfac*((m_a[i]+m_b[i])*log(1./transp) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
-        G(1,0) += 4.*colfac*( (m_a[i]+m_b[i])*sqr(log(1./transp))/2.0 - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])+ log(Q12/Q)/m_a[i])*log(1./transp) );
+//         G(1,2) += -2.*colfac*m_a[i]*m_beta;
+//         G(1,1) += -4.*colfac*((m_a[i]+m_b[i])*log(1./transp) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
+//         G(1,0) += 4.*colfac*( (m_a[i]+m_b[i])*sqr(log(1./transp))/2.0 - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])+ log(Q12/Q)/m_a[i])*log(1./transp) );
+        
+        // Fixed type and removed contribution removed from R
+        G(1,2) += -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+        G(1,1) += -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
+        G(1,0) += 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])+ log(Q12/Q)/m_a[i])*log(1./transp) );
 
         ExpAtEnd += -2./M_PI*as*(colfac)*(m_a[i]+m_b[i])*log(1./transp)/m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
         
@@ -980,7 +985,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         
         double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
         
-        RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);        
+        RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);        
       } // end expansion for grooming
       else {
         
