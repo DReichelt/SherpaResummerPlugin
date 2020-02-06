@@ -5,8 +5,10 @@
 #include "ATOOLS/Math/MathTools.H"
 #include "ATOOLS/Org/Run_Parameter.H"
 
+#ifdef USING_YODA
 #include "YODA/Scatter2D.h"
 #include "YODA/WriterYODA.h"
+#endif
 
 #include  <fstream>
 
@@ -112,6 +114,7 @@ double FFunction::operator()(const double Rp, double& FexpNLL_NLO) {
 }
 
 void FFunction::PrintYODA(const std::string& filename) {
+#ifdef USING_YODA
   YODA::Scatter2D plot("/FFunction/FFunction","/FFunction/FFunction");
   YODA::Scatter2D plot_interp("/FFunction/FFunction","/FFunction/FFunction");
   double Fvar = stod(ATOOLS::rpa->gen.Variable("RESUM::FFUNCTION::VARIATION","0"));
@@ -136,6 +139,7 @@ void FFunction::PrintYODA(const std::string& filename) {
   YODA::WriterYODA::write(filename+".yoda",plot);
   YODA::WriterYODA::write(filename+"_Interpolated_F"+std::to_string(int(Fvar))+".yoda",
                           plot_interp);
+#endif
 }
 
 // double FFunction::LaplacePol(const double Rp) const {

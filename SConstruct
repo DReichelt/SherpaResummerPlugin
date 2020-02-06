@@ -7,20 +7,35 @@ AddOption('--enable-fastjetcontrib',
           action='store_true',
           default=False,
           help=('Enable Observables that are implemented using fastjet-contrib.'
-                'Needs to be installed as libfastjetcontribfragile'))
+                'Needs to be installed as libfastjetcontribfragile.'
+                'Use fjcpath to set path if needed.'))
 
-fjc = GetOption('fjc')
+AddOption('--enable-yoda',
+          dest='yoda',
+          action='store_true',
+          default=False,
+          help=('Enable use of yoda.',
+                'Use yodapath to set path if needed.'))
+
 
 vars = Variables('.SConstruct')
 vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
-vars.Add(PathVariable('include','directories that will be passed to the compilerwith the -I option.','.'))
-vars.Add(BoolVariable('fjc','Whether to enable fjcontrib.',GetOption('fjc')))
+vars.Add(PathVariable('include','directories that will be passed to the compiler with the -I option.','.'))
+vars.Add(BoolVariable('fjc','Whether to enable fjcontrib.', GetOption('fjc')))
+vars.Add(PathVariable('fjcpath','path to fastjetcontrib','${sherpa}'))
+vars.Add(BoolVariable('yoda','Whether to enable yoda.', GetOption('yoda')))
+vars.Add(PathVariable('yodapath','path to yoda','${sherpa}'))
 
 env = Environment(variables=vars,
-                  CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
+                  CPPPATH=['${sherpa}/include/SHERPA-MC',
+                           os.getcwd(),
+                           '${include}',
+                           '${yodapath}/include',
+                           '${fjcpath}/include'])
+
 vars.Add('CXX','The C++ Compiler',
     os.popen(env['sherpa']+'/bin/Sherpa-config --cxx').read().rstrip())
 vars.Add('CXXFLAGS','The C++ Flags',['-g','-O2','-std=c++11'])
@@ -31,6 +46,12 @@ env['ENV']=os.environ
 if env['PLATFORM']=='darwin':
    env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup'])
 
+fjc = env['fjc']
+yoda = env['yoda']
+
+env.Append(CCFLAGS=[] +
+           (['-D USING_YODA'] if yoda else []) +
+           (['-D USING_FJCONTRIB'] if fjc else []))
 
 resumcommon = env.SharedLibrary('ResumCommon',
                                  ['Math/r8lib.cpp',
@@ -97,21 +118,28 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                 ] + (observables +
                                      (obsFjcontrib if fjc else [])),
 	                        LIBPATH=(['${sherpa}/lib/SHERPA-MC']
-                                         + (['${sherpa}/lib'] if fjc else [])),
+                                         + (['${fjcpath}/lib']
+                                            if fjc else [])
+                                         + (['${yodapath}/lib']
+                                            if yoda else [])),
 	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
-                                         + (['${sherpa}/lib'] if fjc else [])),
+                                       + (['${fjcpath}/lib']
+                                            if fjc else [])
+                                       + (['${yodapath}/lib']
+                                          if yoda else [])),
 	                        LIBS=(['SherpaAnalyses',
                                       'SherpaAnalysis',
                                       'ResumCommon']
                                       + (['fastjetcontribfragile']
-                                         if fjc else [])))
+                                         if fjc else [])
+                                      + (['YODA']
+                                         if yoda else [])))
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
 	                      ['Tools/CBasis.C',
 	                       'Tools/CMetric_Base.C',
 	                       'Tools/Hard_Matrix.C',
-                               'Tools/StringTools.C',
                                'Tools/Reader.C',
                                'Bases/QCD_Generic.C',  
 	                       'Main/Comix_Interface.C',
@@ -134,12 +162,12 @@ def make_exe(target, source, env, cp=copy):
    cp(target, source, env)
    subprocess.check_output(['chmod', 'ug+x', str(target[0])])
 
-
+print env['sherpa']
 
 env.Command(target="Tools/Files.H", source="Tools/Files.H.in",
             action=partial(replace, old='@share_dir',
-	    			    new=os.path.join(env.subst('${sherpa}'),
-							'share/RESUM')))
+	    			    new=os.path.abspath(os.path.join(env.subst('${sherpa}'),
+							             'share/RESUM'))))
 env.Command(target='${sherpa}/bin/dat2yoda', source="Scripts/dat2yoda",
 	    action=partial(make_exe,
                            cp=partial(replace,
@@ -161,7 +189,8 @@ env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 
-env.Install('${sherpa}/lib/SHERPA-MC', [resumcommon,resumlib,analysislib,rratiolib])
+env.Install('${sherpa}/lib/SHERPA-MC', [resumcommon,resumlib,analysislib] +(
+   [rratiolib] if yoda else []))
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',

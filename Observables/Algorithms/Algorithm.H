@@ -47,7 +47,10 @@ namespace RESUM {
 
 
 #include "ThrustFinder.H"
+
+#ifdef USING_FJCONTRIB
 #include "FastjetAlg.H"
+#endif
 
 namespace RESUM {
   template <typename T>
@@ -56,15 +59,17 @@ namespace RESUM {
                                                  const std::vector<ATOOLS::Flavour>& fl,
                                                  const size_t &nin) {
     if(name=="ThrustFinder") return std::make_shared<ThrustFinder<T>>(p,fl,nin);
-    // if(name=="FJmaxPTjet") {
-    //   if(std::is_same<T,double>::value) {
-    //     return std::make_shared<FJmaxPTjet>(p,fl,nin);
-    //   }
-    //   else {
-    //     THROW(fatal_error, "Fastjet only available for double precision.");
-    //     return nullptr;
-    //   }
-    // }
+#ifdef USING_FJCONTRIB
+    if(name=="FJmaxPTjet") {
+      if(std::is_same<T,double>::value) {
+        return std::make_shared<FJmaxPTjet>(p,fl,nin);
+      }
+      else {
+        THROW(fatal_error, "Fastjet only available for double precision.");
+        return nullptr;
+      }
+    }
+#endif
     else {
       THROW(fatal_error,"Algorithm "+name+" not implemented!");
       return nullptr;

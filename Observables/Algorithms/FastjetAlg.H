@@ -16,7 +16,7 @@ namespace RESUM {
     
     FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
                const std::vector<ATOOLS::Flavour>& fl,
-               const size_t &nin, double R_jet)   {
+               const size_t &nin)   {
 
       std::vector<fastjet::PseudoJet> fjs(p.size()-nin);
       for(size_t i=0; i<fjs.size(); i++) {
