@@ -29,7 +29,7 @@ namespace RESUM {
     
     inline size_t numJets() const {return m_jets.size();}
     inline const std::vector<ATOOLS::Vec3<T>>&  jetAxes() const {return m_jetAxes;}
-    inline T jetAxes(size_t i) const {return m_jetAxes.at(i);}
+    inline ATOOLS::Vec3<T> jetAxes(size_t i) const {return m_jetAxes.at(i);}
     inline const std::vector<T> jetMasses() const {return m_jetMasses;}
     inline T jetMasses(size_t i) const {return m_jetMasses.at(i);}
     inline const std::vector<T> jetBroads() const {return m_jetBroads;}
@@ -47,7 +47,7 @@ namespace RESUM {
 
 
 #include "ThrustFinder.H"
-
+#include "FastjetAlg.H"
 
 namespace RESUM {
   template <typename T>
@@ -56,6 +56,15 @@ namespace RESUM {
                                                  const std::vector<ATOOLS::Flavour>& fl,
                                                  const size_t &nin) {
     if(name=="ThrustFinder") return std::make_shared<ThrustFinder<T>>(p,fl,nin);
+    if(name=="FJmaxPTjet") {
+      if(std::is_same<T,double>::value) {
+        return std::make_shared<FJmaxPTjet>(p,fl,nin);
+      }
+      else {
+        THROW(fatal_error, "Fastjet only available for double precision.");
+        return nullptr;
+      }
+    }
     else {
       THROW(fatal_error,"Algorithm "+name+" not implemented!");
       return nullptr;

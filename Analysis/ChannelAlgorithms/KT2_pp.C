@@ -71,11 +71,14 @@ double KT2_pp::KT2(const Vec4D &p1, const Vec4D &p2,
                    const vector<int>& fl1,
                    const vector<int>& fl2,
                    int mode, int num_flavd) const {
+  if(mode&MODE::ZPROD and num_flavd < 4 and flavd(fl1) and flavd(fl2)) {
+    return std::numeric_limits<double>::infinity();
+  }
   // determine combined flavour
   vector<int> nfl(6,0);
   for(int i=0; i<6; i++) nfl[i] = fl1[i]+fl2[i];
   // angular distance
-  const double deltaR = sqr(p1.Y()-p2.Y())-sqr(p1.DPhi(p2));
+  const double deltaR2 = sqr(p1.Y()-p2.Y())+sqr(p1.DPhi(p2));
 
   if(p1.PPerp2() < p2.PPerp2()) {
     // softer jet is p1
@@ -83,11 +86,11 @@ double KT2_pp::KT2(const Vec4D &p1, const Vec4D &p2,
       // softer jet is flavoured, use max kt2
       if(mode&MODE::BLAND and flavd(nfl) and flavd(fl2))
         return std::numeric_limits<double>::infinity();
-      return p2.PPerp2()*deltaR;
+      return p2.PPerp2()*deltaR2;
     }
     else {
       // softer jet is flavourless, use min kt2
-      return p1.PPerp2()*deltaR;
+      return p1.PPerp2()*deltaR2;
     }
   }
   else {
@@ -96,12 +99,12 @@ double KT2_pp::KT2(const Vec4D &p1, const Vec4D &p2,
       // softer jet is flavoured, use max kt2
       if(mode&MODE::BLAND and flavd(nfl) and flavd(fl1))
         return std::numeric_limits<double>::infinity();
-      return p1.PPerp2()*deltaR;
+      return p1.PPerp2()*deltaR2;
     }
     
     else {
       // softer jet is flavourless, use min kt2
-      return p2.PPerp2()*deltaR;
+      return p2.PPerp2()*deltaR2;
     }
   }
 }
@@ -111,12 +114,17 @@ double KT2_pp::KT2(const Vec4D &p1,
                    const vector<int>& fl1,
                    const vector<int>& fl2,
                    int mode, int num_flavd) const {
-  if(m_mode&MODE::BLAND and flavd(fl1)) {
-    for(int i=0; i<6; i++)
-      if(fl1[i] != fl2[i])
-        return std::numeric_limits<double>::infinity();
+  if(mode&MODE::ZPROD and num_flavd < 4 and flavd(fl1) and flavd(fl2)) {
+    return std::numeric_limits<double>::infinity();
   }
   if(flavd(fl1)) {
+    if(m_mode&MODE::BLAND) {
+      for(int i=0; i<6; i++) {
+        if(fl1[i] != fl2[i]) {
+          return std::numeric_limits<double>::infinity();
+        }
+      }
+    }
     return Max(p1.PPerp2(),ktB2);
   }
   else {
@@ -188,7 +196,7 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
     }
   }
   int num_flavd = 0;
-  msg_Debugging()<<"Cluster input: mode = "<<m_mode<<" "<<f.size()<<"\n";
+  msg_Debugging()<<"Cluster input: mode = "<<m_mode<<"\n";
   for(int i=0; i<f.size(); i++) {
     if(flavd(f[i])) num_flavd++;
     if(i<2) {
@@ -209,13 +217,17 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
   double dBBmin=std::numeric_limits<double>::infinity(); 
   for (int i=0;i<n;++i) {
     const double dB = KT2(p[i],KT2(p,p[i].Y(),0,imap,n),
-                          f[i],f[0],m_mode,num_flavd);
+                          f[i+2],f[0],m_mode,num_flavd);
+    msg_Debugging()<<i+2<<" with \n0: "<<dB<<"\n";
     const double dBB = KT2(p[i],KT2(p,p[i].Y(),1,imap,n),
-                           f[i],f[1],m_mode,num_flavd);
+                           f[i+2],f[1],m_mode,num_flavd);
+    msg_Debugging()<<"1: "<<dBB<<"\n";
     const double di=Min(dB,dBB);
     if(di<dmin) { dmin=di; ii=i; jj=i; dBmin=dB; dBBmin=dBB; }
     for (int j=0;j<i;++j) {
+
       double dij=kt2ij[i][j]=KT2(p[i],p[j],f[i+2],f[j+2],m_mode,num_flavd);
+      msg_Debugging()<<j+2<<": "<<dij<<"\n";
       if (dij<dmin) { dmin=dij; ii=i; jj=j; }
     }
   }
@@ -243,9 +255,9 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
     ii=jj=0; dmin=std::numeric_limits<double>::infinity();
     for (int i=0;i<n;++i) {
       const double dB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),0,imap,n),
-                            f[imap[i]],f[0],m_mode,num_flavd);
+                            f[imap[i]+2],f[0],m_mode,num_flavd);
       const double dBB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),1,imap,n),
-                             f[imap[i]],f[1],m_mode,num_flavd);
+                             f[imap[i]+2],f[1],m_mode,num_flavd);
       const double di=Min(dB,dBB);
       if(di<dmin) { dmin=di; ii=i; jj=i; dBmin=dB; dBBmin=dBB; }
       for (int j=0;j<i;++j) {

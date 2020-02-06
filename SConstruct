@@ -1,12 +1,23 @@
 #-*- mode: python-*- 
 import os, distutils.spawn, subprocess
 from functools import partial
+
+AddOption('--enable-fastjetcontrib',
+          dest='fjc',
+          action='store_true',
+          default=False,
+          help=('Enable Observables that are implemented using fastjet-contrib.'
+                'Needs to be installed as libfastjetcontribfragile'))
+
+fjc = GetOption('fjc')
+
 vars = Variables('.SConstruct')
 vars.Add(PathVariable('sherpa','path to sherpa',
     os.popen('Sherpa-config --prefix').read().rstrip() if
     distutils.spawn.find_executable('Sherpa-config') else
     '/path/to/sherpa',PathVariable.PathIsDir))
 vars.Add(PathVariable('include','directories that will be passed to the compilerwith the -I option.','.'))
+vars.Add(BoolVariable('fjc','Whether to enable fjcontrib.',GetOption('fjc')))
 
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',os.getcwd(),'${include}'])
@@ -20,73 +31,84 @@ env['ENV']=os.environ
 if env['PLATFORM']=='darwin':
    env.Append(LINKFLAGS=['-Wl,-undefined','-Wl,dynamic_lookup'])
 
+
+resumcommon = env.SharedLibrary('ResumCommon',
+                                 ['Math/r8lib.cpp',
+	                          'Math/c8lib.cpp',
+	                          'Math/matexp.cpp',
+                                  'Math/asa007.cpp',
+                                  'Math/spline.cpp',
+                                  'Math/linpack_d.cpp',
+                                  'Math/blas0.cpp',
+                                  'Math/blas1_d.cpp',
+                                  'Tools/StringTools.C'])
+   
 resumlib = env.SharedLibrary('SherpaResum',
-	                     ['Math/r8lib.cpp',
-	                      'Math/c8lib.cpp',
-	                      'Math/matexp.cpp',
-	                      'Math/asa007.cpp',
-                              'Math/spline.cpp',
-                              'Math/InterpolationWrapper.C',
-                              'Math/linpack_d.cpp',
-                              'Math/blas0.cpp',
-                              'Math/blas1_d.cpp',
+	                     ['Math/InterpolationWrapper.C',
 	                      'Tools/CBasis.C',
 	                      'Tools/CMetric_Base.C',
 	                      'Tools/Hard_Matrix.C',
-                              'Tools/StringTools.C',
                               'Tools/Reader.C',
 	                      'Bases/QCD_Generic.C',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
                               'Main/Cluster_Definitions.C'
-                             ])
+                             ],
+	                     LIBPATH=['${sherpa}/lib/SHERPA-MC'],
+	                     RPATH=['${sherpa}/lib/SHERPA-MC'],
+	                     LIBS=['ResumCommon'])
 
+observables = ['Observables/Y2_IF.C',
+	       'Observables/Y1_II.C',
+	       'Observables/Thrust_FF.C',
+               'Observables/ColorSinglet/Thrust.C',
+	       'Observables/Thrust_IF.C',
+	       'Observables/Thrust_II.C',
+	       'Observables/TThrust_FF.C',
+	       'Observables/Thrust.C',
+	       'Observables/HeavyJetMass.C',
+               'Observables/YN_CambridgeAachen.C',
+               'Observables/YN_Durham.C',
+               'Observables/CParameter.C',
+               'Observables/EParameter.C',
+               'Observables/ThrustMajor.C',
+               'Observables/ThrustMinor.C',
+               'Observables/WideBroad.C',
+               'Observables/TotBroad.C',
+               'Observables/HeavyMinusLightHemMass.C',
+               'Observables/Oblateness.C']
+
+obsFjcontrib = ['Observables/SD_JetAngularities.C',
+                'Observables/JetAngularities.C']
 
 analysislib = env.SharedLibrary('ResumAnalysis',
-          ['Analysis/Observable_Base.C',
-	   'Analysis/Observable_Selector.C',
-           'Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.C',
-           'Analysis/ChannelAlgorithms/KT2_ee.C',
-           'Analysis/ChannelAlgorithms/KT2_pp.C',
-           'Analysis/NLO_Analysis.C',
-           # 'Analysis/Matching_Analysis.C',
-           'Analysis/NLL_Analysis.C',
-           'Analysis/Resum_Enhance_Observable.C',
-           'Scales/Resum_Scale_Setter.C',
-           'Scales/Resum_Scale_Setter_Durham.C',
-	   'Observables/Y2_IF.C',
-	   'Observables/Y1_II.C',
-	   'Observables/Thrust_FF.C',
-           'Observables/ColorSinglet/Thrust.C',
-	   'Observables/Thrust_IF.C',
-	   'Observables/Thrust_II.C',
-	   'Observables/TThrust_FF.C',
-	   'Observables/Thrust.C',
-           'Tools/StringTools.C',
-	   'Observables/HeavyJetMass.C',
-           'Observables/YN_CambridgeAachen.C',
-           'Observables/YN_Durham.C',
-           'Observables/CParameter.C',
-           'Observables/EParameter.C',
-           'Observables/ThrustMajor.C',
-           'Observables/ThrustMinor.C',
-           'Observables/WideBroad.C',
-           'Observables/TotBroad.C',
-           'Observables/HeavyMinusLightHemMass.C',
-           'Observables/Oblateness.C',
-           'FFunction/FFunctions.C'
-          ],
-	LIBPATH=['${sherpa}/lib/SHERPA-MC'],
-	RPATH=['${sherpa}/lib/SHERPA-MC'],
-	LIBS=['SherpaAnalyses','SherpaAnalysis'])
+                                ['Analysis/Observable_Base.C',
+	                         'Analysis/Observable_Selector.C',
+                                 'Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.C',
+                                 'Analysis/ChannelAlgorithms/KT2_ee.C',
+                                 'Analysis/ChannelAlgorithms/KT2_pp.C',
+                                 'Analysis/NLO_Analysis.C',
+                                 # 'Analysis/Matching_Analysis.C',
+                                 'Analysis/NLL_Analysis.C',
+                                 'Analysis/Resum_Enhance_Observable.C',
+                                 'Scales/Resum_Scale_Setter.C',
+                                 'Scales/Resum_Scale_Setter_Durham.C',
+                                 'FFunction/FFunctions.C'
+                                ] + (observables +
+                                     (obsFjcontrib if fjc else [])),
+	                        LIBPATH=(['${sherpa}/lib/SHERPA-MC']
+                                         + (['${sherpa}/lib'] if fjc else [])),
+	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
+                                         + (['${sherpa}/lib'] if fjc else [])),
+	                        LIBS=(['SherpaAnalyses',
+                                      'SherpaAnalysis',
+                                      'ResumCommon']
+                                      + (['fastjetcontribfragile']
+                                         if fjc else [])))
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
-	                      ['Math/r8lib.cpp',
-	                       'Math/c8lib.cpp',
-	                       'Math/matexp.cpp',
-	                       'Math/asa007.cpp',
-	                       'Tools/CBasis.C',
+	                      ['Tools/CBasis.C',
 	                       'Tools/CMetric_Base.C',
 	                       'Tools/Hard_Matrix.C',
                                'Tools/StringTools.C',
@@ -94,7 +116,10 @@ rratiolib = env.SharedLibrary('SherpaRRatios',
                                'Bases/QCD_Generic.C',  
 	                       'Main/Comix_Interface.C',
                                'RRatios/RRatios.C',
-	                       'Main/Cluster_Definitions.C'])
+	                       'Main/Cluster_Definitions.C'],
+	                      LIBPATH=['${sherpa}/lib/SHERPA-MC'],
+	                      RPATH=['${sherpa}/lib/SHERPA-MC'],
+	                      LIBS=['ResumCommon'])
 
 def replace(target, source, env, old, new):
     with open(str(source[0]), "rt") as fin:
@@ -136,7 +161,7 @@ env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 
-env.Install('${sherpa}/lib/SHERPA-MC', [resumlib,analysislib,rratiolib])
+env.Install('${sherpa}/lib/SHERPA-MC', [resumcommon,resumlib,analysislib,rratiolib])
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',
 		      '${sherpa}/bin/dat2yoda',

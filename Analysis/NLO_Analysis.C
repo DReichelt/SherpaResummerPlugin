@@ -172,9 +172,20 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
     mom[2+i]=all[i]->Momentum();
     fl[2+i]=all[i]->Flav();
   }
-  const ATOOLS::Blob* sig = Analysis()->AnalysisHandler()->EventHandler()->GetBlobs()->FindFirst(btp::Signal_Process);
-  fl[0] = sig->ConstInParticle(0)->Flav();
-  fl[1] = sig->ConstInParticle(1)->Flav();
+  if(Analysis()->Sub() and Analysis()->Real() and
+     Analysis()->Sub() != Analysis()->Real()) {
+    // for S-Event get mapped flavours
+    // @TODO: could also do it this way for R, what is the proper way
+    fl[0] = Analysis()->Sub()->p_fl[0];
+    fl[1] = Analysis()->Sub()->p_fl[1];
+  }
+  else {
+    // R, VI and B envents
+    const ATOOLS::Blob* sig = Analysis()->AnalysisHandler()->EventHandler()->GetBlobs()->FindFirst(btp::Signal_Process);
+    fl[0] = sig->ConstInParticle(0)->Flav();
+    fl[1] = sig->ConstInParticle(1)->Flav();
+  }
+
   std::vector<std::string> ch(m_channelAlgs.size(),"");
   for(size_t i=0; i<ch.size(); i++) {
     ch[i] = m_channelAlgs[i]->Channel(mom,fl,2);
