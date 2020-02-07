@@ -38,6 +38,7 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Bases/QCD_Generic.C',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
+                              'Main/Params.C',
                               'Main/Cluster_Definitions.C'
                              ])
 

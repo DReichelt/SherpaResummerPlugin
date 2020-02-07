@@ -1,6 +1,8 @@
 #ifndef RESUM_PARAMS_H
 #define RESUM_PARAMS_H
 
+#include "ATOOLS/Org/Message.H"
+
 namespace MODEL {
   class Running_AlphaS;
 }
