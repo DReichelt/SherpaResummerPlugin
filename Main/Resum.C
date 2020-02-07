@@ -344,7 +344,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*PDFexp);
     if(m_mmode & MATCH_MODE::ADD) {
-      weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(0,0) ));
+      weight *= exp(-epRatio*pow(as,1)*pow(L,1) * ( G(1,1) ));
     }
     if(m_mmode & MATCH_MODE::DERIV) {
       weight *= exp(-epRatio*pow(L,1)*RAtEnd0);
@@ -378,7 +378,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
   H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
-  m_resExpLO[m_n][i] = H(0,0)+H(1,1)+H(2,2);
+  m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2);
   // TODO: fix
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * 4./m_a[0]*SoftexpNLL_LO;
