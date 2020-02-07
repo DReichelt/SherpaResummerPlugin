@@ -3,7 +3,7 @@
 #include <memory>
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Math/MathTools.H"
-
+#include "ATOOLS/Math/Vector.H"
 
 namespace RESUM {
 
@@ -30,51 +30,25 @@ namespace RESUM {
     inline size_t numJets() const {return m_jets.size();}
     inline const std::vector<ATOOLS::Vec3<T>>&  jetAxes() const {return m_jetAxes;}
     inline ATOOLS::Vec3<T> jetAxes(size_t i) const {return m_jetAxes.at(i);}
+    inline const std::vector<ATOOLS::Vec4<T>>&  jetVectors() const {return m_jetVectors;}
+    inline ATOOLS::Vec4<T> jetVectors(size_t i) const {return m_jetVectors.at(i);}
     inline const std::vector<T> jetMasses() const {return m_jetMasses;}
     inline T jetMasses(size_t i) const {return m_jetMasses.at(i);}
     inline const std::vector<T> jetBroads() const {return m_jetBroads;}
     inline T jetBroads(size_t i) const {return m_jetBroads.at(i);}
+    inline const std::vector<T> jetScales() const {return m_jetScales;}
+    inline T jetScales(size_t i) const {return m_jetScales.at(i);}
     inline T Q2() const {return m_Q2;}
     
   protected:
     std::vector<std::set<size_t>> m_jets;
     std::vector<ATOOLS::Vec3<T>> m_jetAxes;
+    std::vector<ATOOLS::Vec4<T>> m_jetVectors;
     std::vector<T> m_jetMasses;
     std::vector<T> m_jetBroads;
+    std::vector<T> m_jetScales;
     T m_Q2;
   };
-}
-
-
-#include "ThrustFinder.H"
-
-#ifdef USING_FJCONTRIB
-#include "FastjetAlg.H"
-#endif
-
-namespace RESUM {
-  template <typename T>
-  static typename Algorithm<T>::Ptr GetAlgorithm(const std::string& name,
-                                                 const std::vector<ATOOLS::Vec4<T>>& p,
-                                                 const std::vector<ATOOLS::Flavour>& fl,
-                                                 const size_t &nin) {
-    if(name=="ThrustFinder") return std::make_shared<ThrustFinder<T>>(p,fl,nin);
-#ifdef USING_FJCONTRIB
-    if(name=="FJmaxPTjet") {
-      if(std::is_same<T,double>::value) {
-        return std::make_shared<FJmaxPTjet>(p,fl,nin);
-      }
-      else {
-        THROW(fatal_error, "Fastjet only available for double precision.");
-        return nullptr;
-      }
-    }
-#endif
-    else {
-      THROW(fatal_error,"Algorithm "+name+" not implemented!");
-      return nullptr;
-    }
-  }
 }
 
 

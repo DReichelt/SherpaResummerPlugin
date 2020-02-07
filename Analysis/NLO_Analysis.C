@@ -84,17 +84,16 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   Algebra_Interpreter *ip=reader.Interpreter();
   m_channelAlgs.clear();
   for (size_t i(1);i<params.size();++i) {
+    std::vector<std::string> ps = {params[i].begin()+1,
+                                   params[i].end()};
     if (params[i][0] == "ChAlg") {
-      std::vector<std::string> ps = {params[i].begin()+1,
-                                     params[i].end()};
-      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject(params[i][1],
-                                                         {params[i][1],
-                                                          ps}));
+      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject
+                                 (params[i][1], {params[i][1],ps}));
       continue;
     }
-    if (params[i].size()<5) continue;
+    if (params[i].size()<5) continue;    
     Observable_Base *obs(Observable_Getter::GetObject
-			 (params[i][0],Observable_Key(params[i][0])));
+			 (params[i][0],{params[i][0], ps}));
     if (obs == nullptr) {
       msg_Error()<<METHOD<<"(): Observable not found '"<<params[i][0]<<"'.\n";
       continue;
@@ -105,10 +104,10 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
     int tp = HistogramType(params[i][4]);
     msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp<<" ("<<params[i][4]<<") "
 		   <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
-    m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,params[i][0]));
-    m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,params[i][0]+"_Sigma"));
+    m_histos.push_back(new Histogram(tp,xmin,xmax,nbin,obs->Tag()));
+    m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,obs->Tag()+"_Sigma"));
     for(int j=0; j<nbin; j++)
-      m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,params[i][0]+"_Sigma"));
+      m_histos.push_back(new Histogram(HistogramType("LinErr"),0,1,2,obs->Tag()+"_Sigma"));
     m_obss.push_back(obs);
   }
   // to stay consistent with previous defaults

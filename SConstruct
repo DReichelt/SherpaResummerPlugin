@@ -62,7 +62,8 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                   'Math/linpack_d.cpp',
                                   'Math/blas0.cpp',
                                   'Math/blas1_d.cpp',
-                                  'Tools/StringTools.C'])
+                                  'Tools/StringTools.C',
+                                  'Tools/Key_Base.C'])
    
 resumlib = env.SharedLibrary('SherpaResum',
 	                     ['Math/InterpolationWrapper.C',
@@ -99,8 +100,8 @@ observables = ['Observables/Y2_IF.C',
                'Observables/HeavyMinusLightHemMass.C',
                'Observables/Oblateness.C']
 
-obsFjcontrib = ['Observables/SD_JetAngularities.C',
-                'Observables/JetAngularities.C']
+obsFjcontrib = ['Observables/JetAngularities.C',
+                'Observables/Algorithms/FastjetAlg.C']
 
 analysislib = env.SharedLibrary('ResumAnalysis',
                                 ['Analysis/Observable_Base.C',

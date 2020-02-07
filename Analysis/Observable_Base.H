@@ -6,18 +6,17 @@
 #include "ATOOLS/Phys/Particle_List.H"
 #include "ATOOLS/Phys/NLO_Subevt.H"
 #include "ATOOLS/Org/Data_Reader.H"
+#include "ATOOLS/Math/Poincare.H"
 #include "Observables/Algorithms/Algorithm.H"
 #include "Tools/StringTools.H"
+#include "Tools/Key_Base.H"
 #include "Main/Resum.H"
 #include <functional>
 
 namespace RESUM {
   
-  struct Observable_Key {
-  public:
-    std::string m_name;
-    Observable_Key(const std::string &name):
-      m_name(name) {}
+  struct Observable_Key : public Key_Base {
+    using Key_Base::Key_Base;
   };
 
   struct Obs_Params {
@@ -36,7 +35,8 @@ namespace RESUM {
   protected:
 
     std::string m_name;
-
+    std::string m_tag;
+    
     double m_logfac = 1.;
     double m_logpow = 1.;
     double m_endpoint = 1.;
@@ -55,6 +55,7 @@ namespace RESUM {
   public:
     typedef std::shared_ptr<Observable_Base_Template> Ptr;
     Observable_Base_Template(const Observable_Key &args) : m_name(args.m_name) {
+      m_tag = args.KwArg("tag",m_name);
       ATOOLS::Data_Reader read(" ",";","#","=");
       m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
       m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
@@ -74,24 +75,9 @@ namespace RESUM {
 
     virtual ~Observable_Base_Template() {};
 
-    // deprecated
-    // Obs_Params Parameters
-    // (const Vec4T *p,const ATOOLS::Flavour *fl,
-    //  const size_t &n,const size_t &l) {
-    //   std::vector<Vec4T> moms;
-    //   std::vector<ATOOLS::Flavour> flavs;
-    //   for(size_t i=0; i<n; i++) {
-    //     moms.push_back(p[i]);
-    //     flavs.push_back(fl[i]);
-    //   }
-    //   return Parameters(moms,flavs,l);
-    // }
 
-    // // use this
-    // virtual Obs_Params Parameters
-    // (const std::vector<Vec4T>& p,
-    //  const std::vector<ATOOLS::Flavour>& fl,
-    //  const size_t &l) = 0;
+    const std::string& Tag() {return m_tag;}
+    
 
     Obs_Params Parameters(ATOOLS::Cluster_Amplitude* ampl, 
                           const size_t l) {

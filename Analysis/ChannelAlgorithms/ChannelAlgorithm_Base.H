@@ -11,6 +11,7 @@
 #include "ATOOLS/Org/Getter_Function.H"
 #include "ATOOLS/Org/Message.H"
 
+
 namespace RESUM {
 
   struct ChannelAlgorithm_Key {
