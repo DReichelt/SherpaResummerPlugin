@@ -868,7 +868,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Lmur=log(muR2/sqr(Q));
 
       // needed for SD grooming
-      double transp = m_obss_n->GroomTransitionPoint(moms, flavs, i);
+      double transp = m_obss[m_n]->GroomTransitionPoint(moms, flavs, i);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
       double lambda2 = as*beta0*log(1./2.);
 

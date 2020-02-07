@@ -49,7 +49,6 @@ namespace RESUM {
     CMetric_Base * p_cmetric;
     
     std::vector<Observable_Base*>     m_obss;
-    Observable_Base*                  m_obss_n;
     std::vector<ATOOLS::Histogram*>   m_hist;
     std::vector<std::pair<double,double> > m_ress;
 
