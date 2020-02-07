@@ -2,7 +2,7 @@
 #define RESUM_OBLATENESS_H
 #include "Analysis/Observable_Base.H"
 #include "ATOOLS/Org/Run_Parameter.H"
-#include "Observables/Algorithms/Algorithm.H"
+#include "Observables/Algorithms/GetAlgorithm.H"
 #include "FFunction/FFunctions.H"
 
 namespace RESUM {

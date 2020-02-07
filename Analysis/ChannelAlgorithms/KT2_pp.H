@@ -20,7 +20,7 @@ namespace RESUM {
                ALL = 0,
                BLAND = 1   << 0,
                ZPROD = 1   << 1,
-               BLAND_Z = 1 << 2
+               BLAND_Z = BLAND|ZPROD
     };
     
   private:

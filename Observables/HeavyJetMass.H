@@ -3,7 +3,7 @@
 
 #include "Analysis/Observable_Base.H"
 #include "ATOOLS/Org/Run_Parameter.H"
-#include "Observables/Algorithms/Algorithm.H"
+#include "Observables/Algorithms/GetAlgorithm.H"
 
 namespace RESUM {
   template <typename T>
