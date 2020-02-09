@@ -179,7 +179,7 @@ if __name__=='__main__':
     parser.add_argument('--output-lo', '-LO', default="LO.yoda")
     parser.add_argument('--output-nlo', '-NLO', default="NLO.yoda")
     parser.add_argument('--output-match','-o',default="resum-plots")
-    parser.add_argument('--channels', '-ch', action='append')
+    parser.add_argument('--channels', '-ch', action='append',default=None)
     parser.add_argument('--channel-fo-add', default=None)
     parser.add_argument('--match', action='store_true', default=False)
     parser.add_argument('--message', '-m', default='warning')
@@ -345,7 +345,14 @@ if __name__=='__main__':
             args.output_nlo = 'NO'
         
         if args.match:
-            command = ['resum-match',
+            if len(args.channels) == 0:
+                chstring = []
+            elif len(args.channels) == 1:
+                chstring = ['-ch',args.channels[0]]
+            elif len(args.channels) > 1:
+                chstring = ['-ch',"{}".format(" ".join(args.channels))]
+
+            command = (['resum-match',
                        '-lo',args.output_lo,
                        '-nlo',args.output_nlo,
                        '-nll',args.output_nll,
@@ -353,8 +360,8 @@ if __name__=='__main__':
                        '--rebin',str(args.rebin),
                        '--message',args.message,
                        '-o', '{DIR}/{OBS}'.format(DIR=args.output_match,
-                                                  OBS=obs),
-                       '-ch']+args.channels
+                                                  OBS=obs)]
+                       + chstring)
             logging.info(" ".join(command))
             subprocess.call(command)
 

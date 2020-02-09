@@ -366,7 +366,7 @@ if __name__=='__main__':
     parser.add_argument('--rebin', default=1, type=int)
     parser.add_argument('--output-dir', '-o', default="resum-plots")
     parser.add_argument('--file-prefix', '-O', default="Resum")
-    parser.add_argument('--channels', '-ch', default=None, nargs='+')
+    parser.add_argument('--channels', '-ch', default=None, action='append')
     parser.add_argument('--scale', '-s', default=None, type=float)
     parser.add_argument('--message', '-m', default='warning')
     
@@ -376,7 +376,11 @@ if __name__=='__main__':
     if args.message.startswith('w'): logging.basicConfig(level=logging.WARNING)
     if args.message.startswith('e'): logging.basicConfig(level=logging.ERROR)
     if args.message.startswith('c'): logging.basicConfig(level=logging.CRITICAL)
-    if args.channels is None: args.channels = []
+    if args.channels is None:
+        args.channels = []
+    else:
+        args.channels = [ch for chs in args.channels for ch in chs.split()]
+
     nll_file = np.array([args.nll_file.split(":")])
     args.nll_file = nll_file[:,0]
     sigma = Sigma(args)
