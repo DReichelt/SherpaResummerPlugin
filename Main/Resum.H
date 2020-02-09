@@ -167,9 +167,9 @@ namespace RESUM {
 		  const int cpl,const double &mu2) const;
 
     virtual size_t AddObservable(Observable_Base *const obs,
-			 ATOOLS::Histogram *const h);
+                                      ATOOLS::Histogram *const h);
 
-    virtual size_t AddObservable(const std::string& name,
+    virtual std::string AddObservable(const std::string& name,
                                  const std::vector<double>& xvals);
    
     size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}

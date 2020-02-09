@@ -574,7 +574,7 @@ size_t Resum::AddObservable(Observable_Base *const obs,
   return m_ress.size()-1;
 }
 
-size_t Resum::AddObservable(const std::string& name,
+std::string Resum::AddObservable(const std::string& name,
 			    const std::vector<double>& xvals)
 {
   Observable_Base* obs = RESUM::Observable_Getter::GetObject(name,
@@ -588,7 +588,7 @@ size_t Resum::AddObservable(const std::string& name,
     m_ress.push_back({-1,-1});
   }
   else  msg_Error()<<"Observable not found: "<<name<<".\n";
-  return m_ress.size()-1;
+  return obs->Tag();
 }
 
 

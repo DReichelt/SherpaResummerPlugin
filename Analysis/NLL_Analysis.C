@@ -80,10 +80,12 @@ NLL_Analysis::NLL_Analysis(const Argument_Matrix& params):
   p_resum->ResetObservables();
   m_channelAlgs.clear();
   for(size_t i=1; i<params.size(); i++) {
+    std::vector<std::string> ps = {params[i].begin()+1,
+                                   params[i].end()};
     if (params[i][0] == "ChAlg") {
       m_channelAlgs.emplace_back(ChAlg_Getter::GetObject(params[i][1],
                                                          {params[i][1],
-                                                          {&params[i][1],&params[i][params.size()-1]}}));
+                                                          ps}));
       continue;
     }
     // to stay consistent with previous defaults
@@ -98,20 +100,22 @@ NLL_Analysis::NLL_Analysis(const Argument_Matrix& params):
 
     if (params[i].size()<5) continue;
     m_nObs++;
-    const string& obsName = params[i][0];
-    m_ObsNames.push_back(obsName);
     const double xmin = ATOOLS::ToType<double>(ip->Interprete(params[i][1]));
     const double xmax = ATOOLS::ToType<double>(ip->Interprete(params[i][2]));
     const int nbin = ATOOLS::ToType<int>(ip->Interprete(params[i][3]));
     const string& htype = params[i][4];
-    Histogram dummy = {HistogramType(htype),xmin,xmax,nbin,obsName};
+    Histogram dummy = {HistogramType(htype),xmin,xmax,nbin,"Dummy"};
     vector<double> xvals(dummy.Nbin()+1);
+
+    // returns index of observable
+    const string& obsName = p_resum->AddObservable(params[i][0],xvals);
+    m_ObsNames.push_back(obsName);
     xvals[0] = dummy.LowEdge(0);
     for(size_t i=0; i<dummy.Nbin(); i++) xvals[i+1] = dummy.HighEdge(i);
     m_NLL[obsName] = CumDist(xvals.size(),{0,0});
     m_expLO[obsName] = CumDist(xvals.size(),{0,0});
     m_expNLO[obsName] = CumDist(xvals.size(),{0,0});    
-    p_resum->AddObservable(obsName,xvals);
+    
     
   }
 }
