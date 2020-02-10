@@ -577,6 +577,7 @@ size_t Resum::AddObservable(Observable_Base *const obs,
 std::string Resum::AddObservable(const std::string& name,
 			    const std::vector<double>& xvals)
 {
+  DEBUG_FUNC(name);
   Observable_Base* obs = RESUM::Observable_Getter::GetObject(name,
                                                              RESUM::Observable_Key(name));
   if(obs != nullptr) {
@@ -586,6 +587,7 @@ std::string Resum::AddObservable(const std::string& name,
     m_resExpLO.push_back(vector<double>(xvals.size()));
     m_resExpNLO.push_back(vector<double>(xvals.size()));
     m_ress.push_back({-1,-1});
+    msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
   }
   else  msg_Error()<<"Observable not found: "<<name<<".\n";
   return obs->Tag();
@@ -1005,8 +1007,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   return R;
 }
 
-double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) 
-{
+double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
+  DEBUG_FUNC(L);
   if(m_gmode & GROOM_MODE::SD) {
     PDFexp = 0;
     if(m_gmode & GROOM_MODE::SD_PDF or
@@ -1016,13 +1018,14 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp)
     }
     return 1.;
   }
+  msg_Debugging()<<"Calculate pdf contribution, no grooming assumed.\n";
   //strong coupling & PDFs
   const double as = (*p_as)(p_ampl->MuR2());
 
   double old_pdffac=1.,new_pdffac = 1.;
   
   const double scale= p_ampl->MuF2();
-  msg_Debugging() << "scale before: " << scale << std::endl;
+  msg_Debugging() << "scale before: " << scale << "\n";
 
   for (size_t i=0;i<2;i++) {
     if (p_ampl->Leg(i)->Flav().IsLepton()) continue;
@@ -1034,8 +1037,12 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp)
 
     //O(as) expansion of the PDF evolution
     Single_Process *proc(p_ampl->Proc<Single_Process>());
-    double z(x+(1.0-x)*m_rn[i]);
+    if(proc == nullptr) {
+       THROW(fatal_error,"Internal error in PDF evaluation.\n");
+    }
+    double z = x+(1.0-x)*m_rn[i];
 
+    msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
     PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,0.0,0.0,1.);
