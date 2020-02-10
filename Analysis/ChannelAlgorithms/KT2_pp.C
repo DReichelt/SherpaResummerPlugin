@@ -18,7 +18,9 @@ KT2_pp::KT2_pp(const ChAlg_Key& parameters)
   : ChannelAlgorithm_Base(parameters) {
   m_nborn = RESUM::to_type<int>(m_params[0]);
   if(m_params.size()>1) {
-    if(m_params[1] == "") m_mode = MODE::ALL;
+    if(m_params[1] == "" or
+       m_params[1] == "''" or
+       m_params[1] == "ALL") m_mode = MODE::ALL;
     else if(m_params[1] == "BLAND") m_mode = MODE::BLAND;
     else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
     else THROW(fatal_error,
@@ -29,31 +31,38 @@ KT2_pp::KT2_pp(const ChAlg_Key& parameters)
     for(int j=0; j<=m_nborn; j+=2) {
       m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
                                +std::string(j,'q'));
-      m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
-                               +std::string(j+1,'q'));
       m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
                                +std::string(j,'q'));
+      if(m_nborn-j > 0) {
+        m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                 +std::string(j+1,'q'));
+      }
     }
   }
   else if(m_mode==MODE::BLAND) {
     for(int j=0; j<=m_nborn; j+=2) {
       m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
                                +std::string(j,'q')+std::string("_BLAND"));
-      m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
-                               +std::string(j+1,'q')+std::string("_BLAND"));
       m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
                                +std::string(j,'q')+std::string("_BLAND"));
+
+      if(m_nborn-j > 0) {
+        m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                 +std::string(j+1,'q')+std::string("_BLAND"));
+      }
     }
   }
   else if(m_mode==MODE::BLAND_Z) {
     for(int j=0; j<=m_nborn; j+=2) {
       m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
                                +std::string(j,'q')+std::string("_BLAND_Z"));
-      m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
-                               +std::string(j+1,'q')+std::string("_BLAND_Z"));
       if(j>1) {
         m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
                                  +std::string(j,'q')+std::string("_BLAND_Z"));
+      }
+      if(m_nborn-j > 0) {
+        m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                 +std::string(j+1,'q')+std::string("_BLAND_Z"));
       }
     }
   }
