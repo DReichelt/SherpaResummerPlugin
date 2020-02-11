@@ -343,10 +343,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   }
 
   // store resummed result
-  if(weight > 10E10) {
-    msg_Out()<<*p_ampl<<"\n";
-    exit(1);
-  }
   m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
