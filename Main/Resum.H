@@ -93,6 +93,8 @@ namespace RESUM {
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
                                                      {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND},
+                                                     // from here on, modes are mostly usefull for debugging,
+                                                     // should not appear in physics calculations
                                                      {"CKINV", MODE::CKINV},
                                                      {"CKCOUL", MODE::CKCOUL},
                                                      {"CHECKINVERSE", MODE::CKINV},
