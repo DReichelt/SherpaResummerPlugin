@@ -263,8 +263,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   return 1;
 }
 
-void Resum::FillValue(size_t i, const double v, const double LResum, const double epRatio)
-{
+void Resum::FillValue(size_t i, const double v, const double LResum, const double epRatio) {
   DEBUG_FUNC(v);
   if(IsZero(v)) return;
   if(v > 1)     return;
@@ -344,21 +343,25 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   }
 
   // store resummed result
-  m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
+  if(weight > 10E10) {
+    msg_Out()<<*p_ampl<<"\n";
+    exit(1);
+  }
+  m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
   if(!(m_amode & MODE::COLLEXPAND)) {
-    msg_Out()<<"Ignore coll. expansion.\n";
+    msg_Debugging()<<"Ignore coll. expansion.\n";
     G = MatrixD(4,4,0);
     FexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::SOFTEXPAND)) {
-    msg_Out()<<"Ignore soft expansion.\n";
+    msg_Debugging()<<"Ignore soft expansion.\n";
     SoftexpNLL_LO = 0;
     SoftexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::PDFEXPAND)) {
-    msg_Out()<<"Ignore pdf expansion.\n";
+    msg_Debugging()<<"Ignore pdf expansion.\n";
     PDFexp = 0;
   }
 
@@ -379,7 +382,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }  
   // store leading order expansion
-  m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+  m_resExpLO[m_n][i] = m_resExpLO[m_n][i];//std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
   
   H(2,4) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(1,2),2) );
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
@@ -400,7 +403,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
   // store next-to-leading order expansion
-  m_resExpNLO[m_n][i] = std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
+  m_resExpNLO[m_n][i] = m_resExpNLO[m_n][i];//std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
 }
 
 
@@ -1028,7 +1031,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
     // if(proc == nullptr) {
     //    THROW(fatal_error,"Internal error in PDF evaluation.\n");
     // }
-    double z = x+(1.0-x)*m_rn[i];
+    const double z = x+(1.0-x)*m_rn[i];
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
@@ -1039,7 +1042,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
     old_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
 
     //new PDF scale
-    double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
+    const double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
     if (scale*scalefac<p_pdf[i]->Q2Min()) {
       //freeze PDF at Q2Min 
       p_pdf[i]->Calculate(x,p_pdf[i]->Q2Min());
