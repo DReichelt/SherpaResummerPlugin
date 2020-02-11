@@ -11,7 +11,7 @@
 
 #include "Main/Cluster_Definitions.H"
 
-
+#include "METOOLS/Explicit/NLO_Counter_Terms.H"
 #include "ATOOLS/Org/Data_Reader.H"
 #include "ATOOLS/Math/Histogram.H"
 #include "Analysis/Observable_Base.H"
@@ -286,57 +286,44 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   double weight = 1.;
 
   // calculate collinear piece
-  weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
-  weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
-
-  // TODO: GroomMode called w/ size_t = -1 ??
-  // m_gmode = m_obss_n->GroomMode(v, moms, flavs, -1);
-  // if(!(m_gmode & GROOM_MODE::SD)) {
+  if(!(m_amode&MODE::IGNCOLL)) {
+    weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
+    weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
+  }
 
   // some checks for colour calculation
-  double dummy1, dummy2;
-  const double calcs1 = m_amode & MODE::CKINV ?
-    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
-  const double calcs2 = m_amode & MODE::CKCOUL ?
-    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
-  // actually calculate soft function
-  weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
-  // evaluate tests if needed
-  if(m_amode & MODE::CKINV) {
-    msg_Out()<<"Check inversion -> "<<weight-calcs1<<".\n";
-    if(!IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
-                                               <<weight-calcs1<<" ratio = "<<(weight-calcs1)/weight<<".\n";
-  }
-  if(m_amode & MODE::CKCOUL) {
-    msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
-    if(!IsZero(weight-calcs2,1e-6)) {
-      if(p_ampl->Leg(0)->Flav().StrongCharge()==0 or p_ampl->Leg(1)->Flav().StrongCharge()==0) {
-        msg_Error()<<"Coulomb phases did not cancel despite singlet initial state -> "
-                     <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
-      }
+  if(!(m_amode&MODE::IGNSOFT)) {
+    double dummy1, dummy2;
+    const double calcs1 = m_amode & MODE::CKINV ?
+      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
+    const double calcs2 = m_amode & MODE::CKCOUL ?
+      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
+    // actually calculate soft function
+    weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    // evaluate tests if needed
+    if(m_amode & MODE::CKINV) {
+      msg_Out()<<"Check inversion -> "<<weight-calcs1<<".\n";
+      if(!IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
+                                                 <<weight-calcs1<<" ratio = "<<(weight-calcs1)/weight<<".\n";
     }
-    if(IsZero(weight-calcs2,1e-6) and p_ampl->Leg(0)->Flav().StrongCharge()!=0 and p_ampl->Leg(1)->Flav().StrongCharge()!=0)
+    if(m_amode & MODE::CKCOUL) {
+      msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
+      if(!IsZero(weight-calcs2,1e-6)) {
+        if(p_ampl->Leg(0)->Flav().StrongCharge()==0 or p_ampl->Leg(1)->Flav().StrongCharge()==0) {
+          msg_Error()<<"Coulomb phases did not cancel despite singlet initial state -> "
+                     <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+        }
+      }
+      if(IsZero(weight-calcs2,1e-6) and p_ampl->Leg(0)->Flav().StrongCharge()!=0 and p_ampl->Leg(1)->Flav().StrongCharge()!=0)
         msg_Out()<<"Complete cancellation of coulomb phases with non-singlet II states ->"
                  <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+    }
   }
-  // }
-  // else {
-  //   SoftexpNLL_LO = 0;
-  //   SoftexpNLL_NLO = 0;
-  // }
-  // non-global logs, maybe some day
-  // weight*=1
 
-  // TODO: GroomMode called w/ size_t = -2 ??
-  // m_gmode = m_obss_n->GroomMode(v, moms, flavs, -2);
-  // if(!(m_gmode & GROOM_MODE::SD)) {    
-  //calc PDF factor for IS legs
-  weight *= CalcPDF(L, LResum, PDFexp);
-  // }
-  // else {
-  //   PDFexp = 0;
-  // }
-    
+  if(!(m_amode&MODE::IGNPDF)) {
+    weight *= CalcPDF(L, LResum, PDFexp);
+  }
+
   // evaluate possible endpoint corrections
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
   const double beta0 = m_params.beta0(p_ampl->MuR2());
@@ -1036,16 +1023,15 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
     p_pdf[i]->Calculate(x,scale);
 
     //O(as) expansion of the PDF evolution
-    Single_Process *proc(p_ampl->Proc<Single_Process>());
-    if(proc == nullptr) {
-       THROW(fatal_error,"Internal error in PDF evaluation.\n");
-    }
+    // Single_Process *proc(p_ampl->Proc<Single_Process>());
+    // if(proc == nullptr) {
+    //    THROW(fatal_error,"Internal error in PDF evaluation.\n");
+    // }
     double z = x+(1.0-x)*m_rn[i];
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
-    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
-    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
-    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,0.0,0.0,1.);
+    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
+    PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
 
     // @TODO: why is this needed????
     p_pdf[i]->Calculate(x,scale);

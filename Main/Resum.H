@@ -80,6 +80,9 @@ namespace RESUM {
                LARGENC = 1    << 3,     // calculate in large nc limit
                CKINV = 1      << 4,     // check the inverse of metric
                CKCOUL = 1     << 5,     // check effect of coulomb phases
+               IGNCOLL = 1    << 6,     // ignore the collinear radiators
+               IGNSOFT = 1    << 7,     // ignore the soft function
+               IGNPDF = 1     << 8,     // ignore the pdf ratio
                EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND // conveninece def.
     };
 
@@ -92,7 +95,14 @@ namespace RESUM {
                                                      {"CKINV", MODE::CKINV},
                                                      {"CKCOUL", MODE::CKCOUL},
                                                      {"CHECKINVERSE", MODE::CKINV},
-                                                     {"CHECKCOULOMB", MODE::CKCOUL}};
+                                                     {"CHECKCOULOMB", MODE::CKCOUL},
+                                                     {"CHECKCOULOMB", MODE::CKCOUL},
+                                                     {"IGNCOLL", MODE::IGNCOLL},
+                                                     {"IGNORECOLLINEAR", MODE::IGNCOLL},
+                                                     {"IGNSOFT", MODE::IGNSOFT},
+                                                     {"IGNORESOFT", MODE::IGNSOFT},
+                                                     {"IGNPDF", MODE::IGNPDF},
+                                                     {"IGNOREPDF",MODE::IGNPDF}};
 
     enum MATCH_MODE {
       NONE = 0,
