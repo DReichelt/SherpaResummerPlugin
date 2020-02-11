@@ -832,8 +832,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
      m_collgmodes[1] & GROOM_MODE::SD_COLL) {
     THROW(not_implemented, "No non-trivial coll. function for groomed initial states implementd");
   }
-  
-  for(size_t i = m_gmode & GROOM_MODE::SD ? 0 : 2;
+  for(size_t i = (m_gmode & GROOM_MODE::SD) ? 2 : 0;
       i<p_ampl->Legs().size(); i++) {
     //m_gmode = m_obss_n->GroomMode(exp(-L), moms, flavs, i);
         
