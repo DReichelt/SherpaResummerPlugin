@@ -338,8 +338,10 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
 
-  if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
-  else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
+  if(!(m_amode&MODE::IGNFFUNC)) {
+    if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
+    else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
+  }
 
   // store resummed result
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;

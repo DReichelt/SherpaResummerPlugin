@@ -83,6 +83,7 @@ namespace RESUM {
                IGNCOLL = 1    << 6,     // ignore the collinear radiators
                IGNSOFT = 1    << 7,     // ignore the soft function
                IGNPDF = 1     << 8,     // ignore the pdf ratio
+               IGNFFUNC = 1   << 9,     // ignore ffunction
                EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND // conveninece def.
     };
 
@@ -102,7 +103,9 @@ namespace RESUM {
                                                      {"IGNSOFT", MODE::IGNSOFT},
                                                      {"IGNORESOFT", MODE::IGNSOFT},
                                                      {"IGNPDF", MODE::IGNPDF},
-                                                     {"IGNOREPDF",MODE::IGNPDF}};
+                                                     {"IGNOREPDF",MODE::IGNPDF},
+                                                     {"IGNFFUNC",MODE::IGNFFUNC},
+                                                     {"IGNOREFFUNCTION",MODE::IGNFFUNC}};
 
     enum MATCH_MODE {
       NONE = 0,
