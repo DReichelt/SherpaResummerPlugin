@@ -1010,7 +1010,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   const double as = (*p_as)(p_ampl->MuR2());
 
   double old_pdffac=1.,new_pdffac = 1.;
-  
+
   const double scale= p_ampl->MuF2();
   msg_Debugging() << "scale before: " << scale << "\n";
 
@@ -1031,11 +1031,18 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
-    PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
 
-    // @TODO: why is this needed????
-    p_pdf[i]->Calculate(x,scale);
-    old_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+
+    const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+    old_pdffac*=fb;
+
+    if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+      msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+      PDFexp += 0;
+    }
+    else {
+      PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
+    }
 
     //new PDF scale
     const double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
