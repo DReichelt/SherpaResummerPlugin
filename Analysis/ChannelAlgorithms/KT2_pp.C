@@ -127,7 +127,7 @@ double KT2_pp::KT2(const Vec4D &p1,
     return std::numeric_limits<double>::infinity();
   }
   if(flavd(fl1)) {
-    if(m_mode&MODE::BLAND) {
+    if(m_mode&MODE::BLAND  and flavd(fl2)) {
       for(int i=0; i<6; i++) {
         if(fl1[i] != fl2[i]) {
           return std::numeric_limits<double>::infinity();
