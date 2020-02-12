@@ -289,6 +289,14 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
     weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
   }
+  bool largeWeight = weight > 1e100;
+  if(largeWeight) {
+    msg_Debugging()<<"Large weight in Resum:";
+    msg_Debugging()<<*p_ampl<<"\n\n";
+    msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
+             <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
+    if(i>0) msg_Debugging()<<"Last Weight = "<<m_resNLL[m_n][i-1]<<"\n";
+  }
 
   // some checks for colour calculation
   if(!(m_amode&MODE::IGNSOFT)) {
@@ -301,9 +309,10 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
     // evaluate tests if needed
     if(m_amode & MODE::CKINV) {
-      msg_Out()<<"Check inversion -> "<<weight-calcs1<<".\n";
-      if(!IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
-                                                 <<weight-calcs1<<" ratio = "<<(weight-calcs1)/weight<<".\n";
+      msg_Debugging()<<"Check inversion -> "<<weight-calcs1<<".\n";
+      if(!std::isnan(weight) and
+         !IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
+                                                 <<weight-calcs1<<" rel. dev. = "<<(weight-calcs1)/weight<<". \n\n";
     }
     if(m_amode & MODE::CKCOUL) {
       msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
@@ -318,10 +327,16 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
                  <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
     }
   }
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after soft = "<<weight<<"\n";
 
   if(!(m_amode&MODE::IGNPDF)) {
     weight *= CalcPDF(L, LResum, PDFexp);
   }
+  largeWeight = largeWeight or weight > 1e100;
+  if(largeWeight)
+    msg_Debugging()<<"Weight after PDF = "<<weight<<".\n";
 
   // evaluate possible endpoint corrections
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
@@ -336,11 +351,20 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight *= exp(-epRatio*pow(L,1)*RAtEnd0);
     }
   }
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after ep subtract = "<<weight<<".\n";
 
   if(!(m_amode&MODE::IGNFFUNC)) {
-    if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
+    if(!std::isnan(Rp)) {
+      if(largeWeight) msg_Out()<<"Calc F("<<Rp<<")\n";
+      weight*=m_F(Rp,FexpNLL_NLO);
+    }
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
   }
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after F = "<<weight<<".\n\n";
 
   // store resummed result
   m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
@@ -629,9 +653,9 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   const MatrixD& met = p_cmetric->CMetric();
   InverseLowerTriangular(met);
   MatrixC ICmetric = p_cmetric->Imetric();
-  if(Check & MODE::CKINV)
+  if(Check & MODE::CKINV) {
     ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
-
+  }
   
   const size_t dim = met.numCols();
   
