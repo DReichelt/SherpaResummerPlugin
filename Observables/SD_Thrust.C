@@ -50,18 +50,10 @@ namespace RESUM {
         return m_gmode;
       }
       else {
+        return GROOM_MODE::SD_COLL;
         if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
         else return m_gmode;        
       }
-      // return m_gmode;
-       
-       //  if(l<2){
-       //      return m_gmode;
-       //  }
-       //  else{
-       //      if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
-       //      else return m_gmode;
-       //  }
     }
 
     double GroomTransitionPoint(const std::vector<ATOOLS::Vec4D>& p,
