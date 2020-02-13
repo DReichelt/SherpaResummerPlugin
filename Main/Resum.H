@@ -41,6 +41,8 @@ namespace RESUM {
     
     MODEL::Running_AlphaS *p_as;
 
+    PDF::ISR_Handler* p_isr;
+
     Params m_params;
 
     //list of available and initialized bases
@@ -150,8 +152,14 @@ namespace RESUM {
                     double &Rp, MatrixD& G, double& S1,
                     double& ExpAtEnd, double& RAtEnd);
 
-
     double CalcPDF(const double L, const double LResum, double &PDFexp);
+
+    double CollinearCounterTerms( const int i,
+                                  const ATOOLS::Flavour &fl,
+                                  const ATOOLS::Vec4D &p,
+                                  const double &z,
+                                  const double muF2) const;
+
     double T(const double x);
 
     double Value(const double v, const double LResum, double epRatio);

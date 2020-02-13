@@ -37,9 +37,7 @@ Comix_Interface::~Comix_Interface()
 
 Hard_Matrix *Comix_Interface::ComputeHardMatrix
 (ATOOLS::Cluster_Amplitude *const ampl,
- const std::vector<PHASIC::Idx_Vector>& perms
- )
-{
+ const std::vector<PHASIC::Idx_Vector>& perms) {
   COMIX::Single_Process *xs=
     GetProcess(ampl)->Get<COMIX::Single_Process>();
   DEBUG_FUNC(xs->Name());

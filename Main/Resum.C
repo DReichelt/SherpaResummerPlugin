@@ -43,7 +43,7 @@ Resum::Resum(ISR_Handler *const isr,
   p_clus = new Cluster_Definitions();
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
-  
+  p_isr = isr;
 
   p_pdf = new PDF_Base*[2];
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
@@ -386,7 +386,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   }
 
   MatrixD H(4,4,0);
-
   H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
   H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
@@ -1018,6 +1017,58 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   return R;
 }
 
+double Resum::CollinearCounterTerms(const int i, 
+                                    const ATOOLS::Flavour &fl,
+                                    const ATOOLS::Vec4D &p,
+                                    const double &z,
+                                    const double muF2) const {
+  // determine ct
+  double ct = 0.0; 
+  double x = p_isr->CalcX(p);
+  Flavour jet(kf_jet);
+  double fb=p_isr->PDFWeight((1<<(i+1))|8,p,p,muF2,muF2,fl,fl,0);
+  if (IsZero(fb)) {
+    msg_Tracking()<<METHOD<<"(): Zero xPDF ( f_{"<<fl<<"}("
+		  <<x<<","<<sqrt(muF2)<<") = "<<fb<<" ). Skip.\n";
+    return 0.0;
+  }
+
+  // skip PDF ratio if high-x sanity condition not fullfilled
+  if (dabs(fb)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+    msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+    return 0.0;
+  }
+
+  msg_Debugging()<<"Beam "<<i<<": z = "<<z<<", f_{"<<fl
+		 <<"}("<<x<<","<<sqrt(muF2)<<") = "<<fb<<" {\n";
+  for (size_t j(0);j<jet.Size();++j) {
+    const double Pf = METOOLS::FPab(jet[j],fl,z);
+    const double Ps = METOOLS::SPab(jet[j],fl,z);
+    if (Pf+Ps==0.0) continue;
+    const double Pi = METOOLS::IPab(jet[j],fl,x);
+    const double H = METOOLS::Hab(jet[j],fl);
+    const double fa=p_isr->PDFWeight
+      (1<<(i+1),p/z,p/z,muF2,muF2,jet[j],jet[j],0);
+    const double fc=p_isr->PDFWeight
+      (1<<(i+1),p,p,muF2,muF2,jet[j],jet[j],0);
+    msg_Debugging()<<"  P_{"<<jet[j]<<","<<fl
+		   <<"}("<<z<<") = {F="<<Pf<<",S="<<Ps
+		   <<",I="<<Pi<<"}, f_{"<<jet[j]<<"}("
+		   <<x/z<<","<<sqrt(muF2)<<") = "<<fa
+		   <<", f_{"<<jet[j]<<"}("<<x<<","
+		   <<sqrt(muF2)<<") = "<<fc<<"\n";
+    if (IsZero(fa)||IsZero(fc)) {
+      msg_Tracking()<<METHOD<<"(): Zero xPDF. No contrib from "<<j
+                    <<". Skip .\n";
+    }
+    ct += ((fa/z*Pf+(fa/z-fc)*Ps)*(1.0-x)+fc*(H-Pi))/fb;
+  }
+  msg_Debugging()<<"} -> "<<ct<<"\n";
+  return ct;
+}
+
+
+
 double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   DEBUG_FUNC(L);
   if(m_gmode & GROOM_MODE::SD) {
@@ -1033,7 +1084,8 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   //strong coupling & PDFs
   const double as = (*p_as)(p_ampl->MuR2());
 
-  double old_pdffac=1.,new_pdffac = 1.;
+  double old_pdffac = 1.;
+  double new_pdffac = 1.;
 
   const double scale= p_ampl->MuF2();
   msg_Debugging() << "scale before: " << scale << "\n";
@@ -1055,18 +1107,21 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
-
+    PDFexp += -2.0/(m_a[i]+m_b[i])*CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale);
+    // msg_Out()<<CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale)<<" "
+    //          <<METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,as,exp(1.),1.,scale,p_pdf[i])*as/(2.*M_PI)<<"\n";
+    // msg_Out()<<x<<" "<<p_isr->CalcX(-p_ampl->Leg(i)->Mom())<<"\n\n";
 
     const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
-    old_pdffac*=fb;
+    old_pdffac *= fb;
 
-    if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
-      msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
-      PDFexp += 0;
-    }
-    else {
-      PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
-    }
+    // if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+    //   msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+    //   PDFexp += 0;
+    // }
+    // else {
+    //   PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
+    // }
 
     //new PDF scale
     const double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
@@ -1078,7 +1133,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
       p_pdf[i]->Calculate(x,scale*scalefac);
     }
     msg_Debugging() << "scale after: " << scale*scalefac << std::endl;
-    new_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
+    new_pdffac *= p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
   }
   return new_pdffac/old_pdffac;
 }
