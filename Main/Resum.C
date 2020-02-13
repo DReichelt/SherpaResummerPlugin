@@ -11,7 +11,7 @@
 
 #include "Main/Cluster_Definitions.H"
 
-
+#include "METOOLS/Explicit/NLO_Counter_Terms.H"
 #include "ATOOLS/Org/Data_Reader.H"
 #include "ATOOLS/Math/Histogram.H"
 #include "Analysis/Observable_Base.H"
@@ -263,8 +263,7 @@ double Resum::Value(const double v, const double LResum, const double epRatio)
   return 1;
 }
 
-void Resum::FillValue(size_t i, const double v, const double LResum, const double epRatio)
-{
+void Resum::FillValue(size_t i, const double v, const double LResum, const double epRatio) {
   DEBUG_FUNC(v);
   if(IsZero(v)) return;
   if(v > 1)     return;
@@ -286,57 +285,59 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   double weight = 1.;
 
   // calculate collinear piece
-  weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
-  weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
-
-  // TODO: GroomMode called w/ size_t = -1 ??
-  // m_gmode = m_obss_n->GroomMode(v, moms, flavs, -1);
-  // if(!(m_gmode & GROOM_MODE::SD)) {
+  if(!(m_amode&MODE::IGNCOLL)) {
+    weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
+    weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
+  }
+  bool largeWeight = weight > 1e100;
+  if(largeWeight) {
+    msg_Debugging()<<"Large weight in Resum:";
+    msg_Debugging()<<*p_ampl<<"\n\n";
+    msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
+             <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
+    if(i>0) msg_Debugging()<<"Last Weight = "<<m_resNLL[m_n][i-1]<<"\n";
+  }
 
   // some checks for colour calculation
-  double dummy1, dummy2;
-  const double calcs1 = m_amode & MODE::CKINV ?
-    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
-  const double calcs2 = m_amode & MODE::CKCOUL ?
-    weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
-  // actually calculate soft function
-  weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
-  // evaluate tests if needed
-  if(m_amode & MODE::CKINV) {
-    msg_Out()<<"Check inversion -> "<<weight-calcs1<<".\n";
-    if(!IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
-                                               <<weight-calcs1<<" ratio = "<<(weight-calcs1)/weight<<".\n";
-  }
-  if(m_amode & MODE::CKCOUL) {
-    msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
-    if(!IsZero(weight-calcs2,1e-6)) {
-      if(p_ampl->Leg(0)->Flav().StrongCharge()==0 or p_ampl->Leg(1)->Flav().StrongCharge()==0) {
-        msg_Error()<<"Coulomb phases did not cancel despite singlet initial state -> "
-                     <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
-      }
+  if(!(m_amode&MODE::IGNSOFT)) {
+    double dummy1, dummy2;
+    const double calcs1 = m_amode & MODE::CKINV ?
+      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
+    const double calcs2 = m_amode & MODE::CKCOUL ?
+      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
+    // actually calculate soft function
+    weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    // evaluate tests if needed
+    if(m_amode & MODE::CKINV) {
+      msg_Debugging()<<"Check inversion -> "<<weight-calcs1<<".\n";
+      if(!std::isnan(weight) and
+         !IsZero(weight-calcs1,1e-6)) msg_Error()<<"Color inversion check failed -> "
+                                                 <<weight-calcs1<<" rel. dev. = "<<(weight-calcs1)/weight<<". \n\n";
     }
-    if(IsZero(weight-calcs2,1e-6) and p_ampl->Leg(0)->Flav().StrongCharge()!=0 and p_ampl->Leg(1)->Flav().StrongCharge()!=0)
+    if(m_amode & MODE::CKCOUL) {
+      msg_Debugging()<<"Check for coulomb cancellation -> "<<weight<<" - "<<calcs2<<" = "<<weight-calcs2<<".\n";
+      if(!IsZero(weight-calcs2,1e-6)) {
+        if(p_ampl->Leg(0)->Flav().StrongCharge()==0 or p_ampl->Leg(1)->Flav().StrongCharge()==0) {
+          msg_Error()<<"Coulomb phases did not cancel despite singlet initial state -> "
+                     <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+        }
+      }
+      if(IsZero(weight-calcs2,1e-6) and p_ampl->Leg(0)->Flav().StrongCharge()!=0 and p_ampl->Leg(1)->Flav().StrongCharge()!=0)
         msg_Out()<<"Complete cancellation of coulomb phases with non-singlet II states ->"
                  <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
+    }
   }
-  // }
-  // else {
-  //   SoftexpNLL_LO = 0;
-  //   SoftexpNLL_NLO = 0;
-  // }
-  // non-global logs, maybe some day
-  // weight*=1
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after soft = "<<weight<<"\n";
 
-  // TODO: GroomMode called w/ size_t = -2 ??
-  // m_gmode = m_obss_n->GroomMode(v, moms, flavs, -2);
-  // if(!(m_gmode & GROOM_MODE::SD)) {    
-  //calc PDF factor for IS legs
-  weight *= CalcPDF(L, LResum, PDFexp);
-  // }
-  // else {
-  //   PDFexp = 0;
-  // }
-    
+  if(!(m_amode&MODE::IGNPDF)) {
+    weight *= CalcPDF(L, LResum, PDFexp);
+  }
+  largeWeight = largeWeight or weight > 1e100;
+  if(largeWeight)
+    msg_Debugging()<<"Weight after PDF = "<<weight<<".\n";
+
   // evaluate possible endpoint corrections
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
   const double beta0 = m_params.beta0(p_ampl->MuR2());
@@ -350,26 +351,37 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight *= exp(-epRatio*pow(L,1)*RAtEnd0);
     }
   }
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after ep subtract = "<<weight<<".\n";
 
-  if(!std::isnan(Rp)) weight*=m_F(Rp,FexpNLL_NLO);
-  else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
+  if(!(m_amode&MODE::IGNFFUNC)) {
+    if(!std::isnan(Rp)) {
+      if(largeWeight) msg_Out()<<"Calc F("<<Rp<<")\n";
+      weight*=m_F(Rp,FexpNLL_NLO);
+    }
+    else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
+  }
+  largeWeight = largeWeight or weight > 1e100;
+  if (largeWeight)
+    msg_Debugging()<<"Weight after F = "<<weight<<".\n\n";
 
   // store resummed result
-  m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
+  m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
   if(!(m_amode & MODE::COLLEXPAND)) {
-    msg_Out()<<"Ignore coll. expansion.\n";
+    msg_Debugging()<<"Ignore coll. expansion.\n";
     G = MatrixD(4,4,0);
     FexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::SOFTEXPAND)) {
-    msg_Out()<<"Ignore soft expansion.\n";
+    msg_Debugging()<<"Ignore soft expansion.\n";
     SoftexpNLL_LO = 0;
     SoftexpNLL_NLO = 0;
   }
   if(!(m_amode & MODE::PDFEXPAND)) {
-    msg_Out()<<"Ignore pdf expansion.\n";
+    msg_Debugging()<<"Ignore pdf expansion.\n";
     PDFexp = 0;
   }
 
@@ -390,7 +402,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }  
   // store leading order expansion
-  m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+  m_resExpLO[m_n][i] = m_resExpLO[m_n][i];//std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
   
   H(2,4) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(1,2),2) );
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
@@ -411,7 +423,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
   // store next-to-leading order expansion
-  m_resExpNLO[m_n][i] = std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
+  m_resExpNLO[m_n][i] = m_resExpNLO[m_n][i];//std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
 }
 
 
@@ -641,9 +653,9 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   const MatrixD& met = p_cmetric->CMetric();
   InverseLowerTriangular(met);
   MatrixC ICmetric = p_cmetric->Imetric();
-  if(Check & MODE::CKINV)
+  if(Check & MODE::CKINV) {
     ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
-
+  }
   
   const size_t dim = met.numCols();
   
@@ -1022,7 +1034,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   const double as = (*p_as)(p_ampl->MuR2());
 
   double old_pdffac=1.,new_pdffac = 1.;
-  
+
   const double scale= p_ampl->MuF2();
   msg_Debugging() << "scale before: " << scale << "\n";
 
@@ -1035,23 +1047,29 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
     p_pdf[i]->Calculate(x,scale);
 
     //O(as) expansion of the PDF evolution
-    Single_Process *proc(p_ampl->Proc<Single_Process>());
-    if(proc == nullptr) {
-       THROW(fatal_error,"Internal error in PDF evaluation.\n");
-    }
-    double z = x+(1.0-x)*m_rn[i];
+    // Single_Process *proc(p_ampl->Proc<Single_Process>());
+    // if(proc == nullptr) {
+    //    THROW(fatal_error,"Internal error in PDF evaluation.\n");
+    // }
+    const double z = x+(1.0-x)*m_rn[i];
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
-    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,2.*M_PI);
-    PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
-    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,0.0,0.0,1.);
+    // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
 
-    // @TODO: why is this needed????
-    p_pdf[i]->Calculate(x,scale);
-    old_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+
+    const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+    old_pdffac*=fb;
+
+    if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+      msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+      PDFexp += 0;
+    }
+    else {
+      PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
+    }
 
     //new PDF scale
-    double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
+    const double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
     if (scale*scalefac<p_pdf[i]->Q2Min()) {
       //freeze PDF at Q2Min 
       p_pdf[i]->Calculate(x,p_pdf[i]->Q2Min());

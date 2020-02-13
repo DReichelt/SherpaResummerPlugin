@@ -51,6 +51,8 @@ namespace RESUM {
 
 }// end of namespace RESUM
 
+#include "AddOns/Analysis/Main/Analysis_Handler.H"
+#include "SHERPA/Single_Events/Event_Handler.H"
 #include "AddOns/Analysis/Main/Primitive_Analysis.H"
 #include "ATOOLS/Org/MyStrStream.H"
 #include "ATOOLS/Org/Shell_Tools.H"
@@ -131,13 +133,35 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   m_Ncount += ncount;
   m_sumW += weight;
   m_sumW2 += sqr(weight);
-  Particle_List* all = p_ana->GetParticleList(m_listname);
-  if (all == nullptr) AddZero(ncount,0);
+  Particle_List* allps = p_ana->GetParticleList(m_listname);
+  if (allps == nullptr) AddZero(ncount,0);
+  Particle_List all = *allps; 
+  
+  Vec4D_Vector mom(2+all.size());
+  Flavour_Vector fl(2+all.size());
+  for (size_t i=0; i<all.size(); i++) {
+    mom[2+i]=all[i]->Momentum();
+    fl[2+i]=all[i]->Flav();
+  }
+  if(Analysis()->Sub() and Analysis()->Real() and
+     Analysis()->Sub() != Analysis()->Real()) {
+    // for S-Event get mapped flavours
+    // @TODO: could also do it this way for R, what is the proper way
+    fl[0] = Analysis()->Sub()->p_fl[0];
+    fl[1] = Analysis()->Sub()->p_fl[1];
+  }
+  else {
+    // R, VI and B envents
+    const ATOOLS::Blob* sig = Analysis()->AnalysisHandler()->EventHandler()->GetBlobs()->FindFirst(btp::Signal_Process);
+    fl[0] = sig->ConstInParticle(0)->Flav();
+    fl[1] = sig->ConstInParticle(1)->Flav();
+  }
 
+  
   // find out channels
   vector<string> channels(m_channelAlgs.size());
   for(size_t i=0; i<channels.size(); i++) {
-    channels[i] = m_channelAlgs[i]->Channel(*all);
+    channels[i] = m_channelAlgs[i]->Channel(mom,fl,2);
   }
 
   for(const string& channel: channels) {
