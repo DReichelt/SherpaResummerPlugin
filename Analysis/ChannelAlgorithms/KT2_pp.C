@@ -174,6 +174,8 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
     THROW(fatal_error,"This algorithm is only valid for pp collisions, but one beam had no strong charge.");
   
   size_t nn = ip.size();
+  msg_Debugging()<<"Got "<<nn<<" momenta and "<<fl.size()<<" flavours. "
+                 <<"From these, "<<nin<<" are initial states.\n";
   if(nn == nin) {
     std::string channel = "";
     if(fl[0] == 21) channel += "g";
@@ -185,7 +187,9 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
   vector<Vec4D> p;
   vector<vector<int>> f;//(nn,vector<int>(6,0));
   for (size_t i=0; i<nn; i++) {
+    msg_Debugging()<<i<<"th particle: "<<fl[i]<<", p = "<<ip[i];
     if(fl[i].Strong()) {
+      msg_Debugging()<<" is colour-charged ";
       vector<int>  fi(6,0);
       if(fl[i] == 1) fi[0] += 1;
       if(fl[i] == -1) fi[0] -= 1;
@@ -201,9 +205,20 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
       if(fl[i] == -6) fi[5] -= 1;
       sum+=p[i];
       f.push_back(fi);
-      if(i > nin) p.push_back(ip[i]);
+      if(i < nin) {
+        msg_Debugging()<<" but not a final state.\n";
+      }
+      else {
+        msg_Debugging()<<" and a final state.\n";
+        p.push_back(ip[i]);
+      }
+    }
+    else {
+      msg_Debugging()<<" is not colour charged.\n";
     }
   }
+  int  n = p.size();
+  msg_Debugging()<<"Found "<<n<<" colour charged final states to use as cluster input.\n";
   int num_flavd = 0;
   msg_Debugging()<<"Cluster input: mode = "<<m_mode<<"\n";
   for(int i=0; i<f.size(); i++) {
@@ -215,12 +230,16 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
       msg_Debugging()<<"("<<i<<") "<<f[i]<<" "<<p[i-2]<<"\n";
     }
   }
-
+  if(m_mode&MODE::ZPROD and num_flavd < 2) {
+    THROW(fatal_error, "Clustering to states compatible with Z-production was requested, but there are no flavours in input.");
+  }
+  
   vector<int> imap(p.size());
   for (int i=0;i<imap.size();++i) imap[i]=i;
   vector<vector<double> > kt2ij
     (imap.size(),vector<double>(imap.size()));
-  int ii=0, jj=0, n=p.size();
+  int ii=0;
+  int jj=0;
   double dmin=std::numeric_limits<double>::infinity();
   double dBmin=std::numeric_limits<double>::infinity();
   double dBBmin=std::numeric_limits<double>::infinity(); 
@@ -240,7 +259,9 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
       if (dij<dmin) { dmin=dij; ii=i; jj=j; }
     }
   }
+  msg_Debugging()<<"Starting with "<<n<<" final states to cluster.\n";
   while (n>m_nborn) {
+    msg_Debugging()<<"Need clustering because "<<m_nborn<<" < "<<n<<"\n";
     msg_Debugging()<<"Cluster "<<imap[ii]+2<<" to "<<imap[jj]+2<<"\n";
     if (ii!=jj) {
       p[imap[jj]]+=p[imap[ii]];
@@ -276,6 +297,13 @@ std::string KT2_pp::Channel(const vector<Vec4D>& ip,
         if (dij<dmin) { dmin=dij; ii=i; jj=j; }
       }
     }
+  }
+  if(n != m_nborn) {
+    msg_Error()<<"Clustered to "<<n<<" final states, requested were "<<m_nborn<<".\n";
+    THROW(fatal_error, "Something went wrong, did not cluster to requested multiplicity.")
+  }
+  else {
+    msg_Debugging()<<"Finished clustering to "<<n<<" = "<<m_nborn<<" final states.\n";
   }
   std::string channel = "";
   msg_Debugging()<<"Clustered:\n";
