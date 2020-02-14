@@ -125,3 +125,23 @@ operator()(const Parameter_Type &args) const
 void ATOOLS::Getter<Observable_Base,Observable_Key,Y2_Durham_II>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"Y2_Durham_II"; }
+
+
+typedef YN_II<3> Y3_Durham_II;
+DECLARE_GETTER(Y3_Durham_II,"Y3_Durham_II",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y3_Durham_II>::
+operator()(const Parameter_Type &args) const 
+{ return new Y3_Durham_II(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,Y3_Durham_II>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"Y3_Durham_II"; }
+
+typedef YN_II<4> Y4_Durham_II;
+DECLARE_GETTER(Y4_Durham_II,"Y4_Durham_II",Observable_Base,Observable_Key);
+Observable_Base *ATOOLS::Getter<Observable_Base,Observable_Key,Y4_Durham_II>::
+operator()(const Parameter_Type &args) const 
+{ return new Y4_Durham_II(args); }
+void ATOOLS::Getter<Observable_Base,Observable_Key,Y4_Durham_II>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"Y4_Durham_II"; }
+
