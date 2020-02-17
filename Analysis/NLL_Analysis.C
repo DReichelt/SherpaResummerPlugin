@@ -114,8 +114,9 @@ NLL_Analysis::NLL_Analysis(const Argument_Matrix& params):
     for(size_t i=0; i<dummy.Nbin(); i++) xvals[i+1] = dummy.HighEdge(i);
 
     // returns index of observable
-    const string& obsName = p_resum->AddObservable(params[i][0],xvals);
+    const string& obsName = p_resum->AddObservable({params[i][0],ps},xvals);
     m_ObsNames.push_back(obsName);
+    msg_Debugging()<<"Add "<<params[i][0]<<" as "<<obsName<<"\n";
     m_NLL[obsName] = CumDist(xvals.size(),{0,0});
     m_expLO[obsName] = CumDist(xvals.size(),{0,0});
     m_expNLO[obsName] = CumDist(xvals.size(),{0,0});    
@@ -163,11 +164,11 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   for(size_t i=0; i<channels.size(); i++) {
     channels[i] = m_channelAlgs[i]->Channel(mom,fl,2);
   }
-
   for(const string& channel: channels) {
+    msg_Debugging()<<"Found channel "<< channel<<"...\n";
     if(std::find(m_channels.begin(), m_channels.end(), channel)
        == m_channels.end()) {
-      // channel encountered for first time, initalize
+      msg_Debugging()<<"... encountered for first time, initalize.\n";
       m_channels.push_back(channel);
       m_NLL_channels[channel] = ObsDist();
       m_expLO_channels[channel] = ObsDist();
@@ -177,6 +178,9 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
         m_expLO_channels[channel][name] = CumDist(m_expLO[name].size(),{0,0});
         m_expNLO_channels[channel][name] = CumDist(m_expNLO[name].size(),{0,0});
       }
+    }
+    else {
+      msg_Debugging()<<" ... recognized from before.\n";
     }
   }
   // get results from resum and fill
@@ -190,6 +194,7 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
       const double nll = weight*resNLL[i];
       const double expLO = weight*resExpLO[i];
       const double expNLO = weight*resExpNLO[i];
+      msg_Debugging()<<name<<" "<<p_resum->m_xvals[k][i]<<" "<<nll<<" "<<expLO<<" "<<expNLO<<".\n";
       m_NLL[name][i].first += nll;
       m_NLL[name][i].second += sqr(nll);
       m_expLO[name][i].first += expLO;

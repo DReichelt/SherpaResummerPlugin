@@ -19,8 +19,7 @@ namespace RESUM {
   public:
 
     JetAngularities_Base(const Observable_Key &args): 
-    Observable_Base(args) {
-      m_algkey = args;
+      Observable_Base(args), m_algkey(args) {
       m_algkey.m_name = "FJmaxPTjet";
       m_algtag = m_algkey.Name();
       m_algtag += ":"+args.KwArg("R","0.5");
@@ -33,18 +32,44 @@ namespace RESUM {
       (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t& l) {
-      // TODO: this is a dummy
-      return Obs_Params(2.0,0.0,0.0,0.0);
+      // @TODO: returning a=0 leads to problems, because a_0 is magic
+      if(l<2) return {1,0,0,0};
+      // @TODO: we could check here if l corresponds to the largest pT jet,
+      // possibly enabling this also for the leading di-/multijet etc.
+      // at the moment, assume we are in pp -> Zj, so only one colour charged final
+      // state that corresponds to the leading jet
+      if(!fl[l].Strong()) return {1,0,0,0};
+      const double a = 1;
+      const double b = m_alpha-1;
+      const double d = pow(cosh(p[l].Eta())/(sqrt(2)*m_R),m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
+      return Obs_Params(a,b,log(d),0.0);
     }
 
     std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                                     const std::vector<ATOOLS::Flavour>& fl, 
                                                     const RESUM::Params& params) {
-      // TODO: this is a dummy
       return FFUNCTION::Additive;
     }
 
 
+    GROOM_MODE GroomMode() {
+      // @TODO: this tricks the observable into ignoring initial states and soft function
+      return GROOM_MODE::SD;
+    }
+    
+    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
+                         const std::vector<ATOOLS::Flavour>& fl,
+                         const size_t &l) {
+      if(l<2) {
+        return GROOM_MODE::SD;
+      }
+      else {
+        // @TODO: but still calculate radiator w.r.t. final state leg
+        return GROOM_MODE::NONE;
+      }
+    }
+
+    
     double Value(const std::vector<Vec4D>& moms,
             const std::vector<ATOOLS::Flavour>& flavs,
             const size_t& nin) {

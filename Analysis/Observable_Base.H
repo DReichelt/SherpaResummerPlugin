@@ -75,6 +75,7 @@ namespace RESUM {
     typedef std::shared_ptr<Observable_Base_Template> Ptr;
     Observable_Base_Template(const Observable_Key &args) : m_name(args.m_name) {
       m_tag = args.KwArg("tag",m_name);
+      DEBUG_FUNC(m_tag);
       ATOOLS::Data_Reader read(" ",";","#","=");
       m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
       m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
