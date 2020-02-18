@@ -2,8 +2,11 @@
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Org/Run_Parameter.H"
 #include "ATOOLS/Math/Poincare.H"
+#include "ATOOLS/Org/Exception.H"
 #include "FFunction/FFunctions.H"
 #include <algorithm>       
+
+#include "fastjet/contrib/SoftDrop.hh"
 
 using namespace ATOOLS;
 using namespace std;
@@ -99,16 +102,15 @@ namespace RESUM {
       return a.Sqr()>b.Sqr();
     }
 
-    double Value(const std::vector<Vec4D>& p,
+    double Value(const std::vector<Vec4D>& momenta,
                  const std::vector<Flavour>& fl,
-		 const size_t &nin)
-    {
-      THROW(not_implemented, "Matching was not implemented for sd.")
-      size_t n = p.size();
-      Vec3D lastaxis, curraxis, thrustaxis;
+		 const size_t &nin) {
+
+      size_t n = momenta.size();
+      Vec3D lastaxis, curraxis, thrustaxis, maxaxis, axis;
       double maxthrust=0., lastthrust , currthrust, thrust;
       std::vector<Vec3D> vectors(n-nin);
-      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(p[i][1],p[i][2],0.0);
+      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(momenta[i][1],momenta[i][2],0.0);
       for (int pass=0;pass<2;++pass) {
 	if (pass==1) RotateMoms(vectors,thrustaxis);
 	sort(vectors.begin(),vectors.end(),&bigger);
@@ -142,12 +144,81 @@ namespace RESUM {
 	  if (lastthrust>maxthrust+rpa->gen.Accu()) {
 	    ident=0;
 	    maxthrust=lastthrust;
+            maxaxis=lastaxis;
 	  }
 	  ident++;
 	}
-	if (pass==0) thrust=maxthrust; 
+	if (pass==0) {
+          thrust=maxthrust;
+          axis = maxaxis;
+        }
       }
-      return 1.0-thrust;
+
+      
+      double ptot_perp_ungroomed = 0; //scaling factor
+
+      
+      // Partition event into hemispheres from the thrust axis
+      vector<fastjet::PseudoJet> left_hemi, right_hemi;
+      for(int i = nin; i < momenta.size(); i++) {
+        if(!fl[i].Strong()) continue;
+        Vec3D p = {momenta[i][1], momenta[i][2],0};
+        ptot_perp_ungroomed += p.Abs();
+        if ( axis*p >= 0) {
+          right_hemi.push_back(fastjet::PseudoJet(momenta[i][1], momenta[i][2], momenta[i][3], momenta[i][0])); 
+        }											
+        else if ( axis*p < 0) {
+          left_hemi.push_back(fastjet::PseudoJet(momenta[i][1], momenta[i][2], momenta[i][3], momenta[i][0]));
+        }
+        else {
+          THROW(fatal_error, "Something went wrong.");
+        }
+      }
+
+      if (left_hemi.size() == 0 or right_hemi.size() == 0) {
+        THROW(fatal_error,"Empty hemisphere.");
+        // empty_hemisphere += 1;
+        // cout << "Empty hemisphere!! in event " << nevent << ". Veto Event and skip. This has occured: " << empty_hemisphere << " times        " << endl;
+        // AddZero(ncount,0);
+      }
+      
+      int number_of_particles = left_hemi.size() + right_hemi.size();
+      
+      fastjet::JetDefinition jet_def(fastjet::genkt_algorithm, 2*M_PI, 0.0, fastjet::E_scheme, fastjet::Best);
+      fastjet::ClusterSequence   cs_l(left_hemi, jet_def);
+      fastjet::ClusterSequence   cs_r(right_hemi, jet_def);
+      vector<fastjet::PseudoJet> right_jets = cs_r.exclusive_jets(1);
+      vector<fastjet::PseudoJet> left_jets = cs_l.exclusive_jets(1);
+      
+
+      fastjet::contrib::SoftDrop softdrop(m_beta, m_zcut, M_PI); // Inputs are beta, zcut, R0
+      vector<fastjet::PseudoJet> sd_right_hemi = softdrop(right_jets);
+      vector<fastjet::PseudoJet> sd_left_hemi = softdrop(left_jets);
+      vector<fastjet::PseudoJet>  right = sd_right_hemi[0].constituents();
+      vector<fastjet::PseudoJet>  left = sd_left_hemi[0].constituents();
+      vector<fastjet::PseudoJet>  left_ungroom = left_jets[0].constituents();
+      vector<fastjet::PseudoJet>  right_ungroom = right_jets[0].constituents();
+
+      // Calculate ptot
+      double ptot = 0;
+      
+      for (unsigned i = 0; i < right.size(); i++){
+        ptot += right[i].pt();
+      }
+
+      for (unsigned i = 0; i < left.size(); i++){
+        ptot += left[i].pt();
+      } 
+      
+      // Calculate SD thrust axes
+      Vec3D p_r = {sd_right_hemi[0].px(), sd_right_hemi[0].py(), 0};
+      Vec3D p_l = {sd_left_hemi[0].px(), sd_left_hemi[0].py(), 0};
+      
+      // thrust
+      double T = ( p_l.Abs() + p_r.Abs() );
+      double tau = (ptot - T) / ptot_perp_ungroomed;
+      return tau;  
+        
     }
     
   };// end of class Thrust
