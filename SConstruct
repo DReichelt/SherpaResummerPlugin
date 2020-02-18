@@ -83,6 +83,7 @@ resumlib = env.SharedLibrary('SherpaResum',
 
 observables = ['Observables/Y2_IF.C',
 	       'Observables/Y1_II.C',
+	       'Observables/YN_II.C',
 	       'Observables/Thrust_FF.C',
                'Observables/ColorSinglet/Thrust.C',
 	       'Observables/Thrust_IF.C',

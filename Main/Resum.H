@@ -41,6 +41,8 @@ namespace RESUM {
     
     MODEL::Running_AlphaS *p_as;
 
+    PDF::ISR_Handler* p_isr;
+
     Params m_params;
 
     //list of available and initialized bases
@@ -134,6 +136,12 @@ namespace RESUM {
 
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 
+    bool m_cacheMatrices = false;
+    MatrixC m_Gamma;
+    MatrixD m_Hard;
+
+    const MatrixC& Gamma();
+    const MatrixD& Hard();
     
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
     double CalcColl(const double L, const double LResum, const int order,
@@ -150,8 +158,14 @@ namespace RESUM {
                     double &Rp, MatrixD& G, double& S1,
                     double& ExpAtEnd, double& RAtEnd);
 
-
     double CalcPDF(const double L, const double LResum, double &PDFexp);
+
+    double CollinearCounterTerms( const int i,
+                                  const ATOOLS::Flavour &fl,
+                                  const ATOOLS::Vec4D &p,
+                                  const double &z,
+                                  const double muF2) const;
+
     double T(const double x);
 
     double Value(const double v, const double LResum, double epRatio);
@@ -182,10 +196,10 @@ namespace RESUM {
 		  const int cpl,const double &mu2) const;
 
     virtual size_t AddObservable(Observable_Base *const obs,
-                                      ATOOLS::Histogram *const h);
+                                 ATOOLS::Histogram *const h);
 
-    virtual std::string AddObservable(const std::string& name,
-                                 const std::vector<double>& xvals);
+    virtual std::string AddObservable(const RESUM::Observable_Key& key,
+                                      const std::vector<double>& xvals);
    
     size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}
     std::pair<int, double> Result(int n) const { return m_ress.at(n); }

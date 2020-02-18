@@ -1,0 +1,47 @@
+(run){
+  power:=1;
+  fvar:=0;
+  EVENTS 10k; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 6500; BEAM_2 2212 6500;
+  SHOWER_GENERATOR Resum;
+  ANALYSIS_OUTPUT=NLL_ppower_Ffvar
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{MPerp2(p[2]+p[3])};
+  ANALYSIS Internal; SHERPA_LDADD ResumAnalysis;
+  RESUM::MATCHING=ADD|LO|NLO;
+  RESUM::MODE RESUM|EXPAND;
+  RESUM::LOGPOW=power
+  RESUM::FFUNCTION::VARIATION = fvar;
+  RESUM::UNITNORM = 0;
+  RESUM::pre_calc = pre_calc/trace_basis;
+}(run);
+
+(processes){
+  Process 93 93 -> 11 -11 93;
+  Order (*,2);
+  End process;
+}(processes);
+
+(selector){
+  Mass 11 -11 80 100
+  #           <algorithm> <n> <ptmin>  <etmin>  <R0>
+  FastjetFinder antikt     1  500      0        0.4;
+}(selector)
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO;
+    NLLResum { FinalState;
+      ChAlg KT2_pp 1 BLAND_Z;
+      ChAlg KT2_pp 1 BLAND;
+      ChAlg KT2_pp 1;
+      JetAngularities    1e-4 1 100 LogErr alpha:0.5 R:0.5 tag:JA_alpha05;
+      JetAngularities    1e-4 1 100 LogErr alpha:1   R:0.5 tag:JA_alpha1;
+      JetAngularities    1e-4 1 100 LogErr alpha:2   R:0.5 tag:JA_alpha2;
+      # SD_JetAngularities 1e-4 1 100 LogErr alpha:0.5 R:0.5 tag:SDJA_alpha05 beta:2 zcut:0.05;
+      # SD_JetAngularities 1e-4 1 100 LogErr alpha:1   R:0.5 tag:SDJA_alpha1  beta:2 zcut:0.05;
+      # SD_JetAngularities 1e-4 1 100 LogErr alpha:2   R:0.5 tag:SDJA_alpha2  beta:2 zcut:0.05;
+    }
+  } END_ANALYSIS;
+}(analysis);

@@ -43,7 +43,7 @@ Resum::Resum(ISR_Handler *const isr,
   p_clus = new Cluster_Definitions();
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
-  
+  p_isr = isr;
 
   p_pdf = new PDF_Base*[2];
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
@@ -284,28 +284,27 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   // weight for cumulative distribution
   double weight = 1.;
 
-  // calculate collinear piece
   if(!(m_amode&MODE::IGNCOLL)) {
+    msg_Debugging()<<"Calculate collinear piece.\n";
     weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
     weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
   }
-  bool largeWeight = weight > 1e100;
-  if(largeWeight) {
+  msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
+                 <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
+  if(weight > 1e100) {
     msg_Debugging()<<"Large weight in Resum:";
-    msg_Debugging()<<*p_ampl<<"\n\n";
-    msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
-             <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
+    msg_Debugging()<<*p_ampl<<"\n\n";            
     if(i>0) msg_Debugging()<<"Last Weight = "<<m_resNLL[m_n][i-1]<<"\n";
   }
 
-  // some checks for colour calculation
   if(!(m_amode&MODE::IGNSOFT)) {
+    // some checks for colour calculation
     double dummy1, dummy2;
     const double calcs1 = m_amode & MODE::CKINV ?
       weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
     const double calcs2 = m_amode & MODE::CKCOUL ?
       weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
-    // actually calculate soft function
+    msg_Debugging()<<"Calculate soft function.\n";
     weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
     // evaluate tests if needed
     if(m_amode & MODE::CKINV) {
@@ -327,16 +326,13 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
                  <<(weight-calcs2)<<" ratio = "<<(weight-calcs2)/weight<<".\n";
     }
   }
-  largeWeight = largeWeight or weight > 1e100;
-  if (largeWeight)
-    msg_Debugging()<<"Weight after soft = "<<weight<<"\n";
+  msg_Debugging()<<"Weight after soft = "<<weight<<"\n";
 
   if(!(m_amode&MODE::IGNPDF)) {
+    msg_Debugging()<<"Calculate PDF.\n";
     weight *= CalcPDF(L, LResum, PDFexp);
   }
-  largeWeight = largeWeight or weight > 1e100;
-  if(largeWeight)
-    msg_Debugging()<<"Weight after PDF = "<<weight<<".\n";
+  msg_Debugging()<<"Weight after PDF = "<<weight<<".\n";
 
   // evaluate possible endpoint corrections
   const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
@@ -351,22 +347,19 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight *= exp(-epRatio*pow(L,1)*RAtEnd0);
     }
   }
-  largeWeight = largeWeight or weight > 1e100;
-  if (largeWeight)
-    msg_Debugging()<<"Weight after ep subtract = "<<weight<<".\n";
+  msg_Debugging()<<"Weight after ep subtract = "<<weight<<".\n";
 
   if(!(m_amode&MODE::IGNFFUNC)) {
+    msg_Debugging()<<"Calculate FFunction of Rp = "<<Rp<<".\n";
     if(!std::isnan(Rp)) {
-      if(largeWeight) msg_Out()<<"Calc F("<<Rp<<")\n";
       weight*=m_F(Rp,FexpNLL_NLO);
     }
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
   }
-  largeWeight = largeWeight or weight > 1e100;
-  if (largeWeight)
-    msg_Debugging()<<"Weight after F = "<<weight<<".\n\n";
+  msg_Debugging()<<"Weight after F = "<<weight<<".\n";
 
   // store resummed result
+  msg_Debugging()<<"Final weight = "<<weight<<"\n";
   m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
@@ -386,7 +379,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   }
 
   MatrixD H(4,4,0);
-
   H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
   H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
@@ -587,12 +579,11 @@ size_t Resum::AddObservable(Observable_Base *const obs,
   return m_ress.size()-1;
 }
 
-std::string Resum::AddObservable(const std::string& name,
-			    const std::vector<double>& xvals)
+std::string Resum::AddObservable(const RESUM::Observable_Key& key,
+                                 const std::vector<double>& xvals)
 {
-  DEBUG_FUNC(name);
-  Observable_Base* obs = RESUM::Observable_Getter::GetObject(name,
-                                                             RESUM::Observable_Key(name));
+  DEBUG_FUNC(key.Name());
+  Observable_Base* obs = RESUM::Observable_Getter::GetObject(key.Name(),key);
   if(obs != nullptr) {
     m_obss.push_back(obs);
     m_xvals.push_back(xvals);
@@ -602,7 +593,7 @@ std::string Resum::AddObservable(const std::string& name,
     m_ress.push_back({-1,-1});
     msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
   }
-  else  msg_Error()<<"Observable not found: "<<name<<".\n";
+  else  msg_Error()<<"Observable not found: "<<key.Name()<<".\n";
   return obs->Tag();
 }
 
@@ -628,6 +619,21 @@ double Resum::T(const double x)
 } 
 
 
+const MatrixC& Resum::Gamma() {
+  if(m_cacheMatrices) {return m_Gamma;}
+  const size_t dim = p_cmetric->CMetric().numCols();
+
+  MatrixD ReGamma(dim, dim, 0);
+  m_Gamma = {dim,dim,0};
+
+}
+
+const MatrixD& Resum::Hard() {
+  if(m_cacheMatrices) {return m_Hard;}
+
+}
+
+
 
 double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check)
 {
@@ -638,6 +644,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     if(m_gmode & GROOM_MODE::SD_SOFT) {
       THROW(not_implemented, "No non-trivial soft function for grooming implemented.");
     }
+    msg_Debugging()<<"Ignoring soft function for groomed observables\n";
     return 1.;
   }
   
@@ -653,6 +660,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   
   const MatrixD& met = p_cmetric->CMetric();
   InverseLowerTriangular(met);
+  // TODO: why is this no ref?
   MatrixC ICmetric = p_cmetric->Imetric();
   if(Check & MODE::CKINV) {
     ICmetric += (MatrixC::diagonal(1,ICmetric.numRows())-ICmetric*MatrixC(met))*MatrixC::random(ICmetric.numRows(),ICmetric.numCols());
@@ -836,6 +844,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G,
                        double& S1, double& ExpAtEnd, double& RAtEnd) 
 {
+  DEBUG_FUNC(L);
   const double muR2 = p_ampl->MuR2();
   const double beta0 = m_params.beta0(muR2);
   const double beta1 = m_params.beta1(muR2);
@@ -859,7 +868,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   for(size_t i = (m_gmode & GROOM_MODE::SD) ? 2 : 0;
       i<p_ampl->Legs().size(); i++) {
     //m_gmode = m_obss_n->GroomMode(exp(-L), moms, flavs, i);
-        
+    msg_Debugging()<<"Calculate radiator for leg "<<i<<".\n";
       double colfac = 0.;
       double hardcoll = 0.;
 
@@ -868,9 +877,20 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       cms.Boost(pl);
       const double El = dabs(pl[0]);
       
-      if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {colfac = m_params.CA(); hardcoll=m_params.CollDimGlue(muR2);}
-      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {colfac = m_params.CF(); hardcoll=m_params.CollDimQuark(muR2);} 
-      else continue;
+      if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {
+        colfac = m_params.CA();
+        hardcoll=m_params.CollDimGlue(muR2);
+        msg_Debugging()<<"Gluon, Cl = "<<colfac<<" Bl = "<<hardcoll<<".\n";
+      }
+      else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {
+        colfac = m_params.CF();
+        hardcoll=m_params.CollDimQuark(muR2);
+        msg_Debugging()<<"Quark, Cl = "<<colfac<<" Bl = "<<hardcoll<<".\n";
+      } 
+      else {
+        msg_Debugging()<<"No strong charge, ignoring.\n";
+        continue;
+      }
 
       double t_scale = 0.5*(sqrt(pow(p_ampl->Leg(2)->Mom()[1],2) + pow(p_ampl->Leg(2)->Mom()[2],2)+
 				 pow(p_ampl->Leg(3)->Mom()[1],2) + pow(p_ampl->Leg(3)->Mom()[2],2)));
@@ -898,10 +918,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                                          + (m_a[i]+m_b[i])*(1.-2./(m_a[i]+m_b[i])*lambda)*log(1.-2./(m_a[i]+m_b[i])*lambda) );                             
             } // end grooming for LL parts for b != 0
             else {
+              msg_Debugging()<<"Argument of log is "<<1.-2.*lambda/m_a[i]<<" and "<<1.-2.*lambda/(m_a[i]+m_b[i])<<".\n";
               r1= 1./2./M_PI/pow(beta0,2.)/as/m_b[i]*((m_a[i]-2.*lambda)*log(1.-2.*lambda/m_a[i])
                                                       -(m_a[i]+m_b[i]-2.*lambda)*log(1.-2.*lambda/(m_a[i]+m_b[i])));
               
             }
+            msg_Debugging()<<"LL contribution = "<<-colfac*r1<<"\n";
 	    R -= colfac*r1;
 	  } // end LL for b != 0
 	  if (order>=1) {	    
@@ -956,9 +978,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         else {
           if (order>=0) {    
             //LL part
+            msg_Debugging()<<"Argument of log is "<<1.-2.*lambda/m_a[i]<<".\n";
             double r1= -1./2./M_PI/pow(beta0,2.)/as*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]));
-            R+=(-1.)*colfac*r1;
-            
+            msg_Debugging()<<"LL contribution = "<<-colfac*r1<<".\n";
+            R -= colfac*r1;
           }
           if (order>=1) {	    
             //NLL part
@@ -1030,8 +1053,61 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         S1 += -colfac*log(Q12/Q);
       } // end expansion without grooming
     } // end loop over legs
+  msg_Debugging()<<"Sum of radiators = "<<R<<".\n";
   return R;
 }
+
+double Resum::CollinearCounterTerms(const int i, 
+                                    const ATOOLS::Flavour &fl,
+                                    const ATOOLS::Vec4D &p,
+                                    const double &z,
+                                    const double muF2) const {
+  // determine ct
+  double ct = 0.0; 
+  double x = p_isr->CalcX(p);
+  Flavour jet(kf_jet);
+  double fb=p_isr->PDFWeight((1<<(i+1))|8,p,p,muF2,muF2,fl,fl,0);
+  if (IsZero(fb)) {
+    msg_Tracking()<<METHOD<<"(): Zero xPDF ( f_{"<<fl<<"}("
+		  <<x<<","<<sqrt(muF2)<<") = "<<fb<<" ). Skip.\n";
+    return 0.0;
+  }
+
+  // skip PDF ratio if high-x sanity condition not fullfilled
+  if (dabs(fb)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+    msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+    return 0.0;
+  }
+
+  msg_Debugging()<<"Beam "<<i<<": z = "<<z<<", f_{"<<fl
+		 <<"}("<<x<<","<<sqrt(muF2)<<") = "<<fb<<" {\n";
+  for (size_t j(0);j<jet.Size();++j) {
+    const double Pf = METOOLS::FPab(jet[j],fl,z);
+    const double Ps = METOOLS::SPab(jet[j],fl,z);
+    if (Pf+Ps==0.0) continue;
+    const double Pi = METOOLS::IPab(jet[j],fl,x);
+    const double H = METOOLS::Hab(jet[j],fl);
+    const double fa=p_isr->PDFWeight
+      (1<<(i+1),p/z,p/z,muF2,muF2,jet[j],jet[j],0);
+    const double fc=p_isr->PDFWeight
+      (1<<(i+1),p,p,muF2,muF2,jet[j],jet[j],0);
+    msg_Debugging()<<"  P_{"<<jet[j]<<","<<fl
+		   <<"}("<<z<<") = {F="<<Pf<<",S="<<Ps
+		   <<",I="<<Pi<<"}, f_{"<<jet[j]<<"}("
+		   <<x/z<<","<<sqrt(muF2)<<") = "<<fa
+		   <<", f_{"<<jet[j]<<"}("<<x<<","
+		   <<sqrt(muF2)<<") = "<<fc<<"\n";
+    if (IsZero(fa)||IsZero(fc)) {
+      msg_Tracking()<<METHOD<<"(): Zero xPDF. No contrib from "<<j
+                    <<". Skip .\n";
+    }
+    ct += ((fa/z*Pf+(fa/z-fc)*Ps)*(1.0-x)+fc*(H-Pi))/fb;
+  }
+  msg_Debugging()<<"} -> "<<ct<<"\n";
+  return ct;
+}
+
+
 
 double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   DEBUG_FUNC(L);
@@ -1042,13 +1118,15 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
        m_collgmodes[1] & GROOM_MODE::SD_PDF) {
       THROW(not_implemented, "No non-trivial pdf contribution for grooming implemented.");
     }
+    msg_Debugging()<<"Ignoring pdf function for groomed observables.\n";
     return 1.;
   }
   msg_Debugging()<<"Calculate pdf contribution, no grooming assumed.\n";
   //strong coupling & PDFs
   const double as = (*p_as)(p_ampl->MuR2());
 
-  double old_pdffac=1.,new_pdffac = 1.;
+  double old_pdffac = 1.;
+  double new_pdffac = 1.;
 
   const double scale= p_ampl->MuF2();
   msg_Debugging() << "scale before: " << scale << "\n";
@@ -1070,18 +1148,21 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     // PDFexp+=-2.0/(m_a[i]+m_b[i])*proc->CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,exp(1.),1.,1.,1.) * (2.*M_PI)/as;
-
+    PDFexp += -2.0/(m_a[i]+m_b[i])*CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale);
+    // msg_Out()<<CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale)<<" "
+    //          <<METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,as,exp(1.),1.,scale,p_pdf[i])*as/(2.*M_PI)<<"\n";
+    // msg_Out()<<x<<" "<<p_isr->CalcX(-p_ampl->Leg(i)->Mom())<<"\n\n";
 
     const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
-    old_pdffac*=fb;
+    old_pdffac *= fb;
 
-    if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
-      msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
-      PDFexp += 0;
-    }
-    else {
-      PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
-    }
+    // if (dabs(fb/x)<1.0e-4*log(1.0 - x)/log(1.0 - 1.0e-2)){
+    //   msg_Debugging() << "Invalid pdf ratio, ct set to zero." << std::endl;
+    //   PDFexp += 0;
+    // }
+    // else {
+    //   PDFexp += -2.0/(m_a[i]+m_b[i])*METOOLS::CollinearCounterTerms(p_ampl->Leg(i)->Flav().Bar(), x, z,2*M_PI,exp(1.),1.,scale,p_pdf[i]);
+    // }
 
     //new PDF scale
     const double scalefac = pow(exp(-L),2./(m_a[i]+m_b[i]));
@@ -1093,7 +1174,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
       p_pdf[i]->Calculate(x,scale*scalefac);
     }
     msg_Debugging() << "scale after: " << scale*scalefac << std::endl;
-    new_pdffac*=p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
+    new_pdffac *= p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
   }
   return new_pdffac/old_pdffac;
 }
