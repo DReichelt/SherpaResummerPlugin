@@ -6,7 +6,9 @@
 #include "FFunction/FFunctions.H"
 #include <algorithm>       
 
+#ifdef USING_FJCONTRIB
 #include "fastjet/contrib/SoftDrop.hh"
+#endif
 
 using namespace ATOOLS;
 using namespace std;
@@ -105,7 +107,7 @@ namespace RESUM {
     double Value(const std::vector<Vec4D>& momenta,
                  const std::vector<Flavour>& fl,
 		 const size_t &nin) {
-
+#ifdef USING_FJCONTRIB
       size_t n = momenta.size();
       Vec3D lastaxis, curraxis, thrustaxis, maxaxis, axis;
       double maxthrust=0., lastthrust , currthrust, thrust;
@@ -218,7 +220,7 @@ namespace RESUM {
       double T = ( p_l.Abs() + p_r.Abs() );
       double tau = (ptot - T) / ptot_perp_ungroomed;
       return tau;  
-        
+#endif        
     }
     
   };// end of class Thrust
