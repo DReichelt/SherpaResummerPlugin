@@ -56,7 +56,7 @@ namespace RESUM {
 
     std::vector<ATOOLS::Vec4D> m_cms, momlabels;
     std::vector<ATOOLS::Flavour> flavlabels;
-    std::vector<double> m_Qij, m_a, m_b, m_logdbar;
+    std::vector<double> m_Qij, m_a, m_b, m_logdbar, m_etamin;
     std::function<double(double, double&)> m_F;
     std::vector<int> signlabels;
     int n_g, n_q, n_aq, color_sings;
