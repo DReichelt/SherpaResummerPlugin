@@ -178,7 +178,15 @@ namespace RESUM {
       }
 
       if (left_hemi.size() == 0 or right_hemi.size() == 0) {
-        THROW(fatal_error,"Empty hemisphere.");
+//         THROW(fatal_error,"Empty hemisphere.");
+          std::cout << left_hemi.size()<< " " << right_hemi.size() << std::endl;
+          std::cout << axis[0] << " " << axis[1] << std::endl;
+          std::cout << momenta[0][1] << " " << momenta[0][2] << " " << momenta[0][3] << std::endl;
+          std::cout << momenta[1][1] << " " << momenta[1][2] << " " << momenta[1][3] << std::endl;
+          std::cout << momenta[2][1] << " " << momenta[2][2] << " " << momenta[2][3] << std::endl;
+          std::cout << momenta[3][1] << " " << momenta[3][2] << " " << momenta[3][3] << std::endl;
+          std::cout << momenta[4][1] << " " << momenta[4][2] << " " << momenta[4][3] << std::endl;
+          return 0.;
         // empty_hemisphere += 1;
         // cout << "Empty hemisphere!! in event " << nevent << ". Veto Event and skip. This has occured: " << empty_hemisphere << " times        " << endl;
         // AddZero(ncount,0);
