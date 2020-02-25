@@ -121,6 +121,7 @@ int Resum::PerformShowers()
     m_a.clear();
     m_b.clear();
     m_logdbar.clear();
+    m_etamin.clear();
     for (size_t i=0; i<moms.size(); i++) {
       if(m_obss[m_n] == nullptr)
         THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
@@ -129,6 +130,8 @@ int Resum::PerformShowers()
       m_b.push_back(ps.m_b);
 
       m_logdbar.push_back(ps.m_logdbar);
+      
+      m_etamin.push_back(ps.m_etamin);
     }
     
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
@@ -967,6 +970,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             }
             else {
               R -= colfac*log(Q12/Q)*T(lambda/m_a[i]);
+              R += colfac*m_etamin[i]*T(lambda/m_a[i]);
             } 
             Rp+=r1p*colfac;
 	  } // end of NLL for b != 0
@@ -993,12 +997,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2_corr = +LResum*r1p;
             double r2=(r2_cmw+r2_beta1+r2_corr);
             
-            R+= -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
+            R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
+            R += colfac*m_etamin[i]*T(lambda/m_a[i]);
             Rp+=r1p*colfac;
           }
         }
       }
-      
       if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
         // TODO: sd expansion
 //         G(1,2) += -2.*colfac*m_a[i]*m_beta;
@@ -1038,6 +1042,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         G(2,3) += -8.*M_PI*beta0/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
         G(2,2) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)) \
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
+        G(1,1) += 4.*colfac*m_etamin[i]/m_a[i];
+        G(2,2) += 8.*M_PI*beta0*colfac*m_etamin[i]/m_a[i]/m_a[i];
+        
         S1 += -colfac*log(Q12/Q);
       } // end expansion without grooming
     } // end loop over legs

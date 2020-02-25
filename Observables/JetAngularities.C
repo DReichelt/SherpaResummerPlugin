@@ -42,7 +42,8 @@ namespace RESUM {
       const double a = 1;
       const double b = m_alpha-1;
       const double d = pow(2.*cosh(p[l].Eta())/(m_R),m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
-      return Obs_Params(a,b,log(d),0.0);
+      const double etamin = -log(2.*cosh(p[l].Eta())/m_R);
+      return Obs_Params(a,b,log(d),0.0,etamin);
     }
 
     std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,

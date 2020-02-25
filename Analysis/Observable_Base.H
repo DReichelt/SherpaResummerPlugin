@@ -23,11 +23,11 @@ namespace RESUM {
   };
 
   struct Obs_Params {
-    double m_a, m_b, m_logdbar, m_g;
+    double m_a, m_b, m_logdbar, m_g, m_etamin;
     Obs_Params() = default;
     inline Obs_Params(const double &a,const double &b,
-		      const double &logdbar,const double &g):
-      m_a(a), m_b(b), m_logdbar(logdbar), m_g(g) {}
+                      const double &logdbar,const double &g,const double &etamin=0.):
+      m_a(a), m_b(b), m_logdbar(logdbar), m_g(g), m_etamin(etamin) {}
   };
 
   enum GROOM_MODE {
@@ -132,7 +132,7 @@ namespace RESUM {
       }
       Obs_Params p = Parameters(moms,flavs,l);
       double logdbar = p.m_logdbar + p.m_a/2.*log(ampl->MuQ2()/cme.Abs2()); 
-      return {p.m_a,p.m_b,logdbar,p.m_g};
+      return {p.m_a,p.m_b,logdbar,p.m_g,p.m_etamin};
     }
 
     virtual Obs_Params Parameters(const std::vector<Vec4T>& p,
