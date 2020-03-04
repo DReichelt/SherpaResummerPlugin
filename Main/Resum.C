@@ -363,7 +363,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
 
   // store resummed result
   msg_Debugging()<<"Final weight = "<<weight<<"\n";
-  m_resNLL[m_n][i] = weight;//std::isnan(weight) ? 0 : weight;
+  m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
   if(!(m_amode & MODE::COLLEXPAND)) {
@@ -398,7 +398,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }  
   // store leading order expansion
-  m_resExpLO[m_n][i] = m_resExpLO[m_n][i];//std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+  m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
   
   H(2,4) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(1,2),2) );
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
@@ -419,7 +419,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
   // store next-to-leading order expansion
-  m_resExpNLO[m_n][i] = m_resExpNLO[m_n][i];//std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
+  m_resExpNLO[m_n][i] = std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
 }
 
 
