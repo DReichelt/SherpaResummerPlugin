@@ -146,14 +146,29 @@ int Resum::PerformShowers()
       const double ep = m_obss[m_n]->Endpoint(p_ampl);
       const double p = m_obss[m_n]->LogPow(p_ampl);
       if(m_gmode & GROOM_MODE::SD) {
-        for(size_t i=0; i<moms.size(); i++) {
-          m_collgmodes[i] = m_obss[m_n]->GroomMode(m_obss[m_n]->LogArg(x, p_ampl),
-                                                   moms, flavs, i);    
+        for(size_t j=0; j<moms.size(); j++) {
+          m_collgmodes[j] = m_obss[m_n]->GroomMode(m_obss[m_n]->LogArg(x, p_ampl),
+                                                   p_ampl, j);    
         }
       }
       FillValue(i,m_obss[m_n]->LogArg(x, p_ampl),
                 -log(m_obss[m_n]->LogFac(p_ampl)),
                 pow(std::min(x/ep,1.),p));
+    }
+//     if(m_resNLL[m_n][0]>m_resNLL[m_n][1]){
+    if(m_resNLL[m_n][0]>1){
+        const double muR2 = p_ampl->MuR2();
+        const double beta0 = m_params.beta0(muR2);
+        const double as = (*p_as)(muR2);
+        double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, 2);
+        
+        std::cout << "Landau pole " << log(m_obss[m_n]->LogArg(m_xvals[m_n][0], p_ampl)) << " " << log(transp) << " " << -(m_a[2]+m_b[2])/2./as/beta0 << " " << m_b[2]/(1.+m_beta)*log(1./transp)-(m_a[2]*(1.+m_beta)+m_b[2])/2./(1.+m_beta)/as/beta0 << std::endl;
+//         std::cout << "Landau pole " << log(m_obss[m_n]->LogArg(m_xvals[m_n][0], p_ampl)) << " " << -(m_a[2]+m_b[2])/2./as/beta0 << " " << -m_a[2]/2./as/beta0 << std::endl;
+        
+        for(size_t i=0; i<m_xvals[m_n].size(); i++) {
+            std::cout << m_resNLL[m_n][i] << " ";
+        }
+        std::cout << std::endl;
     }
   }
   CleanUp();
@@ -905,7 +920,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double Lmur=log(muR2/sqr(Q));
 
       // needed for SD grooming
-      double transp = m_obss[m_n]->GroomTransitionPoint(moms, flavs, i);
+      double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
       double lambda2 = as*beta0*log(1./2.);
 
@@ -965,7 +980,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             // add NLL parts to R and Rp
             R -= colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])));
             if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
-              R -= colfac*(r1d*m_logdbar[i]);
+              R -= colfac*(r1d*(m_logdbar[i]+LResum));
 //               R -= colfac*(r1d*m_logdbar[i] + log(Q12/Q)*T(lambdaZ));
             }
             else {
