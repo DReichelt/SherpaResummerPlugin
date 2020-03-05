@@ -155,21 +155,6 @@ int Resum::PerformShowers()
                 -log(m_obss[m_n]->LogFac(p_ampl)),
                 pow(std::min(x/ep,1.),p));
     }
-//     if(m_resNLL[m_n][0]>m_resNLL[m_n][1]){
-    if(m_resNLL[m_n][0]>1){
-        const double muR2 = p_ampl->MuR2();
-        const double beta0 = m_params.beta0(muR2);
-        const double as = (*p_as)(muR2);
-        double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, 2);
-        
-        std::cout << "Landau pole " << log(m_obss[m_n]->LogArg(m_xvals[m_n][0], p_ampl)) << " " << log(transp) << " " << -(m_a[2]+m_b[2])/2./as/beta0 << " " << m_b[2]/(1.+m_beta)*log(1./transp)-(m_a[2]*(1.+m_beta)+m_b[2])/2./(1.+m_beta)/as/beta0 << std::endl;
-//         std::cout << "Landau pole " << log(m_obss[m_n]->LogArg(m_xvals[m_n][0], p_ampl)) << " " << -(m_a[2]+m_b[2])/2./as/beta0 << " " << -m_a[2]/2./as/beta0 << std::endl;
-        
-        for(size_t i=0; i<m_xvals[m_n].size(); i++) {
-            std::cout << m_resNLL[m_n][i] << " ";
-        }
-        std::cout << std::endl;
-    }
   }
   CleanUp();
   return 1;
