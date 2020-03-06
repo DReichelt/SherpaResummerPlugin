@@ -22,10 +22,10 @@ namespace RESUM {
       Observable_Base(args), m_algkey(args) {
       m_algkey.m_name = "FJmaxPTjet";
       m_algtag = m_algkey.Name();
-      m_algtag += ":"+args.KwArg("R","0.5");
+      m_algtag += ":"+args.KwArg("R","0.8");
       m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
-      m_R = to_type<double>(args.KwArg("R","0.5"));
+      m_R = to_type<double>(args.KwArg("R","0.8"));
     }
 
     Obs_Params Parameters
@@ -41,7 +41,7 @@ namespace RESUM {
       if(!fl[l].Strong()) return {1,0,0,0};
       const double a = 1;
       const double b = m_alpha-1;
-      const double d = pow(2.*cosh(p[l].Eta())/(m_R),m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
+      const double d = pow(2.*cosh(p[l].Eta())/m_R,m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
       const double etamin = log(2.*cosh(p[l].Eta())/m_R);
       return Obs_Params(a,b,log(d),0.0,etamin);
     }

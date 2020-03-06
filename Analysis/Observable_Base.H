@@ -120,7 +120,6 @@ namespace RESUM {
 
     Obs_Params Parameters(ATOOLS::Cluster_Amplitude* ampl, 
                           const size_t l) {
-      DEBUG_FUNC(this);
       // return this->Parameters(ampl,l);
       std::vector<Vec4T> moms(ampl->Legs().size());
       std::vector<ATOOLS::Flavour> flavs(ampl->Legs().size());
@@ -132,6 +131,14 @@ namespace RESUM {
       }
       Obs_Params p = Parameters(moms,flavs,l);
       double logdbar = p.m_logdbar + p.m_a/2.*log(ampl->MuQ2()/cme.Abs2()); 
+      DEBUG_FUNC(Tag()+" -> "+Name());
+      msg_Debugging()<<"Parameters for leg "<<l<<" of "; 
+      msg_Debugging()<<*ampl<<"\n\n";
+      msg_Debugging()<<"a = "<<p.m_a<<"\n";
+      msg_Debugging()<<"b = "<<p.m_b<<"\n";
+      msg_Debugging()<<"log(\\bar{d}) = "<<p.m_logdbar<<"\n";
+      msg_Debugging()<<"g = "<<p.m_g<<"\n";
+      msg_Debugging()<<"\\eta_{min} = "<<p.m_etamin<<".\n";
       return {p.m_a,p.m_b,logdbar,p.m_g,p.m_etamin};
     }
 
