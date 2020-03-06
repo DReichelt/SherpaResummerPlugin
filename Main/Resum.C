@@ -278,7 +278,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   MatrixD G0(4,4,0);
   MatrixD Rexp(4,4,0);
   MatrixD Rexp0(4,4,0);
-  double ExpAtEnd0 = 0.;
   double RAtEnd0 = 0.;
   // expansion coefficents for soft function
   double SoftexpNLL_LO=0.0;
@@ -293,7 +292,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(!(m_amode&MODE::IGNCOLL)) {
     msg_Debugging()<<"Calculate collinear piece.\n";
     weight *= exp(CalcColl(L, LResum, 1, Rp, G, Rexp, SoftexpNLL_LO));
-    weight *= exp(-CalcColl(0, LResum, 1, Rp0, G0, Rexp0, ExpAtEnd0, RAtEnd0));
+    weight *= exp(-CalcColl_end(0, LResum, 1, Rp0, G0, Rexp0, RAtEnd0));
   }
   msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
                  <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
@@ -395,12 +394,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   
   // TODO: fix
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
-    m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * 4./m_a[0]*SoftexpNLL_LO;
+    m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
     if(m_mmode & MATCH_MODE::ADD) {
       m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G(1,1);
     }
     if(m_mmode & MATCH_MODE::DERIV) {
-      m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * ExpAtEnd0/pow(as,1);
+      m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G0(1,1);
     }
   }  
   // store leading order expansion
@@ -422,10 +421,11 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
     m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) +PDFexp)),2)/2.;
     if(m_mmode & MATCH_MODE::ADD) {
-      m_resExpNLO[m_n][i] += (H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(1,1)+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(1,1)+PDFexp)));
     }
     if(m_mmode & MATCH_MODE::DERIV) {
-      m_resExpNLO[m_n][i] += (H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ExpAtEnd0/pow(as,1)+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G0(1,1)+PDFexp)));
+      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * G0(2,1);
     }
   }
   // store next-to-leading order expansion
@@ -854,8 +854,8 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 }
 
 
-double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G,
-                       MatrixD& Rexp, double& S1, double& ExpAtEnd, double& RAtEnd) 
+double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, 
+                       MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd) 
 {
   DEBUG_FUNC(L);
   const double muR2 = p_ampl->MuR2();
@@ -1038,8 +1038,6 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                          -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*m_logdbar[i])*sqr(log(1./transp)));
         //TODO Soft function expansion
 //         S1 += -colfac*log(Q12/Q);
-
-        ExpAtEnd += -2./M_PI*as*(colfac)*(m_a[i]+m_b[i])*log(1./transp)/m_a[i]/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
         
         RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
 
@@ -1051,13 +1049,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         
         double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
         
-        ExpAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]+m_a[i]*log(Q/Q12)-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
-        
         RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+r1dAtEnd*m_logdbar[i]+hardcoll*r2_hardcollAtEnd);        
       } // end expansion for grooming
       else {
-        
-        ExpAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
         
         RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
         
