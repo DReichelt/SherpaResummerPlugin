@@ -272,9 +272,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(v > 1)     return;
   const double L = log(1.0/v);
   double Rp = 0.0;
+  double Rp0 = 0.0;
   // expansion coefficients for collinear part
   MatrixD G(4,4,0);
   MatrixD G0(4,4,0);
+  MatrixD Rexp(4,4,0);
+  MatrixD Rexp0(4,4,0);
   double ExpAtEnd0 = 0.;
   double RAtEnd0 = 0.;
   // expansion coefficents for soft function
@@ -289,8 +292,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
 
   if(!(m_amode&MODE::IGNCOLL)) {
     msg_Debugging()<<"Calculate collinear piece.\n";
-    weight *= exp(CalcColl(L, LResum, 1, Rp, G, SoftexpNLL_LO));
-    weight *= exp(-CalcColl(0, LResum, 1, G0, ExpAtEnd0, RAtEnd0));
+    weight *= exp(CalcColl(L, LResum, 1, Rp, G, Rexp, SoftexpNLL_LO));
+    weight *= exp(-CalcColl(0, LResum, 1, Rp0, G0, Rexp0, ExpAtEnd0, RAtEnd0));
   }
   msg_Debugging()<<"Weight after coll = "<<weight<<" Rp = "<<Rp<<" L =  "<<L
                  <<" v = "<<m_xvals[m_n][i]<<" bar{d} = "<<exp(m_logdbar[1])<<" "<<exp(m_logdbar[2])<<".\n";
@@ -356,6 +359,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     msg_Debugging()<<"Calculate FFunction of Rp = "<<Rp<<".\n";
     if(!std::isnan(Rp)) {
       weight*=m_F(Rp,FexpNLL_NLO);
+      double dummy;
+      weight*=m_F(Rp0,dummy);
     }
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
   }
@@ -387,6 +392,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
   double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
   m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2)-H10;
+  
   // TODO: fix
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * 4./m_a[0]*SoftexpNLL_LO;
@@ -402,10 +408,14 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   
   H(2,4) = pow(as,2)*pow(L,4) * ( 0.5*pow(G(1,2),2) );
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
-  // TODO: Fexp handling might be inconsistent with grooming
   H(2,2) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(1,1),2) + G(2,2) +
-                                  4.*FexpNLL_NLO*pow(G(1,2),2) );
-  m_resExpNLO[m_n][i] = H(2,4) + H(2,3) + H(2,2);
+                                  G(1,2)*G(1,0) +
+                                  4.*FexpNLL_NLO*pow(Rexp(1,2),2) );
+  H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) );
+  H(2,0) = pow(as,2)*pow(L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + FexpNLL_NLO*pow(Rexp(1,1),2) );
+  double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) + 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
+  
+  m_resExpNLO[m_n][i] = H(2,4) + H(2,3) + H(2,2) + H(2,1) + H(2,0) - H20;
   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
 
   // TODO: fix
@@ -845,7 +855,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 
 
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, MatrixD& G,
-                       double& S1, double& ExpAtEnd, double& RAtEnd) 
+                       MatrixD& Rexp, double& S1, double& ExpAtEnd, double& RAtEnd) 
 {
   DEBUG_FUNC(L);
   const double muR2 = p_ampl->MuR2();
@@ -1008,6 +1018,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         G(1,1) += -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum)+m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
         G(1,0) += 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum)-m_logdbar[i]/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp) );
         
+        Rexp(1,2) += -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
+        Rexp(1,1) += -4.*colfac*log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]);
+        
         
         G(2,3) += -8.*M_PI*beta0*colfac/3.*m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i]));
         G(2,2) += -8.*M_PI*beta0*colfac*((m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp)
@@ -1051,6 +1064,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         
         G(1,2) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
         G(1,1) += -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum));
+        
+        Rexp(1,2) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
+        
         G(2,3) += -8.*M_PI*beta0/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
         G(2,2) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)) \
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));

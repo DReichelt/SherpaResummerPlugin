@@ -145,17 +145,17 @@ namespace RESUM {
     
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
     double CalcColl(const double L, const double LResum, const int order,
-                    double &Rp, MatrixD& G, double& S1) {
+                    double &Rp, MatrixD& G, MatrixD& Rexp, double& S1) {
       double dummy1, dummy2;
-      return CalcColl(L, LResum, order, Rp, G, S1, dummy1, dummy2);
+      return CalcColl(L, LResum, order, Rp, G, Rexp, S1, dummy1, dummy2);
     }
     double CalcColl(const double L, const double LResum, const int order,
-                    MatrixD& G, double& ExpAtEnd, double& RAtEnd) {
-      double dummy1, dummy2;
-      return CalcColl(L, LResum, order, dummy1, G, dummy2, ExpAtEnd, RAtEnd);
+                    double &Rp, MatrixD& G, MatrixD& Rexp, double& ExpAtEnd, double& RAtEnd) {
+      double dummy1;
+      return CalcColl(L, LResum, order, Rp, G, Rexp, dummy1, ExpAtEnd, RAtEnd);
     }
     double CalcColl(const double L, const double LResum, const int order,
-                    double &Rp, MatrixD& G, double& S1,
+                    double &Rp, MatrixD& G, MatrixD& Rexp, double& S1,
                     double& ExpAtEnd, double& RAtEnd);
 
     double CalcPDF(const double L, const double LResum, double &PDFexp);
