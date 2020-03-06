@@ -392,7 +392,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
   m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2)-H10;
   
-  // TODO: fix
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
     if(m_mmode & MATCH_MODE::ADD) {
@@ -412,19 +411,18 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
                                   4.*FexpNLL_NLO*pow(Rexp(1,2),2) );
   H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) );
   H(2,0) = pow(as,2)*pow(L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + FexpNLL_NLO*pow(Rexp(1,1),2) );
-  double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) + 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
+  double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
   
-  m_resExpNLO[m_n][i] = H(2,4) + H(2,3) + H(2,2) + H(2,1) + H(2,0) - H20;
+  m_resExpNLO[m_n][i] = H(2,4) + H(2,3) + H(2,2) + H(2,1) + H(2,0) - H20 - H10*(H(1,0)+H(1,1)+H(1,2));
   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
 
-  // TODO: fix
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
-    m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(0,0) +PDFexp)),2)/2.;
+    m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(1,1) +PDFexp)),2)/2.;
     if(m_mmode & MATCH_MODE::ADD) {
-      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(1,1)+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(1,1)+PDFexp)));
     }
     if(m_mmode & MATCH_MODE::DERIV) {
-      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2))*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G0(1,1)+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G0(1,1)+PDFexp)));
       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * G0(2,1);
     }
   }
