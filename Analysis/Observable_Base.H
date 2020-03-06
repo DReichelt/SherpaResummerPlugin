@@ -224,10 +224,9 @@ namespace RESUM {
       return m_gmode;
     }
     
-    virtual GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
-                         const std::vector<ATOOLS::Flavour>& fl,
-                         const size_t &l) {
-        if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
+    virtual GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
+                                 const size_t &l) {
+        if(v > GroomTransitionPoint(ampl, l)) return GROOM_MODE::NONE;
         else return m_gmode;
     }
 
@@ -239,10 +238,8 @@ namespace RESUM {
       return m_beta;
     }
 
-    virtual double GroomTransitionPoint
-       (const std::vector<ATOOLS::Vec4D>& p,
-       const std::vector<ATOOLS::Flavour>& fl,
-       const size_t &l) {
+    virtual double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
+                                        const size_t &l) {
       return std::numeric_limits<T>::infinity();
     }
     

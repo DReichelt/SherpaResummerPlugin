@@ -48,28 +48,45 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
-    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
-                         const std::vector<ATOOLS::Flavour>& fl,
+    double LogFac(ATOOLS::Cluster_Amplitude* ampl) {
+      if(!m_unitNorm) return RESUM::Observable_Base::LogFac();
+      double avg = 0;
+      double n = 0;
+      for(int i=2; i<ampl->Legs().size(); i++) {
+        if(ampl->Leg(i)->Flav().StrongCharge() != 0) {
+          n++;
+          avg += RESUM::Observable_Base::Parameters(ampl,i).m_logdbar;
+        }
+      }
+      avg /= n;
+      return exp(avg)*RESUM::Observable_Base::LogFac();
+    }
+
+    GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
                          const size_t &l) {
       if(l<2) {
         return m_gmode;
       }
       else {
         return GROOM_MODE::SD_COLL;
-        if(v > GroomTransitionPoint(p, fl, l)) return GROOM_MODE::NONE;
+        if(v > GroomTransitionPoint(ampl, l)) return GROOM_MODE::NONE;
         else return m_gmode;        
       }
     }
 
-    double GroomTransitionPoint(const std::vector<ATOOLS::Vec4D>& p,
-                                const std::vector<ATOOLS::Flavour>& fl,
+    double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
                                 const size_t &l) {
-           
-      double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
       
-      double d=log(1.0/sqr(sinth));
-      d += -2.0*log(2.0);
-      return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta)*exp(d);
+      std::vector<Vec4T> moms(ampl->Legs().size());
+      for (size_t i=0; i<ampl->Legs().size(); ++i) {
+        moms[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
+      }
+      double sinth=sqrt(2.0*moms[2].PPerp2()/(moms[0]*moms[1]));
+      
+      Obs_Params para = RESUM::Observable_Base::Parameters(ampl,l);
+      double logfac = LogFac(ampl);
+      
+      return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta)*exp(para.m_logdbar)/logfac;
     }
     
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
