@@ -211,14 +211,14 @@ namespace RESUM {
       
       int number_of_particles = left_hemi.size() + right_hemi.size();
       
-      fastjet::JetDefinition jet_def(fastjet::genkt_algorithm, 2*M_PI, 0.0, fastjet::E_scheme, fastjet::Best);
+      fastjet::JetDefinition jet_def(fastjet::genkt_algorithm, 1000., 0.0, fastjet::E_scheme, fastjet::Best);
       fastjet::ClusterSequence   cs_l(left_hemi, jet_def);
       fastjet::ClusterSequence   cs_r(right_hemi, jet_def);
       vector<fastjet::PseudoJet> right_jets = cs_r.exclusive_jets(1);
       vector<fastjet::PseudoJet> left_jets = cs_l.exclusive_jets(1);
       
 
-      fastjet::contrib::SoftDrop softdrop(m_beta, m_zcut, M_PI); // Inputs are beta, zcut, R0
+      fastjet::contrib::SoftDrop softdrop(m_beta, m_zcut, m_R0); // Inputs are beta, zcut, R0
       vector<fastjet::PseudoJet> sd_right_hemi = softdrop(right_jets);
       vector<fastjet::PseudoJet> sd_left_hemi = softdrop(left_jets);
       vector<fastjet::PseudoJet>  right = sd_right_hemi[0].constituents();
