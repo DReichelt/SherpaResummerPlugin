@@ -62,12 +62,21 @@ Hard_Matrix *Comix_Interface::ComputeHardMatrix
     
     for (size_t i(0);i<perm.size();++i) {
       size_t cur(perm[i]), next(i+1<perm.size()?perm[i+1]:perm[0]);
-      msg_Debugging()<<fc<<" " <<ampl->Leg(cur)->Flav().StrongCharge()<<"\n";
+      msg_Debugging()<<fc<<" "<<ampl->Leg(cur)->Flav().StrongCharge()<<"\n";
+      if (ampl->Leg(cur)->Flav().StrongCharge()==0) {
+	continue;
+      }
       if (ampl->Leg(cur)->Flav().StrongCharge()==-fc) {
 	fc=ampl->Leg(next)->Flav().StrongCharge();
 	continue;
       }
-      cj[fc>0?next:cur]=ci[fc>0?cur:next]=Flow::Counter();
+      if(ampl->Leg(next)->Flav().Strong()) {
+	cj[fc>0?next:cur]=ci[fc>0?cur:next]=Flow::Counter();
+      }
+      else {
+	if(fc!=8) THROW(fatal_error,"Inconsistent colors.");
+	cj[perm[0]]=ci[cur]=Flow::Counter();
+      }
     }
     double me(xs->GetAmplitude()->Differential(ci,cj,-1));
     std::vector<Spin_Amplitudes> amps;
