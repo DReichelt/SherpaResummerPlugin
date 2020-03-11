@@ -90,7 +90,7 @@ namespace RESUM {
           m_epmode = static_cast<EP_MODE>(m_epmode | m_EPModeToEnum.at(m));
         }
       }
-      
+      /*
       const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","NONE");
       if(is_int(gmode)) {
         m_gmode = static_cast<GROOM_MODE>(to_type<int>(gmode));
@@ -101,7 +101,8 @@ namespace RESUM {
             m_gmode = static_cast<GROOM_MODE>(m_gmode | m_GroomModeToEnum.at(m));
           }
         }
-      }
+      }*/
+      /*
       if(m_gmode & GROOM_MODE::SD) {
         m_zcut = read.GetValue<double>("RESUM::"+m_name+"::GROOM::ZCUT",
                                        read.GetValue<double>("RESUM::GROOM::ZCUT", 0.1) );
@@ -109,7 +110,7 @@ namespace RESUM {
                                        read.GetValue<double>("RESUM::GROOM::BETA", 0));
         m_R0   = read.GetValue<double>("RESUM::"+m_name+"::GROOM::RAD0",
                                        read.GetValue<double>("RESUM::GROOM::RAD0", 1));
-      }
+      }*/
     }
 
     virtual ~Observable_Base_Template() {};

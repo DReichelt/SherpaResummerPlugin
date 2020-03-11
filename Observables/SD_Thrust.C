@@ -26,7 +26,13 @@ namespace RESUM {
   public:
 
     SD_Thrust(const Observable_Key &args): 
-    Observable_Base(args) {}
+    Observable_Base(args) {
+        m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
+        m_beta = to_type<double>(args.KwArg("beta","0"));
+        m_R0 = to_type<double>(args.KwArg("R0","1"));
+        if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
+        else m_gmode = GROOM_MODE::SD;
+    }
 
     Obs_Params Parameters
       (const std::vector<ATOOLS::Vec4D>& p,
