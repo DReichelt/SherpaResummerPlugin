@@ -32,6 +32,11 @@ namespace RESUM {
         m_R0 = to_type<double>(args.KwArg("R0","1"));
         if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
         else m_gmode = GROOM_MODE::SD;
+        DEBUG_FUNC(Name()+" -> "+Tag());
+        DEBUG_VAR(m_zcut);
+        DEBUG_VAR(m_beta);
+        DEBUG_VAR(m_R0);
+        DEBUG_VAR(m_gmode);
     }
 
     Obs_Params Parameters

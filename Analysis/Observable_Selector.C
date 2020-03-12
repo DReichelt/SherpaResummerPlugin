@@ -25,11 +25,10 @@ namespace PHASIC {
       m_fl=(Flavour*)&p_proc->Process()->Flavours().front();
       m_sel_log=new Selector_Log(m_name);
       p_tau = RESUM::Observable_Getter::GetObject
-	(key[0][0],RESUM::Observable_Key(key[0][0]));
+	(key[0][0],RESUM::Observable_Key(key[0][0],{key[0].begin(),key[0].end()}));
       if (p_tau==nullptr) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
       m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
-      if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));
-      
+      if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));      
     }
 
     ~Observable_Selector() { delete p_tau; }
