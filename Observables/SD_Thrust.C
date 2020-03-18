@@ -89,12 +89,14 @@ namespace RESUM {
                                 const size_t &l) {
       
       std::vector<Vec4T> moms(ampl->Legs().size());
+      std::vector<ATOOLS::Flavour> flavs(ampl->Legs().size());
       for (size_t i=0; i<ampl->Legs().size(); ++i) {
         moms[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
+        flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
       double sinth=sqrt(2.0*moms[2].PPerp2()/(moms[0]*moms[1]));
       
-      Obs_Params para = RESUM::Observable_Base::Parameters(ampl,l);
+      Obs_Params para = Parameters(moms,flavs,l);;
       double logfac = LogFac(ampl);
       
       return pow(2,m_beta)*m_zcut/pow(m_R0*sinth,m_beta)*exp(para.m_logdbar)/logfac;
