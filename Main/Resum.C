@@ -122,6 +122,7 @@ int Resum::PerformShowers()
     m_b.clear();
     m_logdbar.clear();
     m_etamin.clear();
+    m_deltad.clear();
     for (size_t i=0; i<moms.size(); i++) {
       if(m_obss[m_n] == nullptr)
         THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
@@ -132,6 +133,7 @@ int Resum::PerformShowers()
       m_logdbar.push_back(ps.m_logdbar);
       
       m_etamin.push_back(ps.m_etamin);
+      m_deltad.push_back(ps.m_deltad);
     }
     
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
@@ -459,6 +461,7 @@ void Resum::CleanUp()
   
   m_cms.clear();
   m_Qij.clear();
+  m_kij.clear();
   flavlabels.clear();
   signlabels.clear();
   momlabels.clear();
@@ -527,10 +530,10 @@ bool Resum::PrepareShower
     m_cmetrics.insert(make_pair(pname,cmetric));
   }
 
-  /* m_ordered_ids = vector<size_t>(p_ampl->Legs().size()); */
-  /* for(size_t i=0; i<p_ampl->Legs().size(); i++) { */
-  /*   m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id(); */
-  /* } */
+  m_ordered_ids = vector<size_t>(p_ampl->Legs().size());
+  for(size_t i=0; i<p_ampl->Legs().size(); i++) {
+    m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id();
+  }
   
   p_cmetric=cmetric;
  
@@ -559,12 +562,12 @@ bool Resum::PrepareShower
     cms_boost.Boost(tmp);
     m_cms.push_back(tmp);
   }
-
+  
   //kinematic invariants
   for (size_t i=0;i<lab_moms.size();i++) {
       for (size_t j=i+1;j<lab_moms.size();j++) {
 	m_Qij.push_back(sqrt((lab_moms[i]+lab_moms[j])*(lab_moms[i]+lab_moms[j])));
-	momlabels.push_back(lab_moms[i]);
+        momlabels.push_back(lab_moms[i]);
 	momlabels.push_back(lab_moms[j]);
 	flavlabels.push_back(tmp_lab[i]);  
 	flavlabels.push_back(tmp_lab[j]);
@@ -572,12 +575,32 @@ bool Resum::PrepareShower
 	signlabels.push_back(tmp_sig[j]);
       }
   }
-
   
   
   p_ampl->Delete();
   p_ampl=ampl->Copy();
 
+  for(size_t i=0; i<p_ampl->Legs().size()-color_sings; i++) {
+    for(size_t j=i+1; j<p_ampl->Legs().size()-color_sings; j++) {
+
+      m_kij.push_back({p_ampl->IdIndex(m_ordered_ids[i]),p_ampl->IdIndex(m_ordered_ids[j])});
+      // m_lgamma.push_back((p_ampl->IdLeg(m_ordered_ids[i])->Mom()
+      //                     +p_ampl->IdLeg(m_ordered_ids[i])->Mom()).Abs()/s_12);
+      // m_lgamma.push_back(0);
+      // const double R0 = 0.8;
+      // if(p_ampl->IdIndex(m_ordered_ids[i])<p_ampl->NIn() and
+      //    p_ampl->IdIndex(m_ordered_ids[j])<p_ampl->NIn()) {
+      //   m_lgamma.push_back(sqr(R0)/4.);
+      // }
+      // else {
+      //   Vec4D pi = p_ampl->IdLeg(m_ordered_ids[i])->Mom();
+      //   Vec4D pj = p_ampl->IdLeg(m_ordered_ids[j])->Mom();
+      //   m_lgamma.push_back(sqr(R0)*(1./4.+sqr(R0)/288.)/4.);
+      // }
+    }
+  }
+  
+  
   return true;
 } 
   
@@ -749,7 +772,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   MatrixD ReGamma(dim, dim, 0);
   MatrixC Gamma(dim, dim, 0);
   for(size_t k=0; k<Tprods.size(); k++) {
-    ReGamma += log(m_Qij[k]/s_12)*Tprods[k];
+    ReGamma += m_obss[m_n]->SoftGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
     if(signlabels[2*k]*signlabels[2*k+1] == 1) {
       Gamma += MatrixC(Tprods[k]);
     }
@@ -878,6 +901,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
   }
   for(size_t i = (m_gmode & GROOM_MODE::SD) ? 2 : 0;
       i<p_ampl->Legs().size(); i++) {
+    if(m_deltad[i] == 0) continue;
     //m_gmode = m_obss_n->GroomMode(exp(-L), moms, flavs, i);
     msg_Debugging()<<"Calculate radiator for leg "<<i<<".\n";
       double colfac = 0.;
@@ -912,6 +936,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double lambda = as*beta0*L;
       double Lmur=log(muR2/sqr(Q));
 
+      msg_Debugging()<<"lambda = as*beta0*L = "<<as<<"*"<<beta0<<"*"<<L<<" = "<<lambda<<"\n";
+      
       // needed for SD grooming
       double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
       double lambdaZ = as*beta0*log(1./transp)/m_a[i];
@@ -932,7 +958,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               msg_Debugging()<<"Argument of log is "<<1.-2.*lambda/m_a[i]<<" and "<<1.-2.*lambda/(m_a[i]+m_b[i])<<".\n";
               r1= 1./2./M_PI/pow(beta0,2.)/as/m_b[i]*((m_a[i]-2.*lambda)*log(1.-2.*lambda/m_a[i])
                                                       -(m_a[i]+m_b[i]-2.*lambda)*log(1.-2.*lambda/(m_a[i]+m_b[i])));
-              
+
             }
             msg_Debugging()<<"LL contribution = "<<-colfac*r1<<"\n";
 	    R -= colfac*r1;
@@ -967,9 +993,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 
             // subtract NLL contribution of scale variation
             const double r2_corr = +LResum*r1p;//-(L-LResum)*r1p;
-            
             const double r2=1./m_b[i]*(r2_cmw+r2_beta1)+r2_corr;
 
+            msg_Debugging()<<"NLL contribution = "<<-colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i])) +  colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambda/m_a[i]) <<"\n";
             // add NLL parts to R and Rp
             R -= colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])));
             if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
@@ -978,7 +1004,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             }
             else {
               R -= colfac*log(Q12/Q)*T(lambda/m_a[i]);
-              R += colfac*m_etamin[i]*T(lambda/m_a[i]);
+              if(!IsZero(m_etamin[i])) {
+                R += colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambda/m_a[i]);
+              }
             } 
             Rp+=r1p*colfac;
 	  } // end of NLL for b != 0
@@ -1006,7 +1034,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             double r2=(r2_cmw+r2_beta1+r2_corr);
             
             R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
-            R += colfac*m_etamin[i]*T(lambda/m_a[i]);
+            if(!IsZero(m_etamin[i])) {
+              R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambda/m_a[i]);
+            }
             Rp+=r1p*colfac;
           }
         }
@@ -1036,6 +1066,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                          -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*m_logdbar[i])*sqr(log(1./transp)));
         //TODO Soft function expansion
 //         S1 += -colfac*log(Q12/Q);
+
         
         RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
 
@@ -1062,13 +1093,15 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         G(2,3) += -8.*M_PI*beta0/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
         G(2,2) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)) \
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
-        G(1,1) += 4.*colfac*m_etamin[i]/m_a[i];
-        G(2,2) += 8.*M_PI*beta0*colfac*m_etamin[i]/m_a[i]/m_a[i];
-        
+        if(!IsZero(m_etamin[i])) {
+          G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
+          G(2,2) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]);
+        }
         S1 += -colfac*log(Q12/Q);
       } // end expansion without grooming
     } // end loop over legs
   msg_Debugging()<<"Sum of radiators = "<<R<<".\n";
+  msg_Debugging()<<"Expansion: \n"<<G(1,2)<<" "<<G(1,1)<<" "<<S1<<" "<<G(1,1)+4./m_a[0]*S1<<"\n";
   return R;
 }
 
@@ -1147,8 +1180,9 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   msg_Debugging() << "scale before: " << scale << "\n";
 
   for (size_t i=0;i<2;i++) {
-    if (p_ampl->Leg(i)->Flav().IsLepton()) continue;
-
+    if(m_deltad[i] == 0) continue;
+    if(p_ampl->Leg(i)->Flav().IsLepton()) continue;
+    
     const double x = i==0 ? (-p_ampl->Leg(i)->Mom()).PPlus()/rpa->gen.PBeam(0).PPlus() : (-p_ampl->Leg(i)->Mom().PMinus())/rpa->gen.PBeam(1).PMinus();
 
     //original PDF

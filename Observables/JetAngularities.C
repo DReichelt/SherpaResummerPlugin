@@ -33,17 +33,20 @@ namespace RESUM {
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t& l) {
       // @TODO: returning a=0 leads to problems, because a_0 is magic
-      if(l<2) return {1,0,0,0};
+      if(l<2) return {1,0,0,0,0,0};
       // @TODO: we could check here if l corresponds to the largest pT jet,
       // possibly enabling this also for the leading di-/multijet etc.
       // at the moment, assume we are in pp -> Zj, so only one colour charged final
       // state that corresponds to the leading jet
-      if(!fl[l].Strong()) return {1,0,0,0};
+      if(!fl[l].Strong()) return {1,0,0,0,0,0};
       const double a = 1;
       const double b = m_alpha-1;
-      const double d = pow(2.*cosh(p[l].Eta())/m_R,m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
-      const double etamin = log(2.*cosh(p[l].Eta())/m_R);
-      return Obs_Params(a,b,log(d),0.0,etamin);
+      const Poincare cms= {p[0]+p[1]};
+      Vec4D pl = p[l];
+      Poincare(p[0]+p[1]).Boost(pl);
+      const double d = pow(2.*cosh(pl.Eta())/m_R,m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
+      const double etamin = log(2.*cosh(pl.Eta())/m_R);
+      return Obs_Params(a,b,log(d),0.0,etamin,1);
     }
 
     std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
@@ -52,25 +55,22 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
-
-    GROOM_MODE GroomMode() {
-      // @TODO: this tricks the observable into ignoring initial states and soft function
-      return GROOM_MODE::SD;
-    }
-    
-    GROOM_MODE GroomMode(double v, const std::vector<ATOOLS::Vec4D>& p,
-                         const std::vector<ATOOLS::Flavour>& fl,
-                         const size_t &l) {
-      if(l<2) {
-        return GROOM_MODE::SD;
+    double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
+      if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
+        if(i<ampl->NIn() and j<ampl->NIn()) {
+          return sqr(m_R)/4.;
+        }
+        else {
+          return sqr(m_R)*(1./4.)/4.;
+          return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+        }
       }
       else {
-        // @TODO: but still calculate radiator w.r.t. final state leg
-        return GROOM_MODE::NONE;
+        return 0;
       }
     }
 
-    
+
     double Value(const std::vector<Vec4D>& moms,
             const std::vector<ATOOLS::Flavour>& flavs,
             const size_t& nin) {
@@ -103,7 +103,7 @@ namespace RESUM {
       for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "<<ip[i]<<" "<<ip[i].PPerp()<<"\n";
       msg_Debugging()<<"... in jet:\n";
       for (ATOOLS::Vec4D con: constits) {
-        // event with grooming , pt is defined without grooming
+        // even with grooming , pt is defined without grooming
         double z = con.PPerp() / alg->second->jetVectors(0).PPerp();
         msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
         lambda +=  z * pow(con.DR(axis) / m_R, m_alpha);

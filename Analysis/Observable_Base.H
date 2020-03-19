@@ -23,11 +23,16 @@ namespace RESUM {
   };
 
   struct Obs_Params {
-    double m_a, m_b, m_logdbar, m_g, m_etamin;
+    double m_a;
+    double m_b;
+    double m_logdbar;
+    double m_g;
+    int m_deltad;
+    double m_etamin = 0;
     Obs_Params() = default;
     inline Obs_Params(const double &a,const double &b,
-                      const double &logdbar,const double &g,const double &etamin=0.):
-      m_a(a), m_b(b), m_logdbar(logdbar), m_g(g), m_etamin(etamin) {}
+                      const double &logdbar,const double &g, const double &etamin=0., int deltad = 1):
+      m_a(a), m_b(b), m_logdbar(logdbar), m_g(g), m_etamin(etamin), m_deltad(deltad) { }
   };
 
   enum GROOM_MODE {
@@ -140,7 +145,7 @@ namespace RESUM {
       msg_Debugging()<<"log(\\bar{d}) = "<<p.m_logdbar<<"\n";
       msg_Debugging()<<"g = "<<p.m_g<<"\n";
       msg_Debugging()<<"\\eta_{min} = "<<p.m_etamin<<".\n";
-      return {p.m_a,p.m_b,logdbar,p.m_g,p.m_etamin};
+      return {p.m_a,p.m_b,logdbar,p.m_g,p.m_etamin,p.m_deltad};
     }
 
     virtual Obs_Params Parameters(const std::vector<Vec4T>& p,
@@ -150,6 +155,20 @@ namespace RESUM {
     virtual std::function<double(double,double&)> FFunction(const std::vector<Vec4T>& p,
                                                             const std::vector<ATOOLS::Flavour>& fl,
                                                             const RESUM::Params& params) = 0;
+
+
+    
+    virtual double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) {
+      if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
+        ATOOLS::Vec4D pi = (i<ampl->NIn() ? -1:1)*ampl->Leg(i)->Mom();
+        ATOOLS::Vec4D pj = (j<ampl->NIn() ? -1:1)*ampl->Leg(j)->Mom();
+        return log((pi+pj).Abs()/scale);
+      }
+      else {
+        msg_Out()<<"Nothing.\n";
+        return 0;
+      }
+    }
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
         ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);
@@ -196,9 +215,10 @@ namespace RESUM {
       double avg = 0;
       double n = 0;
       for(int i=0; i<ampl->Legs().size(); i++) {
-        if(ampl->Leg(i)->Flav().StrongCharge() != 0) {
+        Obs_Params ps = Parameters(ampl,i);
+        if(ampl->Leg(i)->Flav().StrongCharge() != 0 and ps.m_deltad > 0) {
           n++;
-          avg += Parameters(ampl,i).m_logdbar;
+          avg += ps.m_logdbar;
         }
       }
       avg /= n;
