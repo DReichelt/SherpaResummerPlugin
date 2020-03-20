@@ -30,6 +30,7 @@ namespace RESUM {
       // soft drop parameters
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
       m_beta = to_type<double>(args.KwArg("beta","0"));
+      m_R0 = m_R;
       if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
       DEBUG_FUNC(Name()+" -> "+Tag());
@@ -78,17 +79,17 @@ namespace RESUM {
       }
     }
     
-    double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
-                                const size_t &l) {
-      
-      const double sinth = sqrt(2.0*ampl->Leg(2)->Mom().PPerp2() /
-                                (ampl->Leg(0)->Mom()*ampl->Leg(1)->Mom()));
-      
-      const Obs_Params para = Observable_Base::Parameters(ampl,l);
-      const double logfac = LogFac(ampl);
-      
-      return pow(2,m_beta)*m_zcut/pow(m_R*sinth,m_beta)*exp(para.m_logdbar)/logfac;
-    }
+//     double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
+//                                 const size_t &l) {
+//       
+//       const double sinth = sqrt(2.0*ampl->Leg(2)->Mom().PPerp2() /
+//                                 (ampl->Leg(0)->Mom()*ampl->Leg(1)->Mom()));
+//       
+//       const Obs_Params para = Observable_Base::Parameters(ampl,l);
+//       const double logfac = LogFac(ampl);
+//       
+//       return pow(2,m_beta)*m_zcut/pow(m_R*sinth,m_beta)*exp(para.m_logdbar)/logfac;
+//     }
 
 
     double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
