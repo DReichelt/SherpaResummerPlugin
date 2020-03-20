@@ -43,9 +43,9 @@ namespace RESUM {
       (const std::vector<ATOOLS::Vec4D>& p,
        const std::vector<ATOOLS::Flavour>& fl,
        const size_t &l) {
-      double a=1.0;
-      double b=l<2?0.0:1.0;
-      double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
+      const double a=1.0;
+      const double b=l<2?0.0:1.0;
+      const double sinth=sqrt(2.0*p[2].PPerp2()/(p[0]*p[1]));
       double d=log(l<2?1.0/sinth:1.0/sqr(sinth));
       const double G_cat=0.915965594177;
       if (l<2) d+=-4.0*G_cat/M_PI-log(2.0);

@@ -927,21 +927,19 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         continue;
       }
 
-      double t_scale = 0.5*(sqrt(pow(p_ampl->Leg(2)->Mom()[1],2) + pow(p_ampl->Leg(2)->Mom()[2],2)+
-				 pow(p_ampl->Leg(3)->Mom()[1],2) + pow(p_ampl->Leg(3)->Mom()[2],2)));
-      double Q = sqrt(p_ampl->MuQ2());
-      double Q12 = s_12;
+      const double Q = sqrt(p_ampl->MuQ2());
+      const double Q12 = s_12;
       
       
-      double lambda = as*beta0*L;
-      double Lmur=log(muR2/sqr(Q));
+      const double lambda = as*beta0*L;
+      const double Lmur=log(muR2/sqr(Q));
 
       msg_Debugging()<<"lambda = as*beta0*L = "<<as<<"*"<<beta0<<"*"<<L<<" = "<<lambda<<"\n";
       
       // needed for SD grooming
-      double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
-      double lambdaZ = as*beta0*log(1./transp)/m_a[i];
-      double lambda2 = as*beta0*log(1./2.);
+      const double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
+      const double lambdaZ = as*beta0*log(1./transp)/m_a[i];
+      const double lambda2 = as*beta0*log(1./2.);
 
       // The following formulae are taken from Appendix A of hep-ph/0407286. 
       if (!IsZero(m_b[i])) {
@@ -1022,19 +1020,19 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
           if (order>=0) {    
             //LL part
             msg_Debugging()<<"Argument of log is "<<1.-2.*lambda/m_a[i]<<".\n";
-            double r1= -1./2./M_PI/pow(beta0,2.)/as*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]));
+            const double r1= -1./2./M_PI/pow(beta0,2.)/as*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]));
             msg_Debugging()<<"LL contribution = "<<-colfac*r1<<".\n";
             R -= colfac*r1;
           }
           if (order>=1) {	    
             //NLL part
-            double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
-            double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
+            const double r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(log(1.-2.*lambda/m_a[i])+2./m_a[i]*lambda/(1.-2./m_a[i]*lambda));
+            const double r2_beta1=-beta1/2./M_PI/pow(beta0,3.)*(1./2.*pow(log(1-2.*lambda/m_a[i]),2.)
                                                           +(log(1-2.*lambda/m_a[i])+2./m_a[i]*lambda)/(1.-2*lambda/m_a[i]));
-            double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
+            const double r1p=2./(m_a[i]*m_a[i])/(M_PI*beta0)*lambda/(1.-2.*lambda/m_a[i]);
             // subtract NLL contribution of scale variation
-            double r2_corr = +LResum*r1p;
-            double r2=(r2_cmw+r2_beta1+r2_corr);
+            const double r2_corr = +LResum*r1p;
+            const double r2=(r2_cmw+r2_beta1+r2_corr);
             
             R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
             if(!IsZero(m_etamin[i])) {
@@ -1076,13 +1074,13 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         
         RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
 
-        double r2_beta1AtEnd = -as*beta1/M_PI/beta0/beta0*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
-        double r2_cmwAtEnd = 2.*as*beta0*(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
-        double r2_hardcollAtEnd = 2.*as/M_PI/(m_a[i]+m_b[i]);
-        double r1pAtEnd = -2.*as*beta0/m_b[i]*(1./(m_a[i]+m_b[i])-(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i])));
-        double r1dAtEnd = 2.*as/M_PI/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
+        const double r2_beta1AtEnd = -as*beta1/M_PI/beta0/beta0*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
+        const double r2_cmwAtEnd = 2.*as*beta0*(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
+        const double r2_hardcollAtEnd = 2.*as/M_PI/(m_a[i]+m_b[i]);
+        const double r1pAtEnd = -2.*as*beta0/m_b[i]*(1./(m_a[i]+m_b[i])-(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i])));
+        const double r1dAtEnd = 2.*as/M_PI/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
         
-        double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
+        const double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
         
         RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+r1dAtEnd*(m_logdbar[i]+m_beta*log(2.0*El/Q)+LResum)+hardcoll*r2_hardcollAtEnd);        
       } // end expansion for grooming
