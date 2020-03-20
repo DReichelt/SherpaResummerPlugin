@@ -697,7 +697,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 
   const double as = (*p_as)(p_ampl->MuR2());
   const double beta0 = m_params.beta0(p_ampl->MuR2());
-  const double lambda = as*beta0*L; 
+  const double lambda = as*beta0*Lv; 
   const double t = T(lambda/m_a[0]);
   const double t_exp = 1.;//as*L/M_PI/2.;//2*as*L/M_PI;
   
@@ -841,7 +841,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     msg_Debugging()<<"==============================================" << std::endl;  
     msg_Debugging()<< "alpha_s: " << as << std::endl;
     msg_Debugging()<< "evolution variable t: " << t << std::endl;
-    msg_Debugging()<< "Log(1/v): " << L << std::endl;
+    msg_Debugging()<< "Log(1/v): " << Lv << std::endl;
     msg_Debugging()<< std::endl;
     msg_Debugging()<< "Kinematics" << std::endl;
     msg_Debugging()<< *p_ampl << std::endl;
