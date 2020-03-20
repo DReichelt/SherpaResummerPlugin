@@ -165,7 +165,6 @@ namespace RESUM {
         return log((pi+pj).Abs()/scale);
       }
       else {
-        msg_Out()<<"Nothing.\n";
         return 0;
       }
     }

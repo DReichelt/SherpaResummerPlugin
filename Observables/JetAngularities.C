@@ -26,6 +26,17 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
       m_R = to_type<double>(args.KwArg("R","0.8"));
+
+      // soft drop parameters
+      m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
+      m_beta = to_type<double>(args.KwArg("beta","0"));
+      if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
+      else m_gmode = GROOM_MODE::SD;
+      DEBUG_FUNC(Name()+" -> "+Tag());
+      DEBUG_VAR(m_zcut);
+      DEBUG_VAR(m_beta);
+      DEBUG_VAR(m_R);
+      DEBUG_VAR(m_gmode);
     }
 
     Obs_Params Parameters
@@ -55,13 +66,38 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
+                         const size_t &l) {
+      if(l<2) {
+        return m_gmode;
+      }
+      else {
+        return GROOM_MODE::SD_COLL;
+        if(v > GroomTransitionPoint(ampl, l)) return GROOM_MODE::NONE;
+        else return m_gmode;        
+      }
+    }
+    
+    double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
+                                const size_t &l) {
+      
+      const double sinth = sqrt(2.0*ampl->Leg(2)->Mom().PPerp2() /
+                                (ampl->Leg(0)->Mom()*ampl->Leg(1)->Mom()));
+      
+      const Obs_Params para = Observable_Base::Parameters(ampl,l);
+      const double logfac = LogFac(ampl);
+      
+      return pow(2,m_beta)*m_zcut/pow(m_R*sinth,m_beta)*exp(para.m_logdbar)/logfac;
+    }
+
+
     double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
       if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
         if(i<ampl->NIn() and j<ampl->NIn()) {
           return sqr(m_R)/4.;
         }
         else {
-          return sqr(m_R)*(1./4.)/4.;
+          //return sqr(m_R)*(1./4.)/4.;
           return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
         }
       }

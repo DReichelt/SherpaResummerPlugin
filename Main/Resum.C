@@ -1001,6 +1001,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
               R -= colfac*(r1d*(m_logdbar[i]+m_beta*log(2.0*El/Q)+LResum));
 //               R -= colfac*(r1d*m_logdbar[i] + log(Q12/Q)*T(lambdaZ));
+              if(!IsZero(m_etamin[i])) {
+                R += colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambdaZ);
+              }              
             }
             else {
               R -= colfac*log(Q12/Q)*T(lambda/m_a[i]);
@@ -1064,8 +1067,11 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                                          +( -(K_CMW/2./M_PI/beta0+Lmur)/2./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])
                                          +m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)
                                          -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]+m_beta*log(2.0*El/Q)+LResum))*sqr(log(1./transp)));
-        //TODO Soft function expansion
-//         S1 += -colfac*log(Q12/Q);
+
+        if(!IsZero(m_etamin[i])) {
+          G(1,0) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i] * log(1./transp);
+          G(2,0) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]) * sqr(log(1./transp));
+        }
 
         
         RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0;
@@ -1093,10 +1099,12 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         G(2,3) += -8.*M_PI*beta0/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
         G(2,2) += -colfac*(8.*M_PI*beta0 * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/Q)+LResum)) \
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
+
         if(!IsZero(m_etamin[i])) {
           G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
           G(2,2) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]);
         }
+
         S1 += -colfac*log(Q12/Q);
       } // end expansion without grooming
     } // end loop over legs
