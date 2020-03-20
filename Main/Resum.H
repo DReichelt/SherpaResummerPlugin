@@ -135,6 +135,7 @@ namespace RESUM {
     RESUM::GROOM_MODE m_gmode = GROOM_MODE::NONE;
     // groom modes for legs, only used if m_gmode not NONE
     std::vector<RESUM::GROOM_MODE> m_collgmodes;
+    RESUM::GROOM_MODE m_softgmode = GROOM_MODE::SD;
 
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 

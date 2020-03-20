@@ -148,9 +148,12 @@ int Resum::PerformShowers()
       const double ep = m_obss[m_n]->Endpoint(p_ampl);
       const double p = m_obss[m_n]->LogPow(p_ampl);
       if(m_gmode & GROOM_MODE::SD) {
+//         m_softgmode = GROOM_MODE::NONE;
         for(size_t j=0; j<moms.size(); j++) {
           m_collgmodes[j] = m_obss[m_n]->GroomMode(m_obss[m_n]->LogArg(x, p_ampl),
-                                                   p_ampl, j);    
+                                                   p_ampl, j);
+//        Transition for soft function if any coll-mode is groomed
+//           if(m_collgmodes[j] & GROOM_MODE::SD_COLL) m_softgmode = GROOM_MODE::SD_SOFT;
         }
       }
       FillValue(i,m_obss[m_n]->LogArg(x, p_ampl),
@@ -671,15 +674,21 @@ const MatrixD& Resum::Hard() {
 
 double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check)
 {
-  DEBUG_FUNC(L);
+  double Lv = L;
+  DEBUG_FUNC(Lv);
   if(m_gmode & GROOM_MODE::SD) {
-    SoftexpNLL_LO = 0;
-    SoftexpNLL_NLO = 0;
-    if(m_gmode & GROOM_MODE::SD_SOFT) {
-      THROW(not_implemented, "No non-trivial soft function for grooming implemented.");
+    if(m_softgmode & GROOM_MODE::SD_SOFT) {
+//       THROW(not_implemented, "No non-trivial soft function for grooming implemented.");
+      msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
+      double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl);
+      Lv = log(1./transp);
     }
-    msg_Debugging()<<"Ignoring soft function for groomed observables\n";
-    return 1.;
+    else if(m_softgmode & GROOM_MODE::SD){
+      msg_Debugging()<<"Ignoring soft function for groomed observables\n";
+      SoftexpNLL_LO = 0;
+      SoftexpNLL_NLO = 0;
+      return 1.;
+    }
   }
   
   const size_t numlegs = n_g + n_q + n_aq;
