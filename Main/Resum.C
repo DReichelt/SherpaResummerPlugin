@@ -1109,6 +1109,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
 
         if(!IsZero(m_etamin[i])) {
+          RAtEnd += 2./M_PI*as*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
+            
           G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
           G(2,2) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]);
         }
