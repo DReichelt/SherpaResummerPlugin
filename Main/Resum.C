@@ -275,8 +275,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   DEBUG_FUNC(v);
   if(IsZero(v)) return;
   if(v > 1)     return;
-  const double L = log(1.0/v);
-  double Lz = 0.;
+  const double L = log(1./v);
+  const double Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
   double Rp = 0.0;
   double Rp0 = 0.0;
   // expansion coefficients for collinear part
@@ -311,21 +311,17 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(!(m_amode&MODE::IGNSOFT)) {
     // some checks for colour calculation
     double dummy1, dummy2;
-    //TODO Uncertain as to what to do with these contributions in case of grooming
-    const double calcs1 = m_amode & MODE::CKINV ?
-      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
-    const double calcs2 = m_amode & MODE::CKCOUL ?
-      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
-    msg_Debugging()<<"Calculate soft function.\n";
+    const double Lsoft = m_softgmode & GROOM_MODE::SD_SOFT ? Lz : L;
     if(m_softgmode & GROOM_MODE::SD_SOFT) {
         msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
-        double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl);
-        Lz = log(1./transp);
-        weight *= CalcS(Lz, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
     }
-    else {
-        weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
-    }
+    const double calcs1 = m_amode & MODE::CKINV ?
+      weight*CalcS(Lsoft, LResum, dummy1, dummy2, MODE::CKINV) : 0;
+    const double calcs2 = m_amode & MODE::CKCOUL ?
+      weight*CalcS(Lsoft, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
+    msg_Debugging()<<"Calculate soft function.\n";
+    weight *= CalcS(Lsoft, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+	  
     // evaluate tests if needed
     if(m_amode & MODE::CKINV) {
       msg_Debugging()<<"Check inversion -> "<<weight-calcs1<<".\n";
