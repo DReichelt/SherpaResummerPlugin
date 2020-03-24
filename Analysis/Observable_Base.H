@@ -261,6 +261,8 @@ namespace RESUM {
     virtual double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
                                         const size_t &l) {
         if(m_gmode & GROOM_MODE::NONE) return 0.;
+        Obs_Params para = Parameters(ampl,l);
+        if(para.m_deltad == 0) return 0.;
         std::vector<ATOOLS::Vec4D> p(ampl->Legs().size());
         for (size_t i=0; i<ampl->Legs().size(); ++i) {
             p[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
@@ -272,7 +274,6 @@ namespace RESUM {
         double El = pl[0];
         double Q12 = (p[0]+p[1]).Abs();
         
-        Obs_Params para = Parameters(ampl,l);
         double logfac = LogFac(ampl);
         
         double etamin = log(2.*El/Q12);
