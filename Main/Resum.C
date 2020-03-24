@@ -276,6 +276,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(IsZero(v)) return;
   if(v > 1)     return;
   const double L = log(1.0/v);
+  double Lz = 0.;
   double Rp = 0.0;
   double Rp0 = 0.0;
   // expansion coefficients for collinear part
@@ -310,12 +311,21 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(!(m_amode&MODE::IGNSOFT)) {
     // some checks for colour calculation
     double dummy1, dummy2;
+    //TODO Uncertain as to what to do with these contributions in case of grooming
     const double calcs1 = m_amode & MODE::CKINV ?
       weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
     const double calcs2 = m_amode & MODE::CKCOUL ?
       weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
     msg_Debugging()<<"Calculate soft function.\n";
-    weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    if(m_softgmode & GROOM_MODE::SD_SOFT) {
+        msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
+        double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl);
+        Lz = log(1./transp);
+        weight *= CalcS(Lz, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    }
+    else {
+        weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    }
     // evaluate tests if needed
     if(m_amode & MODE::CKINV) {
       msg_Debugging()<<"Check inversion -> "<<weight-calcs1<<".\n";
@@ -396,9 +406,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
   double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
   
-  double Lz = 0.;
   if(m_softgmode & GROOM_MODE::SD_SOFT){
-      Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
       H(1,1) -= pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO);
       H(1,0) += pow(as,1)*pow(Lz,1) * (4./m_a[0]*SoftexpNLL_LO);
   }
@@ -694,16 +702,9 @@ const MatrixD& Resum::Hard() {
 
 double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check)
 {
-  double Lv = L;
-  DEBUG_FUNC(Lv);
+  DEBUG_FUNC(L);
   if(m_gmode & GROOM_MODE::SD) {
-    if(m_softgmode & GROOM_MODE::SD_SOFT) {
-//       THROW(not_implemented, "No non-trivial soft function for grooming implemented.");
-      msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
-      double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl);
-      Lv = log(1./transp);
-    }
-    else if(m_softgmode & GROOM_MODE::SD){
+    if(m_softgmode & GROOM_MODE::SD){
       msg_Debugging()<<"Ignoring soft function for groomed observables\n";
       SoftexpNLL_LO = 0;
       SoftexpNLL_NLO = 0;
@@ -717,7 +718,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 
   const double as = (*p_as)(p_ampl->MuR2());
   const double beta0 = m_params.beta0(p_ampl->MuR2());
-  const double lambda = as*beta0*Lv; 
+  const double lambda = as*beta0*L; 
   const double t = T(lambda/m_a[0]);
   const double t_exp = 1.;//as*L/M_PI/2.;//2*as*L/M_PI;
   
@@ -861,7 +862,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     msg_Debugging()<<"==============================================" << std::endl;  
     msg_Debugging()<< "alpha_s: " << as << std::endl;
     msg_Debugging()<< "evolution variable t: " << t << std::endl;
-    msg_Debugging()<< "Log(1/v): " << Lv << std::endl;
+    msg_Debugging()<< "Log(1/v): " << L << std::endl;
     msg_Debugging()<< std::endl;
     msg_Debugging()<< "Kinematics" << std::endl;
     msg_Debugging()<< *p_ampl << std::endl;
@@ -1048,6 +1049,26 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       else { // start b == 0           
         if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
           THROW(not_implemented,"Groomed b = 0 not implimented.");
+          if (order>=0) {
+              double r1= -1./2./M_PI/pow(beta0,2.)/as*(m_beta*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]))+2.*lambdaZ+log(1.-2.*lambdaZ)+2.*lambdaZ*(log(1.-2.*lambda/m_a[i])-log(1.-2.*lambdaZ)))/(1.+m_beta);
+              R -= colfac*r1;
+          }
+          if (order>=1) {
+              double r2_cmw = (K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)/(1.+m_beta)*(log(1.-2.*lambdaZ)+m_beta*log(1.-2.*lambda/m_a[i])+2.*(lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]));
+              double r2_beta1 = -beta1/2./M_PI/pow(beta0,3.)*(log(1.-2.*lambdaZ)*(2.+log(1.-2.*lambdaZ))+m_beta*sqr(log(1.-2.*lambda/m_a[i]))+2.*(m_beta+2.*lambdaZ)/(1.-2.*lambda/m_a[i])*log(1.-2.*lambda/m_a[i])+4.*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              double r1p = 2./m_a[i]/(M_PI*beta0)*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i])/(1.+m_beta);
+              double r1d = 1./m_a[i]/(M_PI*beta0)*(log(1.-2.*lambdaZ)-log(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              
+              // subtract NLL contribution of scale variation
+              double r2_corr = +LResum*r1p;
+              double r2=(r2_cmw+r2_beta1+r2_corr);
+              
+              R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i])+r1d*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q)));
+              if(!IsZero(m_etamin[i])) {
+                  R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambdaZ);
+              }
+              Rp+=r1p*colfac;
+          }
         }
         else {
           if (order>=0) {    
