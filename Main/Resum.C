@@ -148,9 +148,12 @@ int Resum::PerformShowers()
       const double ep = m_obss[m_n]->Endpoint(p_ampl);
       const double p = m_obss[m_n]->LogPow(p_ampl);
       if(m_gmode & GROOM_MODE::SD) {
+//         m_softgmode = GROOM_MODE::NONE;
         for(size_t j=0; j<moms.size(); j++) {
           m_collgmodes[j] = m_obss[m_n]->GroomMode(m_obss[m_n]->LogArg(x, p_ampl),
-                                                   p_ampl, j);    
+                                                   p_ampl, j);
+//        Transition for soft function if any coll-mode is groomed
+//           if(m_collgmodes[j] & GROOM_MODE::SD_COLL) m_softgmode = GROOM_MODE::SD_SOFT;
         }
       }
       FillValue(i,m_obss[m_n]->LogArg(x, p_ampl),
@@ -272,7 +275,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   DEBUG_FUNC(v);
   if(IsZero(v)) return;
   if(v > 1)     return;
-  const double L = log(1.0/v);
+  const double L = log(1./v);
+  const double Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
   double Rp = 0.0;
   double Rp0 = 0.0;
   // expansion coefficients for collinear part
@@ -307,12 +311,17 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(!(m_amode&MODE::IGNSOFT)) {
     // some checks for colour calculation
     double dummy1, dummy2;
+    const double Lsoft = m_softgmode & GROOM_MODE::SD_SOFT ? Lz : L;
+    if(m_softgmode & GROOM_MODE::SD_SOFT) {
+        msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
+    }
     const double calcs1 = m_amode & MODE::CKINV ?
-      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKINV) : 0;
+      weight*CalcS(Lsoft, LResum, dummy1, dummy2, MODE::CKINV) : 0;
     const double calcs2 = m_amode & MODE::CKCOUL ?
-      weight*CalcS(L, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
+      weight*CalcS(Lsoft, LResum, dummy1, dummy2, MODE::CKCOUL) : 0;
     msg_Debugging()<<"Calculate soft function.\n";
-    weight *= CalcS(L, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+    weight *= CalcS(Lsoft, LResum, SoftexpNLL_LO, SoftexpNLL_NLO);
+	  
     // evaluate tests if needed
     if(m_amode & MODE::CKINV) {
       msg_Debugging()<<"Check inversion -> "<<weight-calcs1<<".\n";
@@ -386,16 +395,22 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     msg_Debugging()<<"Ignore pdf expansion.\n";
     PDFexp = 0;
   }
-
+  
   MatrixD H(4,4,0);
   H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
   H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
   H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
   double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
+  
+  if(m_softgmode & GROOM_MODE::SD_SOFT){
+      H(1,1) -= pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO);
+      H(1,0) += pow(as,1)*pow(Lz,1) * (4./m_a[0]*SoftexpNLL_LO);
+  }
+  
   m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2)-H10;
   
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
-    m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
+    if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
     if(m_mmode & MATCH_MODE::ADD) {
       m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G(1,1);
     }
@@ -416,15 +431,27 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
   
   m_resExpNLO[m_n][i] = H(2,4) + H(2,3) + H(2,2) + H(2,1) + H(2,0) - H20 - H10*(H(1,0)+H(1,1)+H(1,2));
-  m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
+//   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
+//   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
+  
+  if(m_softgmode & GROOM_MODE::SD_SOFT){
+      m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(2.*M_PI*beta0/m_a[0]));
+      m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,1)*(4./m_a[0]*SoftexpNLL_LO*(G(1,0)+L*G(1,1)+L*L*G(1,2)));
+  }
+  else{
+      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
+      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
+  }
 
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
-    m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(1,1) +PDFexp)),2)/2.;
+    if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G(1,1) +PDFexp)),2)/2.;
     if(m_mmode & MATCH_MODE::ADD) {
-      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G(1,1)+PDFexp)));
+      if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G(1,1))));
     }
     if(m_mmode & MATCH_MODE::DERIV) {
-      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+G0(1,1)+PDFexp)));
+      if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
+      m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * G0(2,1);
     }
   }
@@ -673,13 +700,12 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
 {
   DEBUG_FUNC(L);
   if(m_gmode & GROOM_MODE::SD) {
-    SoftexpNLL_LO = 0;
-    SoftexpNLL_NLO = 0;
-    if(m_gmode & GROOM_MODE::SD_SOFT) {
-      THROW(not_implemented, "No non-trivial soft function for grooming implemented.");
+    if(m_softgmode & GROOM_MODE::SD){
+      msg_Debugging()<<"Ignoring soft function for groomed observables\n";
+      SoftexpNLL_LO = 0;
+      SoftexpNLL_NLO = 0;
+      return 1.;
     }
-    msg_Debugging()<<"Ignoring soft function for groomed observables\n";
-    return 1.;
   }
   
   const size_t numlegs = n_g + n_q + n_aq;
@@ -1017,6 +1043,26 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       else { // start b == 0           
         if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
           THROW(not_implemented,"Groomed b = 0 not implimented.");
+          if (order>=0) {
+              double r1= -1./2./M_PI/pow(beta0,2.)/as*(m_beta*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]))+2.*lambdaZ+log(1.-2.*lambdaZ)+2.*lambdaZ*(log(1.-2.*lambda/m_a[i])-log(1.-2.*lambdaZ)))/(1.+m_beta);
+              R -= colfac*r1;
+          }
+          if (order>=1) {
+              double r2_cmw = (K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)/(1.+m_beta)*(log(1.-2.*lambdaZ)+m_beta*log(1.-2.*lambda/m_a[i])+2.*(lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]));
+              double r2_beta1 = -beta1/2./M_PI/pow(beta0,3.)*(log(1.-2.*lambdaZ)*(2.+log(1.-2.*lambdaZ))+m_beta*sqr(log(1.-2.*lambda/m_a[i]))+2.*(m_beta+2.*lambdaZ)/(1.-2.*lambda/m_a[i])*log(1.-2.*lambda/m_a[i])+4.*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              double r1p = 2./m_a[i]/(M_PI*beta0)*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i])/(1.+m_beta);
+              double r1d = 1./m_a[i]/(M_PI*beta0)*(log(1.-2.*lambdaZ)-log(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              
+              // subtract NLL contribution of scale variation
+              double r2_corr = +LResum*r1p;
+              double r2=(r2_cmw+r2_beta1+r2_corr);
+              
+              R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i])+r1d*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q)));
+              if(!IsZero(m_etamin[i])) {
+                  R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambdaZ);
+              }
+              Rp+=r1p*colfac;
+          }
         }
         else {
           if (order>=0) {    
@@ -1107,6 +1153,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                            +2.*(K_CMW+M_PI*beta0*2.*Lmur)/m_a[i]/(m_a[i]+m_b[i]));
 
         if(!IsZero(m_etamin[i])) {
+          RAtEnd += 2./M_PI*as*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
+            
           G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
           G(2,2) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]);
         }
