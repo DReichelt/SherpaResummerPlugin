@@ -10,8 +10,8 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   
   double R = to_type<double>(key.KwArg("R","0.5"));
   m_minPT = to_type<double>(key.KwArg("minPT","0"));
-  double beta = to_type<double>(key.KwArg("sd_beta","2"));
-  double zcut = to_type<double>(key.KwArg("sd_zcut","2"));
+  double beta = to_type<double>(key.KwArg("beta","2"));
+  double zcut = to_type<double>(key.KwArg("zcut","0.05"));
   fastjet::JetDefinition jetDef = fastjet::JetDefinition(fastjet::antikt_algorithm,  R, recombScheme, strategy);
   // TODO: get groom params from key
   fastjet::contrib::SoftDrop sd_groomer = {beta, zcut, R};          
