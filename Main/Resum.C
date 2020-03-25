@@ -1042,7 +1042,6 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       } // end of b != 0
       else { // start b == 0           
         if(m_collgmodes[i] & GROOM_MODE::SD_COLL) {
-          THROW(not_implemented,"Groomed b = 0 not implimented.");
           if (order>=0) {
               double r1= -1./2./M_PI/pow(beta0,2.)/as*(m_beta*(2.*lambda/m_a[i]+log(1.-2.*lambda/m_a[i]))+2.*lambdaZ+log(1.-2.*lambdaZ)+2.*lambdaZ*(log(1.-2.*lambda/m_a[i])-log(1.-2.*lambdaZ)))/(1.+m_beta);
               R -= colfac*r1;
