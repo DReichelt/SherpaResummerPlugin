@@ -1028,7 +1028,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 //               R -= colfac*(log(Q12/Q)*T(lambdaZ));
               if(!IsZero(m_etamin[i])) {
                 R += colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambdaZ);
-                R += colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12));
+                R += colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*r1d;
               }              
             }
             else {
@@ -1059,6 +1059,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i])+r1d*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q)));
               if(!IsZero(m_etamin[i])) {
                   R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambdaZ);
+                  R += colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*r1d;
               }
               Rp+=r1p*colfac;
           }
