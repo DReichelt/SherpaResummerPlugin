@@ -260,7 +260,29 @@ namespace RESUM {
 
     virtual double GroomTransitionPoint(ATOOLS::Cluster_Amplitude* ampl,
                                         const size_t &l) {
-      return std::numeric_limits<T>::infinity();
+        std::vector<ATOOLS::Vec4D> p(ampl->Legs().size());
+        for (size_t i=0; i<ampl->Legs().size(); ++i) {
+            p[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
+        }
+        const ATOOLS::Poincare cms= {p[0]+p[1]};
+        ATOOLS::Vec4D pl = p[l];
+        ATOOLS::Poincare(p[0]+p[1]).Boost(pl);
+        
+        double El = pl[0];
+        double Q12 = (p[0]+p[1]).Abs();
+        
+        Obs_Params para = Parameters(ampl,l);
+        double logfac = LogFac(ampl);
+        
+        double etamin = log(2.*El/Q12);
+        if(para.m_etamin>0.) {
+            etamin+=para.m_etamin-log(2.*El/Q12);
+        }
+        double Q = sqrt(ampl->MuQ2());
+        
+        double zcp = pow(2.*cosh(pl.Eta())/m_R0,m_beta)*m_zcut;
+        
+        return pow(zcp*2.*El/Q, para.m_a)*exp(-etamin*(para.m_b+(1.+m_beta)*para.m_a))*exp(para.m_logdbar)/logfac;
     }
     
     double ObsVal(double logarg, double logfac, 
