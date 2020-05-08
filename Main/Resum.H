@@ -88,7 +88,8 @@ namespace RESUM {
                IGNSOFT = 1    << 7,     // ignore the soft function
                IGNPDF = 1     << 8,     // ignore the pdf ratio
                IGNFFUNC = 1   << 9,     // ignore ffunction
-               EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND // conveninece def.
+               EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND, // conveninece def.
+               HYPGEO = 1     << 10
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
@@ -97,6 +98,7 @@ namespace RESUM {
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
                                                      {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND},
+                                                     {"HYPGEO", MODE::HYPGEO}, //Including hypergeometric function for transition point
                                                      // from here on, modes are mostly usefull for debugging,
                                                      // should not appear in physics calculations
                                                      {"CKINV", MODE::CKINV},
@@ -161,6 +163,8 @@ namespace RESUM {
     }
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd);
+    
+    double CalcRpp(const double L, GROOM_MODE gmode);
 
     double CalcPDF(const double L, const double LResum, double &PDFexp);
 

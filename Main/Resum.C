@@ -17,6 +17,7 @@
 #include "Analysis/Observable_Base.H"
 #include "Tools/StringTools.H"
 #include "Math/Matrix.H"
+#include "Math/HypGeo.H"
 
 #include <vector>
 #include <complex>
@@ -387,6 +388,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight*=m_F(Rp,FexpNLL_NLO);
       double dummy;
       weight/=m_F(Rp0,dummy);
+      
+      if(m_gmode & GROOM_MODE::SD and m_softgmode & GROOM_MODE::NONE and m_amode&MODE::HYPGEO){
+          const double Rppzc = CalcRpp(Lz, GROOM_MODE::SD  );
+          const double Rpp   = CalcRpp(L , GROOM_MODE::NONE);
+          weight*=exp(-Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2_Py(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
+      }
     }
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
   }
@@ -914,6 +921,75 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
  return traceHS/traceH;
 }
 
+double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode){
+    const double muR2 = p_ampl->MuR2();
+    const double beta0 = m_params.beta0(muR2);
+    
+    double Rpp = 0.;
+    
+    Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
+    
+    Vec4D_Vector moms(p_ampl->Legs().size());
+    Flavour_Vector flavs(p_ampl->Legs().size());
+    for (size_t i(0);i<p_ampl->Legs().size();++i) {
+        moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
+        flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
+    }
+    
+    for(size_t i = 2; i<p_ampl->Legs().size(); i++) {
+        if(m_deltad[i] == 0) continue;
+        msg_Debugging()<<"Calculate radiator for leg "<<i<<".\n";
+        double colfac = 0.;
+        
+        const double as = (*p_as)(muR2);
+        
+        if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {
+            colfac = m_params.CA();
+            msg_Debugging()<<"Gluon, Cl = "<<colfac<<".\n";
+        }
+        else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {
+            colfac = m_params.CF();
+            msg_Debugging()<<"Quark, Cl = "<<colfac<<".\n";
+        } 
+        else {
+            msg_Debugging()<<"No strong charge, ignoring.\n";
+            continue;
+        }
+        
+        
+        const double lambda = as*beta0*L;
+        
+        msg_Debugging()<<"lambda = as*beta0*L = "<<as<<"*"<<beta0<<"*"<<L<<" = "<<lambda<<"\n";
+        
+        // needed for SD grooming
+        const double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
+        msg_Debugging() << "Transition point = " << transp << " zcut = " << m_zcut << "\n";
+        
+        const double lambdaZ = as*beta0*log(1./transp)/m_a[i];
+        const double lambda2 = as*beta0*log(1./2.);
+        
+        if (!IsZero(m_b[i])) {
+            if(gmode & GROOM_MODE::SD) {
+                Rpp += -colfac*2.*as/M_PI*(2.*lambdaZ+m_beta)/(m_a[i]+m_b[i]-2.*lambda)/(m_a[i]*(1.+m_beta)+m_b[i]-2.*(1.+m_beta)*lambda-2.*m_b[i]*lambdaZ);
+            }
+            else {
+                Rpp += -colfac*2.*as/M_PI/(m_a[i]-2.*lambda)/(m_a[i]+m_b[i]-2.*lambda);
+            }
+        }
+        else {
+            if(gmode & GROOM_MODE::SD) {
+                
+            }
+            else {
+                Rpp += -colfac*2.*as/M_PI/(m_a[i]-2.*lambda)/(m_a[i]-2.*lambda);
+            }
+        }
+    }
+            
+    
+    
+    return(Rpp);
+}
 
 double Resum::CalcColl(const double L, const double LResum, const int order, double &Rp, 
                        MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd) 

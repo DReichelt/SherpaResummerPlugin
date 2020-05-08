@@ -16,6 +16,13 @@ AddOption('--enable-yoda',
           default=False,
           help=('Enable use of yoda.',
                 'Use yodapath to set path if needed.'))
+          
+AddOption('--enable-python',
+          dest='hyppy',
+          action='store_true',
+          default=False,
+          help=('Enable use of python.',
+                'Use pythonpath to set path if needed.'))
 
 
 vars = Variables('.SConstruct')
@@ -28,6 +35,8 @@ vars.Add(BoolVariable('fjc','Whether to enable fjcontrib.', GetOption('fjc')))
 vars.Add(PathVariable('fjcpath','path to fastjetcontrib','${sherpa}'))
 vars.Add(BoolVariable('yoda','Whether to enable yoda.', GetOption('yoda')))
 vars.Add(PathVariable('yodapath','path to yoda','${sherpa}'))
+vars.Add(BoolVariable('hyppy','Whether to enable python.', GetOption('hyppy')))
+vars.Add(PathVariable('pythonpath','path to yoda','${sherpa}'))
 
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',
@@ -48,6 +57,7 @@ if env['PLATFORM']=='darwin':
 
 fjc = env['fjc']
 yoda = env['yoda']
+hyppy = env['hyppy']
 
 env.Append(CCFLAGS=[] +
            (['-D USING_YODA'] if yoda else []) +
@@ -119,6 +129,7 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                  'Analysis/Resum_Enhance_Observable.C',
                                  'Scales/Resum_Scale_Setter.C',
                                  'Scales/Resum_Scale_Setter_Durham.C',
+                                 'Math/HypGeo.C',
                                  'FFunction/FFunctions.C'
                                 ] + (observables +
                                      (obsFjcontrib if fjc else [])),
@@ -126,19 +137,25 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                          + (['${fjcpath}/lib']
                                             if fjc else [])
                                          + (['${yodapath}/lib']
-                                            if yoda else [])),
+                                            if yoda else [])
+                                         + (['${pythonpath}/lib']
+                                            if hyppy else [])),
 	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
                                        + (['${fjcpath}/lib']
-                                            if fjc else [])
+                                          if fjc else [])
                                        + (['${yodapath}/lib']
-                                          if yoda else [])),
+                                          if yoda else [])
+                                       + (['${pythonpath}/lib']
+                                          if hyppy else [])),
 	                        LIBS=(['SherpaAnalyses',
                                       'SherpaAnalysis',
                                       'ResumCommon']
                                       + (['fastjetcontribfragile']
                                          if fjc else [])
                                       + (['YODA']
-                                         if yoda else [])))
+                                         if yoda else [])
+                                      + (['python2.7']
+                                         if hyppy else [])))
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
