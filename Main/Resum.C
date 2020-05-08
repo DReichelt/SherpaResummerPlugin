@@ -978,6 +978,7 @@ double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode){
         }
         else {
             if(gmode & GROOM_MODE::SD) {
+                Rpp += -colfac*2.*as/M_PI*(2.*lambdaZ+m_beta)/(m_a[i]-2.*lambda)/(m_a[i]*(1.+m_beta)-2.*(1.+m_beta)*lambda);
                 
             }
             else {
