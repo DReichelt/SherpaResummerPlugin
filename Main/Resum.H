@@ -164,7 +164,7 @@ namespace RESUM {
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd);
     
-    double CalcRpp(const double L, GROOM_MODE gmode);
+    double CalcRpp(const double L, GROOM_MODE gmode, double &exp12);
 
     double CalcPDF(const double L, const double LResum, double &PDFexp);
 

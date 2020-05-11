@@ -301,6 +301,10 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   MatrixD G0(4,4,0);
   MatrixD Rexp(4,4,0);
   MatrixD Rexp0(4,4,0);
+  
+  double exp12 = 0.;
+  double exp12zc = 0.;
+  
   double RAtEnd0 = 0.;
   // expansion coefficents for soft function
   double SoftexpNLL_LO=0.0;
@@ -390,8 +394,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight/=m_F(Rp0,dummy);
       
       if(m_gmode & GROOM_MODE::SD and m_softgmode & GROOM_MODE::NONE and m_amode&MODE::HYPGEO){
-          const double Rppzc = CalcRpp(Lz, GROOM_MODE::SD  );
-          const double Rpp   = CalcRpp(L , GROOM_MODE::NONE);
+          const double Rppzc = CalcRpp(Lz, GROOM_MODE::SD  , exp12zc);
+          const double Rpp   = CalcRpp(L , GROOM_MODE::NONE, exp12  );
           weight*=exp(-Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2_Py(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
       }
     }
@@ -448,8 +452,10 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
   H(2,2) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(1,1),2) + G(2,2) +
                                   G(1,2)*G(1,0) +
-                                  4.*FexpNLL_NLO*pow(Rexp(1,2),2) );
-  H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) );
+                                  4.*FexpNLL_NLO*pow(Rexp(1,2),2) 
+                                 -4.*exp12*(exp12-exp12zc)*ATOOLS::DiLog(exp(L-Lz)) );
+  H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) 
+                                 +4.*Lz*exp12*(exp12-exp12zc)*ATOOLS::DiLog(exp(L-Lz)) );
   H(2,0) = pow(as,2)*pow(L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + FexpNLL_NLO*pow(Rexp(1,1),2) );
   double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
   
@@ -475,7 +481,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV) {
       if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
-      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * G0(2,1);
+      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1) + 4.*Lz*exp12*(exp12-exp12zc)*ATOOLS::DiLog(exp(L-Lz)));
     }
   }
   // store next-to-leading order expansion
@@ -921,7 +927,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
  return traceHS/traceH;
 }
 
-double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode){
+double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode, double &exp12){
     const double muR2 = p_ampl->MuR2();
     const double beta0 = m_params.beta0(muR2);
     
@@ -968,22 +974,14 @@ double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode){
         const double lambdaZ = as*beta0*log(1./transp)/m_a[i];
         const double lambda2 = as*beta0*log(1./2.);
         
-        if (!IsZero(m_b[i])) {
-            if(gmode & GROOM_MODE::SD) {
-                Rpp += -colfac*2.*as/M_PI*(2.*lambdaZ+m_beta)/(m_a[i]+m_b[i]-2.*lambda)/(m_a[i]*(1.+m_beta)+m_b[i]-2.*(1.+m_beta)*lambda-2.*m_b[i]*lambdaZ);
-            }
-            else {
-                Rpp += -colfac*2.*as/M_PI/(m_a[i]-2.*lambda)/(m_a[i]+m_b[i]-2.*lambda);
-            }
+        
+        if(gmode & GROOM_MODE::SD) {
+            Rpp += -colfac*2.*as/M_PI*(2.*lambdaZ+m_beta)/(m_a[i]+m_b[i]-2.*lambda)/(m_a[i]*(1.+m_beta)+m_b[i]-2.*(1.+m_beta)*lambda-2.*m_b[i]*lambdaZ);
+            exp12 += -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
         }
         else {
-            if(gmode & GROOM_MODE::SD) {
-                Rpp += -colfac*2.*as/M_PI*(2.*lambdaZ+m_beta)/(m_a[i]-2.*lambda)/(m_a[i]*(1.+m_beta)-2.*(1.+m_beta)*lambda);
-                
-            }
-            else {
-                Rpp += -colfac*2.*as/M_PI/(m_a[i]-2.*lambda)/(m_a[i]-2.*lambda);
-            }
+            Rpp += -colfac*2.*as/M_PI/(m_a[i]-2.*lambda)/(m_a[i]+m_b[i]-2.*lambda);
+            exp12 += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
         }
     }
             
