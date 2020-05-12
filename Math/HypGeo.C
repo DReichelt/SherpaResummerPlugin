@@ -1,7 +1,6 @@
+#ifdef USING_PYTHON
 #include <python2.7/Python.h>
-
-
-double HypGeo_3F2_Py(double a1, double a2, double a3, double b1, double b2, double x){
+double _HypGeo_3F2_Py(double a1, double a2, double a3, double b1, double b2, double x){
     PyObject *pName, *pModule, *pDict, *pFunc;
     PyObject *pArgs, *pValue;
     double result;
@@ -103,3 +102,33 @@ double HypGeo_3F2_Py(double a1, double a2, double a3, double b1, double b2, doub
     Py_Finalize();
     return(result);
 }
+#endif
+
+#ifdef USING_ARBLIB
+#include "arb.h"
+#include "arb_hypgeom.h"
+
+double _HypGeo_3F2_Arb(double a1, double a2, double a3, double b1, double b2, double z, int regularized, int prec){
+  // init arb variables
+  arb_t result; arb_init(result);
+  arb_t arg; arb_init(arg); arb_set_d(arg,z);
+  arb_ptr a = _arb_vec_init(3);
+  arb_set_d(a,a1); arb_set_d(a+1,a2); arb_set_d(a+2,a3);
+  arb_ptr b = _arb_vec_init(2);
+  arb_set_d(b,b1); arb_set_d(b+1,b2);
+
+  // actual calculation
+  arb_hypgeom_pfq(result, a, 3, b, 2, arg, regularized, prec);
+
+  // clean up
+  arb_clear(arg);
+  arb_clear(a+2); arb_clear(a+1); arb_clear(a);
+  delete a;
+  arb_clear(b+1); arb_clear(b);
+  delete b;
+  const double ret = arf_get_d(arb_midref(result), ARF_RND_NEAR);
+  arb_clear(result);
+
+  return ret;
+}
+#endif

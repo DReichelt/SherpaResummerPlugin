@@ -392,11 +392,11 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight*=m_F(Rp,FexpNLL_NLO);
       double dummy;
       weight/=m_F(Rp0,dummy);
-      
-      if(m_gmode & GROOM_MODE::SD and m_softgmode & GROOM_MODE::NONE and m_amode&MODE::HYPGEO){
+
+      if(m_gmode & GROOM_MODE::SD and m_softgmode==GROOM_MODE::NONE and m_amode & MODE::HYPGEO){
           const double Rppzc = CalcRpp(Lz, GROOM_MODE::SD  , exp12zc);
           const double Rpp   = CalcRpp(L , GROOM_MODE::NONE, exp12  );
-          weight*=exp(-Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2_Py(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
+          weight*=exp(-Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
       }
     }
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F

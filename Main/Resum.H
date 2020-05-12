@@ -89,7 +89,7 @@ namespace RESUM {
                IGNPDF = 1     << 8,     // ignore the pdf ratio
                IGNFFUNC = 1   << 9,     // ignore ffunction
                EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND, // conveninece def.
-               HYPGEO = 1     << 10
+               HYPGEO = 1     << 10     // include hypergeometric function for transition point
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
@@ -98,7 +98,7 @@ namespace RESUM {
                                                      {"SOFTEXPAND", MODE::SOFTEXPAND},
                                                      {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND},
-                                                     {"HYPGEO", MODE::HYPGEO}, //Including hypergeometric function for transition point
+                                                     {"HYPGEO", MODE::HYPGEO}, 
                                                      // from here on, modes are mostly usefull for debugging,
                                                      // should not appear in physics calculations
                                                      {"CKINV", MODE::CKINV},

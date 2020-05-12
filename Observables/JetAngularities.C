@@ -73,9 +73,9 @@ namespace RESUM {
         return m_gmode;
       }
       else {
-        return GROOM_MODE::SD_COLL;
+        // return GROOM_MODE::SD_COLL;
         if(v > GroomTransitionPoint(ampl, l)) return GROOM_MODE::NONE;
-        else return m_gmode;        
+        else return GROOM_MODE::SD_COLL;        
       }
     }
     
@@ -98,8 +98,8 @@ namespace RESUM {
           return sqr(m_R)/4.;
         }
         else {
-          //return sqr(m_R)*(1./4.)/4.;
-          return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+          return sqr(m_R)*(1./4.)/4.;
+          // return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
         }
       }
       else {
@@ -121,8 +121,47 @@ namespace RESUM {
             std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
             const size_t& nin) {
 
+      for(const Vec4D& p: ip) {
+        if(p.Nan()) {
+          // _rejected++;
+          // msg_Error()<<METHOD<<": Nan in momenta, rejecting (returning 0)\n";
+          // for(const Vec4D& p: ip) msg_Error()<<p<<"\n";
+          // msg_Error()<<"Rejected "<<_rejected<<" events so far.\n";
+          return 0;
+        }
+      }
+
+
       if(ip.size() <= nin) return 0;
       msg_Debugging()<<"Start jet angularity.\n";      
+
+      // if(ip.size()==6) {
+      //   if(ip[4].DR(ip[5])<1e-7) {
+      //     msg_Out()<<"\n\nDR = "<<ip[4].DR(ip[5])<<"\n";
+      //     msg_Out()<<"DEta = "<<ip[4].DEta(ip[5])<<"\n";
+      //     msg_Out()<<"DPhi = "<<ip[4].DPhi(ip[5])<<"\n";
+      //     msg_Out()<<ip[4]<<"\n";
+      //     msg_Out()<<ip[5]<<"\n";
+      //     exit(1);
+      //   }
+      //   if(ip[4].DPhi(ip[5])<1e-7) {
+      //     msg_Out()<<"\n\nDPhi = "<<ip[4].DPhi(ip[5])<<"\n";
+      //     msg_Out()<<"DR = "<<ip[4].DR(ip[5])<<"\n";
+      //     msg_Out()<<"DEta = "<<ip[4].DEta(ip[5])<<"\n";
+      //     msg_Out()<<ip[4]<<"\n";
+      //     msg_Out()<<ip[5]<<"\n";
+      //     // exit(1);
+      //   }
+      //   if(abs(ip[4].DEta(ip[5]))<1e-7) {
+      //     msg_Out()<<"\n\nDEta = "<<ip[4].DEta(ip[5])<<"\n";
+      //     msg_Out()<<"DR = "<<ip[4].DR(ip[5])<<"\n";
+      //     msg_Out()<<"DPhi = "<<ip[4].DPhi(ip[5])<<"\n";
+      //     msg_Out()<<ip[4]<<"\n";
+      //     msg_Out()<<ip[5]<<"\n";
+      //     // exit(1);
+      //   }
+      // }
+
       
       auto alg = algorithms.find(m_algtag);
       if(alg==algorithms.end()) {
@@ -131,19 +170,53 @@ namespace RESUM {
       }
       else msg_Debugging()<<"Reusing jets found earlier.\n";
 
-      std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
-      ATOOLS::Vec4D axis(0.,alg->second->jetAxes(GROOM));
+      const std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
+      const ATOOLS::Vec4D axis(0.,alg->second->jetAxes(GROOM));
       
       
       double lambda = 0.;
       msg_Debugging()<<"Final States:\n";
       for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "<<ip[i]<<" "<<ip[i].PPerp()<<"\n";
       msg_Debugging()<<"... in jet:\n";
+      // if(constits.size()==2) {
+      //   if(constits[0].DR(constits[1])<1e-5) {
+      //     msg_Out()<<"\n\nDR = "<<constits[0].DR(constits[1])<<"\n";
+      //     msg_Out()<<"DEta = "<<constits[0].DEta(constits[1])<<"\n";
+      //     msg_Out()<<"DPhi = "<<constits[0].DPhi(constits[1])<<"\n";
+      //     msg_Out()<<constits[0]<<"\n";
+      //     msg_Out()<<constits[1]<<"\n";
+      //     exit(1);
+      //   }
+      //   if(constits[0].DPhi(constits[1])<1e-5) {
+      //     msg_Out()<<"\n\nDPhi = "<<constits[0].DPhi(constits[1])<<"\n";
+      //     msg_Out()<<"DR = "<<constits[0].DR(constits[1])<<"\n";
+      //     msg_Out()<<"DEta = "<<constits[0].DEta(constits[1])<<"\n";
+      //     msg_Out()<<"DY = "<<constits[0].DY(constits[1])<<"\n";
+      //     msg_Out()<<constits[0]<<"\n";
+      //     msg_Out()<<constits[1]<<"\n";
+      //     // exit(1);
+      //   }
+      //   if(abs(constits[0].DEta(constits[1]))<1e-5) {
+      //     msg_Out()<<"\n\nDEta = "<<constits[0].DEta(constits[1])<<"\n";
+      //     msg_Out()<<"DR = "<<constits[0].DR(constits[1])<<"\n";
+      //     msg_Out()<<"DPhi = "<<constits[0].DPhi(constits[1])<<"\n";
+      //     msg_Out()<<constits[0]<<"\n";
+      //     msg_Out()<<constits[1]<<"\n";
+      //     // exit(1);
+      //   }
+      // }
       for (ATOOLS::Vec4D con: constits) {
         // even with grooming , pt is defined without grooming
-        double z = con.PPerp() / alg->second->jetVectors(0).PPerp();
+        const double z = con.PPerp() / alg->second->jetVectors(0).PPerp();
+        const double dR = con.DR(axis) / m_R;
+
+
         msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
-        lambda +=  z * pow(con.DR(axis) / m_R, m_alpha);
+        msg_Debugging()<<"DeltaR / R0 = "<<con.DR(axis)<<" / "<<m_R<<" = "<< dR<<" -> (DeltaR/R0)^(alpha = "<<m_alpha<<")"
+                 <<" = "<<pow(dR, m_alpha)<<"\n";
+        msg_Debugging()<<"z*(DeltaR/R0)^alpha = "<<z * pow(dR, m_alpha)<<"\n";
+
+        lambda +=  z * pow(dR, m_alpha);
       }
       msg_Debugging()<<"\n";
       return lambda;

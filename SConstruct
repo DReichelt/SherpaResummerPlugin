@@ -24,6 +24,13 @@ AddOption('--enable-python',
           help=('Enable use of python.',
                 'Use pythonpath to set path if needed.'))
 
+AddOption('--enable-arblib',
+          dest='arblib',
+          action='store_true',
+          default=False,
+          help=('Enable use of arblib.') )
+
+
 
 vars = Variables('.SConstruct')
 vars.Add(PathVariable('sherpa','path to sherpa',
@@ -37,6 +44,7 @@ vars.Add(BoolVariable('yoda','Whether to enable yoda.', GetOption('yoda')))
 vars.Add(PathVariable('yodapath','path to yoda','${sherpa}'))
 vars.Add(BoolVariable('hyppy','Whether to enable python.', GetOption('hyppy')))
 vars.Add(PathVariable('pythonpath','path to yoda','${sherpa}'))
+vars.Add(BoolVariable('arblib','Whether to enable arblib.', GetOption('arblib')))
 
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',
@@ -58,10 +66,13 @@ if env['PLATFORM']=='darwin':
 fjc = env['fjc']
 yoda = env['yoda']
 hyppy = env['hyppy']
+arblib = env['arblib']
 
 env.Append(CCFLAGS=[] +
            (['-D USING_YODA'] if yoda else []) +
-           (['-D USING_FJCONTRIB'] if fjc else []))
+           (['-D USING_FJCONTRIB'] if fjc else []) + 
+           (['-D USING_PYTHON'] if hyppy else []) + 
+           (['-D USING_ARBLIB'] if arblib else []))
 
 resumcommon = env.SharedLibrary('ResumCommon',
                                  ['Math/r8lib.cpp',
@@ -155,7 +166,9 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                       + (['YODA']
                                          if yoda else [])
                                       + (['python2.7']
-                                         if hyppy else [])))
+                                         if hyppy else [])
+                                      + (['arb']
+                                         if arblib else [])))
 
 
 rratiolib = env.SharedLibrary('SherpaRRatios',
