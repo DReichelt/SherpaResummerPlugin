@@ -83,8 +83,28 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                   'Math/linpack_d.cpp',
                                   'Math/blas0.cpp',
                                   'Math/blas1_d.cpp',
+                                  'Math/HypGeo.C',
                                   'Tools/StringTools.C',
-                                  'Tools/Key_Base.C'])
+                                  'Tools/Key_Base.C'],
+	                        LIBPATH=(['${sherpa}/lib/SHERPA-MC']
+                                         + (['${fjcpath}/lib']
+                                            if fjc else [])
+                                         + (['${yodapath}/lib']
+                                            if yoda else [])
+                                         + (['${pythonpath}/lib']
+                                            if hyppy else [])),
+	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
+                                       + (['${fjcpath}/lib']
+                                          if fjc else [])
+                                       + (['${yodapath}/lib']
+                                          if yoda else [])
+                                       + (['${pythonpath}/lib']
+                                          if hyppy else [])),
+	                        LIBS=([]
+                                      + (['python2.7']
+                                         if hyppy else [])
+                                      + (['arb']
+                                         if arblib else [])))
    
 resumlib = env.SharedLibrary('SherpaResum',
 	                     ['Math/InterpolationWrapper.C',
@@ -140,7 +160,6 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                  'Analysis/Resum_Enhance_Observable.C',
                                  'Scales/Resum_Scale_Setter.C',
                                  'Scales/Resum_Scale_Setter_Durham.C',
-                                 'Math/HypGeo.C',
                                  'FFunction/FFunctions.C'
                                 ] + (observables +
                                      (obsFjcontrib if fjc else [])),

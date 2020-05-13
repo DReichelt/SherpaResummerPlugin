@@ -1,3 +1,27 @@
+#include "Math/HypGeo.H"
+#include "ATOOLS/Org/Exception.H"
+
+// using namespace RESUM;
+
+double _HypGeo_3F2_Py(double a1, double a2, double a3, double b1, double b2, double x);
+double _HypGeo_3F2_Arb(double a1, double a2, double a3, double b1, double b2, double x,
+                         int regularized=0, int prec=64);
+
+namespace RESUM {
+
+  double HypGeo_3F2(double a1, double a2, double a3, double b1, double b2, double x) {
+#ifdef USING_ARBLIB
+    return _HypGeo_3F2_Arb(a1,  a2,  a3,  b1,  b2,  x);
+#elif defined USING_PYTHON
+    return _HypGeo_3F2_Py(a1,  a2,  a3,  b1,  b2,  x);
+#else
+    THROW(fatal_error,"No hypergeometric function available. Use --enable-arblib or --enable-python.");
+    return 0;
+#endif
+  }
+}
+
+
 #ifdef USING_PYTHON
 #include <python2.7/Python.h>
 double _HypGeo_3F2_Py(double a1, double a2, double a3, double b1, double b2, double x){
