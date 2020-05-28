@@ -42,7 +42,6 @@ Resum::Resum(ISR_Handler *const isr,
   Shower_Base("Resum"), p_ampl(nullptr)
 {
   p_clus = new Cluster_Definitions();
-  p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
   
   p_isr = isr;
 
@@ -84,7 +83,8 @@ Resum::Resum(ISR_Handler *const isr,
   }
   msg_Debugging()<<"Resum Mode: "<<m_amode<<"\n";
   msg_Debugging()<<"Match Mode: "<<m_mmode<<"\n";
-  m_params = Params(p_as, (m_amode & MODE::LARGENC));
+  p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
+  m_params = Params(p_as, (m_amode & MODE::LARGENC),read.GetValue<double>("RESUM::CONSTAS",-1));
   m_LogOrd = read.GetValue<size_t>("RESUM::LogOrd", 1);
 }
 
@@ -372,7 +372,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   msg_Debugging()<<"Weight after PDF = "<<weight<<".\n";
 
   // evaluate possible endpoint corrections
-  const double as = (*p_as)(p_ampl->MuR2())/(2.*M_PI);
+  const double as = m_params.alphaS(p_ampl->MuR2())/(2.*M_PI);
   const double beta0 = m_params.beta0(p_ampl->MuR2());
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) { 
     weight *= exp(-epRatio*pow(as,1)*pow(L,1)*4./m_a[0]*SoftexpNLL_LO);
@@ -739,7 +739,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   //Exception for n_colored = 2
   if(numlegs == 2) return 1.;
 
-  const double as = (*p_as)(p_ampl->MuR2());
+  const double as = m_params.alphaS(p_ampl->MuR2());
   const double beta0 = m_params.beta0(p_ampl->MuR2());
   const double lambda = as*beta0*L; 
   const double t = T(lambda/m_a[0]);
@@ -947,7 +947,7 @@ double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode, double &exp12){
         msg_Debugging()<<"Calculate radiator for leg "<<i<<".\n";
         double colfac = 0.;
         
-        const double as = (*p_as)(muR2);
+        const double as = m_params.alphaS(p_ampl->MuR2());
         
         if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {
             colfac = m_params.CA();
@@ -1023,7 +1023,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double colfac = 0.;
       double hardcoll = 0.;
 
-      const double as = (*p_as)(muR2);
+      const double as = m_params.alphaS(p_ampl->MuR2());
       Vec4D pl(p_ampl->Leg(i)->Mom());
       cms.Boost(pl);
       const double El = dabs(pl[0]);
@@ -1323,7 +1323,7 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   }
   msg_Debugging()<<"Calculate pdf contribution, no grooming assumed.\n";
   //strong coupling & PDFs
-  const double as = (*p_as)(p_ampl->MuR2());
+  const double as = m_params.alphaS(p_ampl->MuR2());
 
   double old_pdffac = 1.;
   double new_pdffac = 1.;

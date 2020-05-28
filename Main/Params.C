@@ -24,3 +24,8 @@ double Params::CollDimGlue(double scale2) const {
 double Params::CollDimQuark(double scale2) const {
   return -3./4.;
 }
+
+double Params::alphaS(double scale2) const {
+  return m_constAlpha > 0 ? m_constAlpha : (*p_as)(scale2);
+}
+

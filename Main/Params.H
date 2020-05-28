@@ -16,10 +16,12 @@ namespace RESUM {
     double m_CA = m_NC;
     double m_TR = 1./2.;
     bool m_largeNC = false;
+    double m_constAlpha = -1;
     MODEL::Running_AlphaS *p_as;
   public:
     Params() = default;
-    Params(MODEL::Running_AlphaS *as, bool largeNC=false) : m_largeNC(largeNC) {
+    Params(MODEL::Running_AlphaS *as, bool largeNC=false, double constAlpha=-1) 
+      : m_largeNC(largeNC), m_constAlpha(constAlpha) {
       p_as = as;
       if(m_largeNC) {
         m_CF = m_TR*m_NC;
@@ -38,6 +40,7 @@ namespace RESUM {
     double K_CMW(double scale2) const;
     double CollDimGlue(double scale2) const;
     double CollDimQuark(double scale2) const;
+    double alphaS(double scale2) const;
   };
 }
 
