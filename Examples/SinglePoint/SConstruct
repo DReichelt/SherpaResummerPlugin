@@ -33,4 +33,4 @@ env.Append(LINKFLAGS = get_config(sherpa_config+' --libs')+
 
 env.Replace(CXX=get_config(sherpa_config+' --cxx'))
 
-env.Program('test', ['test.cpp'])
+env.Program('run_point', ['run_point.cpp'])
