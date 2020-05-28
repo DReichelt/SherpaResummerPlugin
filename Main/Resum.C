@@ -1230,7 +1230,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       } // end expansion for grooming
       else {
         
-        RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum) + log(Q12/Q)/m_a[i]);
+        RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum));
         
         
         G(1,2) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
