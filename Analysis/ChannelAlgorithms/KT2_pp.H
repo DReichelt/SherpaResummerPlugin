@@ -1,5 +1,5 @@
-#ifndef RESUM_KT2_EE_H
-#define RESUM_KT2_EE_H
+#ifndef RESUM_KT2_PP_H
+#define RESUM_KT2_PP_H
 #include "Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.H"
 #include <string>
 #include <vector>
