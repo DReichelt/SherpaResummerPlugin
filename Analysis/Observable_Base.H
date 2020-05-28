@@ -82,11 +82,17 @@ namespace RESUM {
       m_tag = args.KwArg("tag",m_name);
       DEBUG_FUNC(m_tag);
       ATOOLS::Data_Reader read(" ",";","#","=");
-      m_logfac = read.GetValue<double>("RESUM::LOGFAC",1.);
-      m_logpow = read.GetValue<double>("RESUM::LOGPOW",1.);
-      m_unitNorm = bool(read.GetValue<int>("RESUM::UNITNORM",1));
-      m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",1.);
-      const std::string& ep_mode = read.GetValue<std::string>("RESUM::"+m_name+"::EP_MODE","FIXED");
+      ATOOLS::Algebra_Interpreter* ip = read.Interpreter();
+      m_logfac = read.GetValue<double>("RESUM::LOGFAC",
+                 to_type<double>(ip->Interprete(args.KwArg("logfac","1"))));
+      m_logpow = read.GetValue<double>("RESUM::LOGPOW",
+                 to_type<double>(ip->Interprete(args.KwArg("logpow","1"))));
+      m_unitNorm = bool(read.GetValue<int>("RESUM::UNITNORM",
+                        to_type<int>(args.KwArg("unitnorm","1"))));
+      m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",
+                   to_type<double>(ip->Interprete(args.KwArg("ep","1"))));
+      const std::string& ep_mode = read.GetValue<std::string>("RESUM::"+m_name+"::EP_MODE",
+                                                              args.KwArg("ep_mode","FIXED"));
       if(is_int(ep_mode)) {
         m_epmode = static_cast<EP_MODE>(to_type<int>(ep_mode));
       }
