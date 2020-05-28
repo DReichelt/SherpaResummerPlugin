@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include "Tools/StringTools.H"
+#include "Tools/Key_Base.H"
 
 #include "ATOOLS/Phys/Flavour.H"
 #include "ATOOLS/Phys/Particle_List.H"
@@ -14,28 +15,28 @@
 
 namespace RESUM {
 
-  struct ChannelAlgorithm_Key {
-    ChannelAlgorithm_Key(const std::string& key)
-      : m_key(key) {}
-    ChannelAlgorithm_Key(const std::string& key,
-                         std::vector<std::string> params)
-      : m_key(key), m_params(params) {
-      // conventionally remove key from parmas if present
-      if(m_params[0]==m_key) m_params.erase(m_params.begin());
-    }
-    std::string m_key = "ChannelAlgorithm";
-    std::vector<std::string> m_params;
-  };
+  // struct ChannelAlgorithm_Key {
+  //   ChannelAlgorithm_Key(const std::string& key)
+  //     : m_key(key) {}
+  //   ChannelAlgorithm_Key(const std::string& key,
+  //                        std::vector<std::string> params)
+  //     : m_key(key), m_params(params) {
+  //     // conventionally remove key from parmas if present
+  //     if(m_params[0]==m_key) m_params.erase(m_params.begin());
+  //   }
+  //   std::string m_key = "ChannelAlgorithm";
+  //   std::vector<std::string> m_params;
+  // };
   
   // convenience typedef
-  typedef ChannelAlgorithm_Key ChAlg_Key;
+  typedef Key_Base ChAlg_Key;
 
   class ChannelAlgorithm_Base {
   public:
     typedef std::shared_ptr<ChannelAlgorithm_Base> Ptr;
     ChannelAlgorithm_Base() = default;
     ChannelAlgorithm_Base(const ChAlg_Key& params)
-      : m_name(params.m_key),  m_params(params.m_params) { }
+      : m_name(params.Name()),  m_params(params.m_params) { }
   
     virtual std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                 const std::vector<ATOOLS::Flavour>& fl,
