@@ -22,7 +22,7 @@ namespace RESUM {
                const size_t &nin,
                const Observable_Key& key);
 
-    std::vector<fastjet::PseudoJet> pseudoJets() {return fastjet::sorted_by_pt( cs.inclusive_jets(m_minPT) );}
+    std::vector<fastjet::PseudoJet> pseudoJets() const {return fastjet::sorted_by_pt( cs.inclusive_jets(m_minPT) );}
 
     const fastjet::PseudoJet LeadJet() const {return m_jet;}
     const fastjet::PseudoJet SDLeadJet() const {return m_sdJet;}
