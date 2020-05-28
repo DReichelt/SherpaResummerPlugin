@@ -26,6 +26,7 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
       m_R = to_type<double>(args.KwArg("R","0.8"));
+      m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) > 0;
 
       // soft drop parameters
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
@@ -133,35 +134,7 @@ namespace RESUM {
 
 
       if(ip.size() <= nin) return 0;
-      msg_Debugging()<<"Start jet angularity.\n";      
-
-      // if(ip.size()==6) {
-      //   if(ip[4].DR(ip[5])<1e-7) {
-      //     msg_Out()<<"\n\nDR = "<<ip[4].DR(ip[5])<<"\n";
-      //     msg_Out()<<"DEta = "<<ip[4].DEta(ip[5])<<"\n";
-      //     msg_Out()<<"DPhi = "<<ip[4].DPhi(ip[5])<<"\n";
-      //     msg_Out()<<ip[4]<<"\n";
-      //     msg_Out()<<ip[5]<<"\n";
-      //     exit(1);
-      //   }
-      //   if(ip[4].DPhi(ip[5])<1e-7) {
-      //     msg_Out()<<"\n\nDPhi = "<<ip[4].DPhi(ip[5])<<"\n";
-      //     msg_Out()<<"DR = "<<ip[4].DR(ip[5])<<"\n";
-      //     msg_Out()<<"DEta = "<<ip[4].DEta(ip[5])<<"\n";
-      //     msg_Out()<<ip[4]<<"\n";
-      //     msg_Out()<<ip[5]<<"\n";
-      //     // exit(1);
-      //   }
-      //   if(abs(ip[4].DEta(ip[5]))<1e-7) {
-      //     msg_Out()<<"\n\nDEta = "<<ip[4].DEta(ip[5])<<"\n";
-      //     msg_Out()<<"DR = "<<ip[4].DR(ip[5])<<"\n";
-      //     msg_Out()<<"DPhi = "<<ip[4].DPhi(ip[5])<<"\n";
-      //     msg_Out()<<ip[4]<<"\n";
-      //     msg_Out()<<ip[5]<<"\n";
-      //     // exit(1);
-      //   }
-      // }
-
+      msg_Debugging()<<"Start jet angularity.\n";
       
       auto alg = algorithms.find(m_algtag);
       if(alg==algorithms.end()) {
@@ -171,46 +144,26 @@ namespace RESUM {
       else msg_Debugging()<<"Reusing jets found earlier.\n";
 
       const std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
-      const ATOOLS::Vec4D axis(0.,alg->second->jetAxes(GROOM));
+      if(constits.size() <= 1) {
+        msg_Debugging()<<"Jet with single constiutent -> lambda = 0\n";
+        return 0;
+      }
+      const ATOOLS::Vec4D axis(0., m_WTA ? alg->second->jetAxes(GROOM)
+                                         : alg->second->jetVectors(GROOM));
       
       
       double lambda = 0.;
       msg_Debugging()<<"Final States:\n";
-      for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "<<ip[i]<<" "<<ip[i].PPerp()<<"\n";
+      for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "
+                                                    <<ip[i]<<" "
+                                                    <<ip[i].PPerp()<<"\n";
       msg_Debugging()<<"... in jet:\n";
-      // if(constits.size()==2) {
-      //   if(constits[0].DR(constits[1])<1e-5) {
-      //     msg_Out()<<"\n\nDR = "<<constits[0].DR(constits[1])<<"\n";
-      //     msg_Out()<<"DEta = "<<constits[0].DEta(constits[1])<<"\n";
-      //     msg_Out()<<"DPhi = "<<constits[0].DPhi(constits[1])<<"\n";
-      //     msg_Out()<<constits[0]<<"\n";
-      //     msg_Out()<<constits[1]<<"\n";
-      //     exit(1);
-      //   }
-      //   if(constits[0].DPhi(constits[1])<1e-5) {
-      //     msg_Out()<<"\n\nDPhi = "<<constits[0].DPhi(constits[1])<<"\n";
-      //     msg_Out()<<"DR = "<<constits[0].DR(constits[1])<<"\n";
-      //     msg_Out()<<"DEta = "<<constits[0].DEta(constits[1])<<"\n";
-      //     msg_Out()<<"DY = "<<constits[0].DY(constits[1])<<"\n";
-      //     msg_Out()<<constits[0]<<"\n";
-      //     msg_Out()<<constits[1]<<"\n";
-      //     // exit(1);
-      //   }
-      //   if(abs(constits[0].DEta(constits[1]))<1e-5) {
-      //     msg_Out()<<"\n\nDEta = "<<constits[0].DEta(constits[1])<<"\n";
-      //     msg_Out()<<"DR = "<<constits[0].DR(constits[1])<<"\n";
-      //     msg_Out()<<"DPhi = "<<constits[0].DPhi(constits[1])<<"\n";
-      //     msg_Out()<<constits[0]<<"\n";
-      //     msg_Out()<<constits[1]<<"\n";
-      //     // exit(1);
-      //   }
-      // }
       for (ATOOLS::Vec4D con: constits) {
         // even with grooming , pt is defined without grooming
         const double z = con.PPerp() / alg->second->jetVectors(0).PPerp();
         const double dR = con.DR(axis) / m_R;
 
-
+        msg_Debugging()<<con<<"\n"<<axis<<"\n";
         msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
         msg_Debugging()<<"DeltaR / R0 = "<<con.DR(axis)<<" / "<<m_R<<" = "<< dR<<" -> (DeltaR/R0)^(alpha = "<<m_alpha<<")"
                  <<" = "<<pow(dR, m_alpha)<<"\n";
@@ -226,6 +179,7 @@ namespace RESUM {
     double m_R;
     double m_alpha;
     std::string m_pstring;
+    bool m_WTA = false;
     Observable_Key m_algkey = {"AlgKey"};
     std::string m_algtag;
   };// end of class Y1_II
