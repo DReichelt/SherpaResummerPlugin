@@ -1,0 +1,49 @@
+(run){
+  EVENTS 0;
+
+  R0:=0.8
+  PTMIN:=500;
+  PTCUT:=0.6;
+
+  SHOWER_GENERATOR Resum;
+
+  SCALES VAR{sqr(R0)*PTMIN}
+  RESUM::pre_calc = pre_calc/trace_basis
+  RESUM::UNITNORM = 0;
+  MASS[6] = 9999999999999999;
+  #SHOW_PDF_SETS=1
+}(run)
+
+(beam){
+  BEAM_1 2212 6500; BEAM_2 2212 6500;
+}(beam)
+
+(isr){
+  PDF_SET = NNPDF30NLO;
+}(isr)
+
+
+
+(processes){
+  Process 1 -1 -> 22 21
+  End process;
+  # Process 1 21 -> 22 1
+  # End process;
+}(processes)
+
+(momenta){
+  NUMBER_OF_POINTS 1
+  Point 1
+  1   500 0 0 -500 1 0 
+  -1  500 0 0 500  0 2
+  22  500 0 500 0
+  21  500 0 -500 0 2 1
+  End point
+  # NUMBER_OF_POINTS 1
+  # Point 1
+  # 1   500 0 0 -500 1 0 
+  # 21  500 0 0 500  2 1
+  # 22  500 0 500 0
+  # 1  500 0 -500 0  0 2
+  # End point
+}(momenta)

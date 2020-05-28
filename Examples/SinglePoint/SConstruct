@@ -1,0 +1,36 @@
+#-*- mode: python-*- 
+def get_config(exec_string):
+   from subprocess import check_output
+   return check_output(exec_string.split()).rstrip().split()
+
+import os, distutils.spawn
+env = Environment(ENV=os.environ)
+
+sherpa_path    = (os.popen('Sherpa-config --prefix').read().rstrip() 
+                  if distutils.spawn.find_executable('Sherpa-config') 
+                  else env['ENV']['SHERPA'])
+sherpa_libpath = sherpa_path+'/lib/SHERPA-MC/'
+sherpa_config  = sherpa_path+'/bin/Sherpa-config'
+
+resum_path = sherpa_path+'/SherpaResummerPlugin'
+
+env.Append(CXXFLAGS = get_config(sherpa_config+' --cppflags')+['-I'+resum_path])
+
+env.Append(RPATH = [sherpa_libpath] )
+
+env.Append(LINKFLAGS = get_config(sherpa_config+' --libs')+
+           ['-lMEProcess',
+            '-lToolsPhys',
+            '-lToolsMath',
+            '-lToolsOrg',
+            '-lPhasicProcess',
+            '-lSherpaPerturbativePhysics',
+            '-lPhasicMain',
+            '-lModelMain',
+            '-lResumCommon',
+            '-lResumAnalysis',
+            '-lSherpaResum'])
+
+env.Replace(CXX=get_config(sherpa_config+' --cxx'))
+
+env.Program('test', ['test.cpp'])
