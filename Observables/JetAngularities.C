@@ -32,7 +32,7 @@ namespace RESUM {
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
       m_beta = to_type<double>(args.KwArg("beta","0"));
       m_R0 = m_R;
-      if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
+      if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
       DEBUG_FUNC(Name()+" -> "+Tag());
       DEBUG_VAR(m_zcut);
@@ -70,13 +70,20 @@ namespace RESUM {
 
     GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
                          const size_t &l) {
-      if(l<2) {
+      if(l<2 or not ampl->Leg(l)->Flav().Strong()) {
         return m_gmode;
       }
       else {
         // return GROOM_MODE::SD_COLL;
-        if(v > GroomTransitionPoint(ampl, l)) return GROOM_MODE::NONE;
-        else return GROOM_MODE::SD_COLL;        
+        const double tp = GroomTransitionPoint(ampl, l);
+        if(v > tp) {
+          msg_Debugging()<<"Value v = "<<v<<" above transition point "<<tp<<"\n";
+          return GROOM_MODE::NONE;
+        }
+        else {
+          msg_Debugging()<<"Value v = "<<v<<" below transition point "<<tp<<"\n";
+          return GROOM_MODE::SD_COLL;        
+        }
       }
     }
     
