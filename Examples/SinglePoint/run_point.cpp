@@ -5,12 +5,14 @@
 #include "ATOOLS/Org/Exception.H"
 #include "ATOOLS/Org/Message.H"
 #include "ATOOLS/Org/My_MPI.H"
-#include "AddOns/Python/MEProcess.H"
 #include "PDF/Main/ISR_Base.H"
 #include "PDF/Main/Shower_Base.H"
 #include "Main/Resum.H"
 #include "Tools/Key_Base.H"
 
+// bad hack :(
+#define private public
+#include "AddOns/Python/MEProcess.H"
 
 int main(int argc,char* argv[])
 {
