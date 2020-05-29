@@ -328,7 +328,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     msg_Debugging()<<*p_ampl<<"\n\n";            
     if(i>0) msg_Debugging()<<"Last Weight = "<<m_resNLL[m_n][i-1]<<"\n";
   }
-
   if(!(m_amode&MODE::IGNSOFT)) {
     // some checks for colour calculation
     double dummy1, dummy2;
@@ -364,7 +363,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
   msg_Debugging()<<"Weight after soft = "<<weight<<"\n";
-
   if(!(m_amode&MODE::IGNPDF)) {
     msg_Debugging()<<"Calculate PDF.\n";
     weight *= CalcPDF(L, LResum, PDFexp);
@@ -402,7 +400,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     else m_F(0,FexpNLL_NLO); // if Rp diverges, still get the first expansion coefficient for F
   }
   msg_Debugging()<<"Weight after F = "<<weight<<".\n";
-
   // store resummed result
   msg_Debugging()<<"Final weight = "<<weight<<"\n";
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
@@ -1092,9 +1089,9 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               r2_beta1 = -(beta1/4./M_PI/pow(beta0,3.)) * (m_b[i]/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
                                                            -(m_a[i]*(1.+m_beta)+m_b[i])/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ),2)+2.*log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda - 2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)) + (m_a[i]+m_b[i])*(pow(log(1.-2./(m_a[i]+m_b[i])*lambda),2)+2.*log(1.-2./(m_a[i]+m_b[i])*lambda)) );
                 
-              r1p = -1./(M_PI*m_b[i]*beta0)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./(m_a[i]+m_b[i])*lambda));
+              r1p = -1./(M_PI*m_b[i]*beta0)*(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./(m_a[i]+m_b[i])*lambda));
                 
-              r1d = -1./(M_PI*m_a[i]*beta0)/(m_beta+1.)*(log(1.-(1.+m_beta)*(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./m_a[i]*lambdaZ));                          
+              r1d = -1./(M_PI*m_a[i]*beta0)/(m_beta+1.)*(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./m_a[i]*lambdaZ));                          
             } // end grooming for NLL parts for b != 0
             else {
               r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
@@ -1128,6 +1125,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               }
             } 
             Rp+=r1p*colfac;
+            
 	  } // end of NLL for b != 0
       } // end of b != 0
       else { // start b == 0           
