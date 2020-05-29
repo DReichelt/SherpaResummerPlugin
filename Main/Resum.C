@@ -153,7 +153,7 @@ int Resum::PerformShowers()
             if(m_collgmodes_end[j] & GROOM_MODE::SD_COLL) m_softgmode_end = GROOM_MODE::SD_SOFT;
         }
     }
-    
+
     m_gmode = m_obss[m_n]->GroomMode();
     m_collgmodes = {moms.size(),m_gmode};
     m_softgmode = m_gmode;
@@ -947,7 +947,7 @@ double Resum::CalcRpp(const double L, RESUM::GROOM_MODE gmode, double &exp12){
         msg_Debugging()<<"Calculate radiator for leg "<<i<<".\n";
         double colfac = 0.;
         
-        const double as = m_params.alphaS(p_ampl->MuR2());
+        const double as = m_params.alphaS(muR2);
         
         if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {
             colfac = m_params.CA();
@@ -1023,7 +1023,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
       double colfac = 0.;
       double hardcoll = 0.;
 
-      const double as = m_params.alphaS(p_ampl->MuR2());
+      const double as = m_params.alphaS(muR2);
       Vec4D pl(p_ampl->Leg(i)->Mom());
       cms.Boost(pl);
       const double El = dabs(pl[0]);
@@ -1112,20 +1112,26 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 
             msg_Debugging()<<"NLL contribution = "<<-colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i])) +  colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambda/m_a[i]) <<"\n";
             // add NLL parts to R and Rp
-            R -= colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/(m_a[i]+m_b[i])));
+            const double r1p_coeff = m_logdbar[i]-m_b[i]*log(2.0*El/Q);
+            R -= colfac*(r2+r1p_coeff*r1p+hardcoll*T(lambda/(m_a[i]+m_b[i])));
             if(collgmode & GROOM_MODE::SD_COLL) {
-              R -= colfac*(r1d*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q)));
-              R -= colfac*(log(Q12/Q)*T(lambdaZ));
+              double r1d_coeff = (m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q));
+              double TZ_coeff = log(Q12/Q);
               if(!IsZero(m_etamin[i])) {
-                R += colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambdaZ);
-                R += colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*r1d;
-              }              
+                TZ_coeff += -(m_etamin[i]-log(2.*El/Q12));
+                r1d_coeff += -(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12));
+              }
+              R -= colfac*r1d_coeff*r1d;
+              R -= colfac*TZ_coeff*T(lambdaZ);
+              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
             }
             else {
-              R -= colfac*log(Q12/Q)*T(lambda/m_a[i]);
+              double T_coeff = log(Q12/Q); 
               if(!IsZero(m_etamin[i])) {
-                R += colfac*(m_etamin[i]-log(2.*El/Q12))*T(lambda/m_a[i]);
+                T_coeff += -(m_etamin[i]-log(2.*El/Q12));
               }
+              R -= colfac*T_coeff*T(lambda/m_a[i]);
+              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
             } 
             Rp+=r1p*colfac;
 	  } // end of NLL for b != 0
@@ -1145,12 +1151,18 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               // subtract NLL contribution of scale variation
               double r2_corr = +LResum*r1p;
               double r2=(r2_cmw+r2_beta1+r2_corr);
-              
-              R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i])+r1d*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q)));
+
+              const double r1p_coeff = m_logdbar[i]-m_b[i]*log(2.0*El/Q); 
+              R -= colfac*(r2+r1p_coeff*r1p+hardcoll*T(lambda/m_a[i]));
+              double r1d_coeff = m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q);
+              double TZ_coeff = 0; //log(Q12/Q)
               if(!IsZero(m_etamin[i])) {
-                  R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambdaZ);
-                  R += colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*r1d;
+                TZ_coeff += -(m_etamin[i]-log(2.0*El/Q12));
+                r1d_coeff += -(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12)); 
               }
+              R -= colfac*TZ_coeff*T(lambdaZ);
+              R -= colfac*r1d_coeff*r1d;
+              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
               Rp+=r1p*colfac;
           }
         }
@@ -1171,11 +1183,15 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
             // subtract NLL contribution of scale variation
             const double r2_corr = +LResum*r1p;
             const double r2=(r2_cmw+r2_beta1+r2_corr);
-            
-            R += -colfac*(r2+r1p*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+hardcoll*T(lambda/m_a[i]) + log(Q12/Q)*T(lambda/m_a[i]));
+
+            const double r1p_coeff = m_logdbar[i]-m_b[i]*log(2.0*El/Q);
+            R -= colfac*(r2+r1p_coeff*r1p+hardcoll*T(lambda/m_a[i]));
+            double T_coeff = log(Q12/Q); 
             if(!IsZero(m_etamin[i])) {
-              R += colfac*(m_etamin[i]-log(2.0*El/Q12))*T(lambda/m_a[i]);
+              T_coeff += -(m_etamin[i]-log(2.0*El/Q12));
             }
+            R -= colfac*T_coeff*T(lambda/m_a[i]);
+            msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
             Rp+=r1p*colfac;
           }
         }
@@ -1229,7 +1245,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/Q))+r1dAtEnd*(m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q))+hardcoll*r2_hardcollAtEnd);        
       } // end expansion for grooming
       else {
-        
+
         RAtEnd += -2./M_PI*as*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/Q)+LResum));
         
         
