@@ -1123,7 +1123,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               }
               R -= colfac*r1d_coeff*r1d;
               R -= colfac*TZ_coeff*T(lambdaZ);
-              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
+              msg_Debugging()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
             }
             else {
               double T_coeff = log(Q12/Q); 
@@ -1131,7 +1131,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 T_coeff += -(m_etamin[i]-log(2.*El/Q12));
               }
               R -= colfac*T_coeff*T(lambda/m_a[i]);
-              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
+              msg_Debugging()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
             } 
             Rp+=r1p*colfac;
 	  } // end of NLL for b != 0
@@ -1162,7 +1162,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               }
               R -= colfac*TZ_coeff*T(lambdaZ);
               R -= colfac*r1d_coeff*r1d;
-              msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
+              msg_Debugging()<<"r1p_coeff = "<<r1p_coeff<<", r1d_coeff = "<<r1d_coeff<<", TZ_coeff = "<<TZ_coeff<<"\n";
               Rp+=r1p*colfac;
           }
         }
@@ -1191,7 +1191,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               T_coeff += -(m_etamin[i]-log(2.0*El/Q12));
             }
             R -= colfac*T_coeff*T(lambda/m_a[i]);
-            msg_Out()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
+            msg_Debugging()<<"r1p_coeff = "<<r1p_coeff<<", T_coeff = "<<T_coeff<<"\n";
             Rp+=r1p*colfac;
           }
         }
