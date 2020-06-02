@@ -462,10 +462,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(2,3) = pow(as,2)*pow(L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
   H(2,2) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(1,1),2) + G(2,2) +
                                   G(1,2)*G(1,0) +
-                                  4.*FexpNLL_NLO*pow(Rexp(1,2),2) 
-                                  +4.*exp12*(exp12-exp12zc)*Li2ratio );
-  H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) 
-                                 -4.*Lz*exp12*(exp12-exp12zc)*Li2ratio );
+                                  4.*FexpNLL_NLO*pow(Rexp(1,2),2) );
+  H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) +  4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) );
+  if(m_gmode & GROOM_MODE::SD) {
+    H(2,2) += pow(as,2)*pow(L,2) * (4.*exp12*(exp12-exp12zc)*Li2ratio);
+    H(2,1) += pow(as,2)*pow(L,1) * (-4.*Lz*exp12*(exp12-exp12zc)*Li2ratio );
+  }
   H(2,0) = pow(as,2)*pow(L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + FexpNLL_NLO*pow(Rexp(1,1),2) );
   double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
   
