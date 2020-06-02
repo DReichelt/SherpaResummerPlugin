@@ -397,16 +397,16 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     double pTmax = -1;
     for(int i=0; i<n; i++) {
       if(p[imap[i]].PPerp() > pTmax) {
-        ind = imap[i];
+        ind = i;
         pTmax = p[imap[i]].PPerp();
       }
     }
-    msg_Debugging()<<p[ind]<<" "<<f[ind+2]<<"\n";
-    if(flavd(f[ind+2])) {
+    msg_Debugging()<<p[imap[ind]]<<" "<<f[imap[ind]+2]<<"\n";
+    if(flavd(f[imap[ind]+2])) {
       if(m_mode&MODE::BLAND) final_channel += "q";
       else {
         bool found = false;
-        for(int fla: f[ind+2]) {
+        for(int fla: f[imap[ind]+2]) {
           // msg_Out()<<fla<<" ";
           if(fla != 0) {
             if(found or abs(fla) > 1) {
@@ -426,8 +426,8 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
       }
     }
     else final_channel += "g";
+    --n;
     for (int i=ind;i<n;++i) imap[i]=imap[i+1];
-    n--;
   }
   if(final_channel == "other") channel = "other";
   else channel += final_channel;
