@@ -26,7 +26,7 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
       m_R = to_type<double>(args.KwArg("R","0.8"));
-      m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) > 0;
+      m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) == 0;
 
       // soft drop parameters
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
