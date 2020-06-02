@@ -392,17 +392,21 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       weight*=m_F(Rp,FexpNLL_NLO);
       double dummy;
       weight/=m_F(Rp0,dummy);
-
-      if(m_gmode & GROOM_MODE::SD and m_softgmode==GROOM_MODE::NONE and m_amode & MODE::HYPGEO){
+      if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO){
           const double Rppzc = CalcRpp(Lz, GROOM_MODE::SD  , exp12zc);
           const double Rpp   = CalcRpp(L , GROOM_MODE::NONE, exp12  );
-          Li2ratio = ATOOLS::DiLog(exp(L-Lz));
-          
-          weight*=exp(-Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
-          if(m_mmode & MATCH_MODE::DERIV){
+          double Trans_F = 1.;
+          if(m_softgmode==GROOM_MODE::NONE){
+            Li2ratio = ATOOLS::DiLog(exp(L-Lz));
+            
+            Trans_F = exp(Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
+            
+            weight*=Trans_F;
+          }
+          if(m_softgmode_end==GROOM_MODE::NONE and m_mmode & MATCH_MODE::DERIV){
               Li2zc = ATOOLS::DiLog(exp(0.-Lz));
               const double Rpp_end = exp12*2.*as;
-              weight*=exp(-epRatio*pow(L,1)*Rpp_end*(Rpp_end-Rppzc)*Lz*Li2zc);
+              weight*=exp(epRatio*pow(L,1)*Rpp_end*(Rpp_end-Rppzc)*Lz*Li2zc);
           }
       }
     }
@@ -459,9 +463,9 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   H(2,2) = pow(as,2)*pow(L,2) * ( 0.5*pow(G(1,1),2) + G(2,2) +
                                   G(1,2)*G(1,0) +
                                   4.*FexpNLL_NLO*pow(Rexp(1,2),2) 
-                                  -4.*exp12*(exp12-exp12zc)*Li2ratio );
+                                  +4.*exp12*(exp12-exp12zc)*Li2ratio );
   H(2,1) = pow(as,2)*pow(L,1) * ( G(2,1) + G(1,1)*G(1,0) + 4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) 
-                                 +4.*Lz*exp12*(exp12-exp12zc)*Li2ratio );
+                                 -4.*Lz*exp12*(exp12-exp12zc)*Li2ratio );
   H(2,0) = pow(as,2)*pow(L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + FexpNLL_NLO*pow(Rexp(1,1),2) );
   double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
   
@@ -487,7 +491,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV) {
       if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
-      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1) + 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1) - 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
     }
   }
   // store next-to-leading order expansion
