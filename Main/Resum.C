@@ -1264,9 +1264,8 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
           G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/Q12))/m_a[i];
           G(2,2) += 8.*M_PI*beta0*colfac*(m_etamin[i]-log(2.*El/Q12))/sqr(m_a[i]);
         }
-
-        S1 += -colfac*log(Q12/Q);
       } // end expansion without grooming
+      S1 += -colfac*log(Q12/Q);
     } // end loop over legs
   msg_Debugging()<<"Sum of radiators = "<<R<<".\n";
   msg_Debugging()<<"Expansion: \n"<<G(1,2)<<" "<<G(1,1)<<" "<<S1<<" "<<G(1,1)+4./m_a[0]*S1<<"\n";
