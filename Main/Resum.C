@@ -1091,7 +1091,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
                 
               r1p = -1./(M_PI*m_b[i]*beta0)*(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./(m_a[i]+m_b[i])*lambda));
                 
-              r1d = -1./(M_PI*m_a[i]*beta0)/(m_beta+1.)*(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2./m_a[i]*lambdaZ));                          
+              r1d = -1./(M_PI*m_a[i]*beta0)/(m_beta+1.)*(log(1.-2.*(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])*lambda-2.*m_b[i]/(m_a[i]*(1.+m_beta)+m_b[i])*lambdaZ)-log(1.-2.*lambdaZ));                          
             } // end grooming for NLL parts for b != 0
             else {
               r2_cmw=(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*((m_a[i]+m_b[i])*log(1.-2.*lambda/(m_a[i]+m_b[i]))
@@ -1141,8 +1141,10 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               R -= colfac*r1;
           }
           if (order>=1) {
-              double r2_cmw = (K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)/(1.+m_beta)*(log(1.-2.*lambdaZ)+m_beta*log(1.-2.*lambda/m_a[i])+2.*(lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]));
-              double r2_beta1 = -beta1/2./M_PI/pow(beta0,3.)*(log(1.-2.*lambdaZ)*(2.+log(1.-2.*lambdaZ))+m_beta*sqr(log(1.-2.*lambda/m_a[i]))+2.*(m_beta+2.*lambdaZ)/(1.-2.*lambda/m_a[i])*log(1.-2.*lambda/m_a[i])+4.*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              double r2_cmw = (K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)/(1.+m_beta)*(log(1.-2.*lambdaZ)+m_beta*log(1.-2.*lambda/m_a[i])+2.*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]));
+              
+              double r2_beta1 = -beta1/4./M_PI/pow(beta0,3.)*(log(1.-2.*lambdaZ)*(2.+log(1.-2.*lambdaZ))+m_beta*sqr(log(1.-2.*lambda/m_a[i]))+2.*(m_beta+2.*lambdaZ)/(1.-2.*lambda/m_a[i])*log(1.-2.*lambda/m_a[i])+4.*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i]))/(1.+m_beta);
+              
               double r1p = 2./m_a[i]/(M_PI*beta0)*(m_beta*lambda/m_a[i]+lambdaZ)/(1.-2.*lambda/m_a[i])/(1.+m_beta);
               double r1d = 1./m_a[i]/(M_PI*beta0)*(log(1.-2.*lambdaZ)-log(1.-2.*lambda/m_a[i]))/(1.+m_beta);
               
@@ -1153,7 +1155,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
               const double r1p_coeff = m_logdbar[i]-m_b[i]*log(2.0*El/Q); 
               R -= colfac*(r2+r1p_coeff*r1p+hardcoll*T(lambda/m_a[i]));
               double r1d_coeff = m_logdbar[i]+LResum+m_a[i]*log(2.*El/Q)-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/Q12)+m_beta*log(2.0*El/Q);
-              double TZ_coeff = 0; //log(Q12/Q)
+              double TZ_coeff = log(Q12/Q);
               if(!IsZero(m_etamin[i])) {
                 TZ_coeff += -(m_etamin[i]-log(2.0*El/Q12));
                 r1d_coeff += -(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12)); 
