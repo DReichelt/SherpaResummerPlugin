@@ -1237,7 +1237,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
 
         if(!IsZero(m_etamin[i])) {
           G(1,1) += 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]);
-          G(1,0) += 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp);
+          G(1,0) += -4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp);
           G(2,2) += 8.*M_PI*beta0*colfac*(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12));
           G(2,1) += 8.*M_PI*beta0*colfac*2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*log(1./transp);
           G(2,0) += -8.*M_PI*beta0*colfac*(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/Q12))*sqr(log(1./transp));
