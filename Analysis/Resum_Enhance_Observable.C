@@ -39,7 +39,7 @@ namespace PHASIC {
 #include "PHASIC++/Main/Process_Integrator.H"
 #include "ATOOLS/Org/MyStrStream.H"
 #include "ATOOLS/Org/Exception.H"
-
+#include "Tools/StringTools.H"
 
 using namespace PHASIC;
 using namespace ATOOLS;
@@ -76,14 +76,15 @@ Resum_Enhance_Observable::Resum_Enhance_Observable
     epos = arg.find("]",bpos);
     if(epos == std::string::npos) THROW(fatal_error,"Invalid input, missing ']'.");
     const std::string& name = arg.substr(bpos+4,epos-4-bpos);
-    m_obs.push_back(RESUM::Observable_Getter::GetObject(name,RESUM::Observable_Key(name)));
+    std::vector<std::string> ags = RESUM::split(name,",");
+    m_obs.push_back(RESUM::Observable_Getter::GetObject(ags[0],RESUM::Observable_Key(ags[0],ags)));
     if(m_obs.back() == nullptr) THROW(fatal_error,"Observable not found '"+name+"'");
-    m_calc.AddTag(m_obs.back()->Name(),"1.0");
+    m_calc.AddTag(m_obs.back()->Tag(),"1.0");
     m_obsVals.push_back(1.);
     const std::string& rep = arg.substr(bpos,epos-bpos);
     bpos = arg.find(rep);
     while(bpos != std::string::npos) {
-      arg.replace(bpos,rep.size()+1,m_obs.back()->Name());
+      arg.replace(bpos,rep.size()+1,m_obs.back()->Tag());
       bpos = arg.find(rep);
     }
     bpos = arg.find("Obs[");
