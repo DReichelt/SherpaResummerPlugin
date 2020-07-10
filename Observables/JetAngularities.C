@@ -106,8 +106,8 @@ namespace RESUM {
           return sqr(m_R)/4.;
         }
         else {
-          return sqr(m_R)*(1./4.)/4.;
-          // return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+          // return sqr(m_R)*(1./4.)/4.;
+          return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
         }
       }
       else {
