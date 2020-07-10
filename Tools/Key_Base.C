@@ -18,7 +18,7 @@ Key_Base::Key_Base(const std::string& name,
   if(m_params[0]==m_name) m_params.erase(m_params.begin());
   for(const std::string& p: m_params) {
     msg_Debugging()<<p<<"\n";
-    std::vector<std::string> keyVal = split(p,":");
+    std::vector<std::string> keyVal = split(p,std::set<std::string>({":"," ",","}));
     if(keyVal.size() > 1) {
       msg_Debugging()<<keyVal[0]<<" -> "<<keyVal[1]<<"\n";
       m_params_map[keyVal[0]] = keyVal[1];
