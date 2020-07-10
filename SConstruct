@@ -146,6 +146,7 @@ observables = ['Observables/Y2_IF.C',
                'Observables/Oblateness.C']
 
 obsFjcontrib = ['Observables/JetAngularities.C',
+                'Observables/JetMass.C',
                 'Observables/Algorithms/FastjetAlg.C']
 
 analysislib = env.SharedLibrary('ResumAnalysis',
