@@ -143,6 +143,8 @@ int Resum::PerformShowers()
     m_beta = m_obss[m_n]->GroomBeta();
 
     
+    m_gmode = m_obss[m_n]->GroomMode();
+    
     m_collgmodes_end = {moms.size(),m_gmode};
     m_softgmode_end = m_gmode;
     if(m_gmode & GROOM_MODE::SD) {
@@ -153,8 +155,6 @@ int Resum::PerformShowers()
             if(m_collgmodes_end[j] & GROOM_MODE::SD_COLL) m_softgmode_end = GROOM_MODE::SD_SOFT;
         }
     }
-
-    m_gmode = m_obss[m_n]->GroomMode();
     m_collgmodes = {moms.size(),m_gmode};
     m_softgmode = m_gmode;
     for(size_t i=0; i<m_xvals[m_n].size(); i++) {
@@ -415,6 +415,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   msg_Debugging()<<"Weight after F = "<<weight<<".\n";
   // store resummed result
   msg_Debugging()<<"Final weight = "<<weight<<"\n";
+  std::cout<< exp(-L) << " " << exp(-Lz) << " Final weight = "<<weight<<"\n";
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
