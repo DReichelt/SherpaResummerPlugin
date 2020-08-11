@@ -63,7 +63,7 @@ namespace RESUM {
       if(!m_unitNorm) return RESUM::Observable_Base::LogFac();
       double avg = 0;
       double n = 0;
-      for(int i=2; i<ampl->Legs().size(); i++) {
+      for(int i=(m_gmode & GROOM_MODE::SD) ? 2 : 0; i<ampl->Legs().size(); i++) {
         if(ampl->Leg(i)->Flav().StrongCharge() != 0) {
           n++;
           avg += RESUM::Observable_Base::Parameters(ampl,i).m_logdbar;
