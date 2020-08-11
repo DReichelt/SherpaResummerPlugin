@@ -415,7 +415,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   msg_Debugging()<<"Weight after F = "<<weight<<".\n";
   // store resummed result
   msg_Debugging()<<"Final weight = "<<weight<<"\n";
-  std::cout<< exp(-L) << " " << exp(-Lz) << " Final weight = "<<weight<<"\n";
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
 
   // calculate expansion
