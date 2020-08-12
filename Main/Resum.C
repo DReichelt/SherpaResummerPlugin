@@ -483,7 +483,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
       m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
   }
-  std::cout << L << " " << Lz << " " << m_resExpNLO[m_n][i] << std::endl;
 
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
     m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G0(1,1) +PDFexp)),2)/2.;
@@ -496,7 +495,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1));
       
-      if(m_softgmode_end==GROOM_MODE::NONE) m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+      if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO and m_softgmode_end==GROOM_MODE::NONE) m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
     }
   }
   // store next-to-leading order expansion
