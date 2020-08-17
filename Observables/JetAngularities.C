@@ -115,6 +115,20 @@ namespace RESUM {
       }
     }
 
+    double SoftNonGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
+      if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
+        if(i<ampl->NIn() and j<ampl->NIn()) {
+          return 4.*pow(m_R,2)*(1.17-log(2.*m_R));
+        }
+        else {
+          return pow(M_PI,2)/3.;
+        }
+      }
+      else {
+        return 0;
+      }
+    }
+
 
     double Value(const std::vector<Vec4D>& moms,
             const std::vector<ATOOLS::Flavour>& flavs,

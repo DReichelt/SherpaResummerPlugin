@@ -174,6 +174,11 @@ namespace RESUM {
         return 0;
       }
     }
+
+    virtual double SoftNonGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) {
+      return 0.;
+    }
+
     
     virtual double Shift(ATOOLS::NLO_subevt *sub) {
         ATOOLS::Vec4D p(sub->p_mom[sub->m_ijt]);

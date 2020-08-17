@@ -836,8 +836,10 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   //Build Gamma
   MatrixD ReGamma(dim, dim, 0);
   MatrixC Gamma(dim, dim, 0);
+  MatrixC GammaNGL(dim,dim,0);
   for(size_t k=0; k<Tprods.size(); k++) {
     ReGamma += m_obss[m_n]->SoftGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
+    GammaNGL += m_obss[m_n]->SoftNonGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
     if(signlabels[2*k]*signlabels[2*k+1] == 1) {
       Gamma += MatrixC(Tprods[k]);
     }
@@ -874,13 +876,17 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   SoftexpNLL_NLO = SoftexpNLL_LO;
   SoftexpNLL_LO += 2.*Trace(Hard, Gamma_exp.real())/traceH;
   MatrixC conjGamma = Conjugate(Gamma_exp);
-  if((m_amode & MODE::SOFTEXPAND) && (m_mmode & MATCH_MODE::NLO)) {
-    SoftexpNLL_NLO *= (SoftexpNLL_LO-SoftexpNLL_NLO/2.);
-    SoftexpNLL_NLO += 4.*(Trace(Hard,real(conjGamma*ICmetric*conjGamma))
-                          + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp))
-                          + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
+  if(m_mmode & MATCH_MODE::NLO) {
+    if((m_amode & MODE::SOFTEXPAND)) {
+      SoftexpNLL_NLO *= (SoftexpNLL_LO-SoftexpNLL_NLO/2.);
+      SoftexpNLL_NLO += 4.*(Trace(Hard,real(conjGamma*ICmetric*conjGamma))
+                            + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp))
+                            + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
+    }
+    if(m_amode & MODE::NGLEXPAND) {
+      SoftexpNLL_NLO += m_params.CA()/16.*Trace(Hard,GammaNGL.real())/traceH;
+    }
   }
- 
   // Calculate Soft matrix
   const MatrixC& eGamma = exp(ICmetric*Gamma.transposeInPlace());
   const MatrixC& cGamma = Conjugate(eGamma)*eGamma;
