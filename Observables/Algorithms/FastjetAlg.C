@@ -40,11 +40,21 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   
   m_jetAxis = wta_recluster(m_jet);
   m_jets = {2,std::set<size_t>()};
-  for(const fastjet::PseudoJet& j: m_jet.constituents() ) {
-    m_jets[0].emplace(j.user_index());
+  if(m_jet.has_constituents()) {
+    for(const fastjet::PseudoJet& j: m_jet.constituents() ) {
+      m_jets[0].emplace(j.user_index());
+    }
   }
-  for(const fastjet::PseudoJet& j: m_sdJet.constituents() ) {
-    m_jets[1].emplace(j.user_index());
+  else {
+    m_jets[0].emplace(m_jet.user_index());
+  }
+  if(m_sdJet.has_constituents()) {
+    for(const fastjet::PseudoJet& j: m_sdJet.constituents() ) {
+      m_jets[1].emplace(j.user_index());
+    }
+  }
+  else {
+    m_jets[1].emplace(m_sdJet.user_index());
   }
   m_jetVectors = {{m_jet.E(),m_jet.px(),m_jet.py(),m_jet.pz()},
                   {m_sdJet.E(),m_sdJet.px(),m_sdJet.py(),m_sdJet.pz()}};
