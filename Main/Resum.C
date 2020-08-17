@@ -143,6 +143,8 @@ int Resum::PerformShowers()
     m_beta = m_obss[m_n]->GroomBeta();
 
     
+    m_gmode = m_obss[m_n]->GroomMode();
+    
     m_collgmodes_end = {moms.size(),m_gmode};
     m_softgmode_end = m_gmode;
     if(m_gmode & GROOM_MODE::SD) {
@@ -153,8 +155,6 @@ int Resum::PerformShowers()
             if(m_collgmodes_end[j] & GROOM_MODE::SD_COLL) m_softgmode_end = GROOM_MODE::SD_SOFT;
         }
     }
-
-    m_gmode = m_obss[m_n]->GroomMode();
     m_collgmodes = {moms.size(),m_gmode};
     m_softgmode = m_gmode;
     for(size_t i=0; i<m_xvals[m_n].size(); i++) {
@@ -493,7 +493,9 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV) {
       if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
-      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1) - 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+      m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1));
+      
+      if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO and m_softgmode_end==GROOM_MODE::NONE) m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
     }
   }
   // store next-to-leading order expansion
