@@ -1,4 +1,5 @@
-#-*- mode: python-*- 
+#-*- mode: python-*-
+ 
 import math as m
 import glob
 import argparse
@@ -169,6 +170,8 @@ class Sigma(object):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--nll-file', '-nll',default='NLL.dat')
+    parser.add_argument('--lo-rs-file', '-loRS',default='LO_RS.dat')
+    parser.add_argument('--lo-bvi-file', '-loBVI',default='LO_BVI.dat')
     parser.add_argument('--lo-file', '-lo',default='LO.dat')
     parser.add_argument('--nlo-rs-file', '-nloRS',default='NLO_RS.dat')
     parser.add_argument('--nlo-vi-file', '-nloVI',default='NLO_VI.dat')
@@ -181,6 +184,8 @@ if __name__=='__main__':
     parser.add_argument('--output-match','-o',default="resum-plots")
     parser.add_argument('--channels', '-ch', action='append',default=None)
     parser.add_argument('--channel-fo-add', default=None)
+    parser.add_argument('--channel-nll-duplicate', default=None)
+    parser.add_argument('--combine', default=None)
     parser.add_argument('--match', action='store_true', default=False)
     parser.add_argument('--message', '-m', default='warning')
     
@@ -189,7 +194,15 @@ if __name__=='__main__':
         args.channels = []
     else:
         args.channels = [ch for chs in args.channels for ch in chs.split()]
+    if args.channel_nll_duplicate is None:
+        nll_duplicates = {} 
+    else:
+        nll_duplicates = {}
+        for ch in args.channel_nll_duplicate.split():
+            chs = ch.split(':')
+            nll_duplicates[chs[0]] = chs[1:]
     args.observable = [ob for obs in args.observable for ob in obs.split()]
+    
     if args.message.startswith('d'): logging.basicConfig(level=logging.DEBUG)
     if args.message.startswith('i'): logging.basicConfig(level=logging.INFO)
     if args.message.startswith('w'): logging.basicConfig(level=logging.WARNING)
@@ -199,7 +212,7 @@ if __name__=='__main__':
 
     
     for obs_mode in args.observable:
-        logging.info("\nCombining files for {OBS}".format(OBS=obs))
+        logging.info("\nCombining files for {OBS}".format(OBS=obs_mode))
         obs = obs_mode.split(":")
         if len(obs) > 1: mode = obs[1]
         else: mode = 'ln'
@@ -222,40 +235,140 @@ if __name__=='__main__':
                               ACC="NLO",
                               OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="NLO"),mode=mode)
             for ch in args.channels:
+                ch_all = ch.split(':')
+                ch = ch_all[0]
                 inpath = "{NLL}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                 if not os.path.exists(inpath.format(NLL=args.nll_file,ACC="NLL",CH=ch,OBS=obs)):
                     logging.info(("No NLL file for channel "
                                   "{CH}. Ignoring.").format(CH=ch))
                     continue
                 outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
+
+
                 
-                yodas += Sigma.from_file(
+                sigma_nll = Sigma.from_file(
                     inpath.format(NLL=args.nll_file,
                                   ACC="NLL",
                                   CH=ch,
-                    OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                    ACC="NLL",
-                                                    CH=ch),mode=mode)
-                yodas += Sigma.from_file(
+                                  OBS=obs))
+                sigma_lo = Sigma.from_file(
                     inpath.format(NLL=args.nll_file,
                                   ACC="LO",
                                   CH=ch,
-                                  OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                  ACC="LO",
-                                                                  CH=ch),mode=mode)
-                yodas += Sigma.from_file(
+                                  OBS=obs))
+                sigma_nlo = Sigma.from_file(
                     inpath.format(NLL=args.nll_file,
                                   ACC="NLO",
                                   CH=ch,
-                                  OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                  ACC="NLO",
-                                                                  CH=ch),mode=mode)
+                                  OBS=obs))
+
+                if len(ch_all) > 1:
+                    for c in ch_all[1:]:
+                        if not os.path.exists(inpath.format(NLL=args.nll_file,ACC="NLL",CH=c,OBS=obs)):
+                            logging.info(("No NLL file for channel "
+                                          "{CH}. Ignoring.").format(CH=c))
+                            continue
+                        sigma_nll += Sigma.from_file(
+                            inpath.format(NLL=args.nll_file,
+                                          ACC="NLL",
+                                          CH=c,
+                                          OBS=obs))
+                        sigma_lo += Sigma.from_file(
+                            inpath.format(NLL=args.nll_file,
+                                          ACC="LO",
+                                          CH=c,
+                                          OBS=obs))
+                        sigma_nlo += Sigma.from_file(
+                            inpath.format(NLL=args.nll_file,
+                                          ACC="NLO",
+                                          CH=c,
+                                          OBS=obs))
+
+                
+                yodas += sigma_nll.toYoda(outpath.format(OBS=obs,
+                                                    ACC="NLL",
+                                                    CH=ch),mode=mode)
+                yodas += sigma_lo.toYoda(outpath.format(OBS=obs,
+                                                     ACC="LO",
+                                                     CH=ch),mode=mode)
+                yodas += sigma_nlo.toYoda(outpath.format(OBS=obs,
+                                                     ACC="NLO",
+                                                     CH=ch),mode=mode)
+
+                if ch in nll_duplicates:
+                    for c in nll_duplicates[ch]:
+                        yodas += sigma_nll.toYoda(outpath.format(OBS=obs,
+                                                             ACC="NLL",
+                                                             CH=c),mode=mode)
+                        yodas += sigma_lo.toYoda(outpath.format(OBS=obs,
+                                                                ACC="LO",
+                                                                CH=c),mode=mode)
+                        yodas += sigma_nlo.toYoda(outpath.format(OBS=obs,
+                                                                 ACC="NLO",
+                                                                 CH=c),mode=mode)
+
+                
             yoda.writeYODA(yodas,args.output_nll)
         elif not os.path.exists(args.output_nll):
             args.output_nll = "NO"
-        
+            
         # LO files
-        if os.path.exists(args.lo_file):
+        if os.path.exists(args.lo_rs_file) and os.path.exists(args.lo_bvi_file):
+            yodas = []
+            inpath = "{ANALYSIS}/{ACC}/{OBS}_Sigma.dat"
+            outpath = "/Resum/{OBS}_{ACC}"
+            
+            rs = Sigma.from_file(
+                inpath.format(ANALYSIS=args.lo_rs_file,
+                              ACC="LO_RS",
+                              OBS=obs))
+            bvi = Sigma.from_file(
+                inpath.format(ANALYSIS=args.lo_bvi_file,
+                              ACC="LO_BVI",
+                              OBS=obs))
+            yodas = (rs+bvi).toYoda(outpath.format(OBS=obs,ACC="LO"),mode=mode)
+            for ch in args.channels:
+                ch_all = ch.split(':')
+                ch = ch_all[0]
+                if args.channel_fo_add is None:
+                    inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
+                else:
+                    inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{OBS}_Sigma.dat"
+                outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
+
+                rs = Sigma.from_file(
+                    inpath.format(ANALYSIS=args.lo_rs_file,
+                                  ACC="LO_RS",
+                                  CH=ch,
+                                  ADD=args.channel_fo_add,
+                                  OBS=obs))
+                bvi = Sigma.from_file(
+                    inpath.format(ANALYSIS=args.lo_bvi_file,
+                                  ACC="LO_BVI",
+                                  CH=ch,
+                                  ADD=args.channel_fo_add,
+                                  OBS=obs))
+                
+                if len(ch_all) > 1:
+                    for c in ch_all[1:]:
+                        rs += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.lo_rs_file,
+                                        ACC="LO_RS",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+                        bvi += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.lo_bvi_file,
+                                          ACC="LO_BVI",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+                        
+                yodas += (rs+bvi).toYoda(outpath.format(OBS=obs,ACC="LO",CH=ch),mode=mode)
+                
+            yoda.writeYODA(yodas,args.output_lo)
+            
+        elif os.path.exists(args.lo_file):
             yodas = []
             inpath = "{ANALYSIS}/{ACC}/{OBS}_Sigma.dat"
             outpath = "/Resum/{OBS}_{ACC}"
@@ -265,20 +378,34 @@ if __name__=='__main__':
                               ACC="LO",
                         OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="LO"),mode=mode)
             for ch in args.channels:
+                ch_all = ch.split(':')
+                ch = ch_all[0]
+
                 if args.channel_fo_add is None:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                 else:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{OBS}_Sigma.dat"
                 outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
-        
-                yodas += Sigma.from_file(
+
+                sigma = Sigma.from_file(
                     inpath.format(ANALYSIS=args.lo_file,
                                   ACC="LO",
                                   CH=ch,
                                   ADD=args.channel_fo_add,
-                                  OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                  ACC="LO",
-                                                                  CH=ch),mode=mode)
+                                  OBS=obs))
+
+                if len(ch_all) > 1:
+                    for c in ch_all[1:]:
+                        sigma += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.lo_file,
+                                          ACC="LO",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+                        
+                yodas += sigma.toYoda(outpath.format(OBS=obs,
+                                                     ACC="LO",
+                                                     CH=ch),mode=mode)
             yoda.writeYODA(yodas,args.output_lo)
         elif not os.path.exists(args.output_lo):
             args.output_lo = "NO"
@@ -299,6 +426,8 @@ if __name__=='__main__':
                           OBS=obs))
             yodas = (rs+vi).toYoda(outpath.format(OBS=obs,ACC="NLO"),mode=mode)
             for ch in args.channels:
+                ch_all = ch.split(':')
+                ch = ch_all[0]
                 if args.channel_fo_add is None:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                 else:
@@ -317,6 +446,22 @@ if __name__=='__main__':
                                   CH=ch,
                                   ADD=args.channel_fo_add,
                                   OBS=obs))
+                if len(ch_all) > 1:
+                    for c in ch_all[1:]:
+                        rs += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.nlo_rs_file,
+                                          ACC="NLO_RS",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+                        vi += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.nlo_vi_file,
+                                          ACC="NLO_VI",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+
+                
                 yodas += (rs+vi).toYoda(outpath.format(OBS=obs,ACC="NLO",CH=ch),mode=mode)
                 
             yoda.writeYODA(yodas,args.output_nlo)
@@ -328,34 +473,50 @@ if __name__=='__main__':
 
             yodas = Sigma.from_file(
                 inpath.format(ANALYSIS=args.nlo_file,
-                              ACC="LO",
-                              OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="LO"),mode=mode)
+                              ACC="NLO",
+                              OBS=obs)).toYoda(outpath.format(OBS=obs,ACC="NLO"),mode=mode)
             for ch in args.channels:
+                ch_all = ch.split(':')
+                ch = ch_all[0]
                 if args.channel_fo_add is None:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                 else:
                     inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{OBS}_Sigma.dat"
                     outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
-                    
-                    yodas += Sigma.from_file(
+
+
+                sigma = Sigma.from_file(
                         inpath.format(ANALYSIS=args.lo_file,
                                       ACC="NLO",
                                       CH=ch,
                                       ADD=args.channel_fo_add,
-                                      OBS=obs)).toYoda(outpath.format(OBS=obs,
-                                                                      ACC="NLO",
-                                                                      CH=ch),mode=mode)
+                                      OBS=obs))
+                if len(ch_all) > 1:
+                    for c in ch_all[1:]:
+                        sigma += Sigma.from_file(
+                            inpath.format(ANALYSIS=args.lo_file,
+                                          ACC="NLO",
+                                          CH=c,
+                                          ADD=args.channel_fo_add,
+                                          OBS=obs))
+                
+                yodas += sigma.toYoda(outpath.format(OBS=obs,
+                                                     ACC="NLO",
+                                                     CH=ch),mode=mode)
             yoda.writeYODA(yodas,args.output_nlo)
         elif not os.path.exists(args.output_nlo):
             args.output_nlo = 'NO'
         
         if args.match:
-            if len(args.channels) == 0:
+            channels = []
+            for i in range(len(args.channels)):
+                channels += [args.channels[i].split(':')[0]]
+            if len(channels) == 0:
                 chstring = []
-            elif len(args.channels) == 1:
-                chstring = ['-ch',args.channels[0]]
-            elif len(args.channels) > 1:
-                chstring = ['-ch',"{}".format(" ".join(args.channels))]
+            elif len(channels) == 1:
+                chstring = ['-ch',channels[0]]
+            elif len(channels) > 1:
+                chstring = ['-ch',"{}".format(" ".join(channels))]
 
             command = (['resum-match',
                        '-lo',args.output_lo,
@@ -387,7 +548,7 @@ if __name__=='__main__':
                 yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
                                                              NAME=key))
 
-            for ch in args.channels:
+            for ch in channels:
                 fs = {}
                 for obs_mode in args.observable:
                     obs = obs_mode.split(":")[0]

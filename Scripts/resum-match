@@ -1,4 +1,5 @@
-#-*- mode: python-*- 
+#-*- mode: python-*-
+ 
 import yoda
 import math as m
 import glob
@@ -17,47 +18,71 @@ class Sigma(object):
         nll_file = ["NLL.yoda"] if self.args.nll_file is None else args.nll_file 
 
         obs = self.args.observable
-        
-        f_nll = yoda.readYODA(nll_file[0])
-        Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_Sigma".format(OBS=obs),f_nll)
+
+        if os.path.exists(nll_file[0]):
+            logging.debug("Found NLL file {}.".format(nll_file[0]))
+            self.has_nll = True
+            f_nll = yoda.readYODA(nll_file[0])
+        else:
+            logging.debug("Did not Find NLL file {}. Use {} as dummy.".format(nll_file[0],lo_file))
+            self.has_nll = False
+            f_nll = yoda.readYODA(lo_file)
+
+        if self.has_nll:
+            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_Sigma".format(OBS=obs),f_nll)
+        else:
+            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_nll)
         self.xvals = np.array([p.x for p in Sigma_NLL.points])
         self.nll = np.array([p.y for p in Sigma_NLL.points])
         self.ch_nll = {}
         for ch in args.channels:
             try:
-                Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLL_Channel_{CH}_Sigma".format(OBS=obs,
-                                                                                           CH=ch),f_nll)
+                if self.has_nll:
+                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLL_Channel_{CH}_Sigma".format(OBS=obs,
+                                                                                               CH=ch),f_nll)
+                else:
+                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,
+                                                                                              CH=ch),f_nll)
+
             except KeyError:
                 logging.info("No channel {} in NLL file.".format(ch))
                 continue
             self.match_bins(Sigma_NLL,Sigma_NLL_ch)
             self.ch_nll[ch] = np.array([p.y for p in Sigma_NLL_ch.points])
 
-        Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_nll)
-        self.match_bins(Sigma_NLL,Sigma_expLO)
-        self.expLO = np.array([p.y for p in Sigma_expLO.points])
-        self.ch_expLO = {}
-        for ch in self.ch_nll:
-            Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,
-                                                                                  CH=ch),f_nll)
+        if self.has_nll:
+            Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_nll)
             self.match_bins(Sigma_NLL,Sigma_expLO)
-            self.ch_expLO[ch] = np.array([p.y for p in Sigma_expLO.points])
+            self.expLO = np.array([p.y for p in Sigma_expLO.points])
+            self.ch_expLO = {}
+            for ch in self.ch_nll:
+                Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,
+                                                                                         CH=ch),f_nll)
+                self.match_bins(Sigma_NLL,Sigma_expLO)
+                self.ch_expLO[ch] = np.array([p.y for p in Sigma_expLO.points])
             
-        Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Sigma".format(OBS=obs),f_nll)
-        self.match_bins(Sigma_NLL,Sigma_expNLO)
-        self.expNLO = np.array([p.y for p in Sigma_expNLO.points])
-        self.ch_expNLO = {}
-        for ch in self.ch_nll:
-            Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_Sigma".format(OBS=obs,
-                                                                                       CH=ch),f_nll)
+            Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Sigma".format(OBS=obs),f_nll)
             self.match_bins(Sigma_NLL,Sigma_expNLO)
-            self.ch_expNLO[ch] = np.array([p.y for p in Sigma_expNLO.points])
+            self.expNLO = np.array([p.y for p in Sigma_expNLO.points])
+            self.ch_expNLO = {}
+            for ch in self.ch_nll:
+                Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_Sigma".format(OBS=obs,
+                                                                                           CH=ch),f_nll)
+                self.match_bins(Sigma_NLL,Sigma_expNLO)
+                self.ch_expNLO[ch] = np.array([p.y for p in Sigma_expNLO.points])
 
+        else:
+            self.expLO = self.nll
+            self.ch_expLO = self.ch_nll
+            self.expNLO = self.nll
+            self.ch_expNLO = self.ch_nll
+                
         self.sigma_0 = self.nll[-1]
         self.ch_sigma_0 = {}
         for ch in self.args.channels:
             self.ch_sigma_0[ch] = self.ch_nll[ch][-1] if ch in self.ch_nll else 0
-
+                
+                
         self.ch_lo = {}
         if os.path.exists(lo_file):
             logging.debug("Found LO file {}".format(lo_file))
@@ -119,11 +144,11 @@ class Sigma(object):
                                   -self.ch_expLO[ch])/self.ch_sigma_0[ch]
                                  if ch in self.ch_nll else np.zeros_like(self.aSC))
                            for ch in self.args.channels}
+
         else:
             self.aSC = np.zeros_like(self.nll)
             self.ch_aSC = {ch : np.zeros_like(self.nll)
                            for ch in self.args.channels}
-            
 
         # Additive
         self._nll_add = self.match_add(self.nll,
@@ -158,6 +183,8 @@ class Sigma(object):
                                          expnlo=self.expNLO)
         self.ch_nll_mult = {ch : self.match_mult_ch(ch)
                             for ch in self.args.channels}
+        self.ch_nll_mult_2 = {ch : self.match_mult_ch_2(ch)
+                              for ch in self.args.channels}
 
         # LogR
         self._nll_logr = self.match_logr(self.nll,
@@ -168,7 +195,10 @@ class Sigma(object):
                                          expnlo=self.expNLO)
         self.ch_nll_logr = {ch : self.match_logr_ch(ch)
                             for ch in self.args.channels}
+        self.ch_nll_logr_2 = {ch : self.match_logr_ch_2(ch)
+                              for ch in self.args.channels}
 
+        
         if self.lo is None:
             self.ch_other = {ch: np.array([np.zeros_like(self.nll),
                                            np.zeros_like(self.nll)])
@@ -188,8 +218,11 @@ class Sigma(object):
             self.nll_add_noC = sum(self.ch_nll_add_noC.values()+self.ch_other.values())
             self.nll_add = sum(self.ch_nll_add.values()+self.ch_other.values())
             self.nll_mult = sum(self.ch_nll_mult.values()+self.ch_other.values())
+            self.nll_mult_2 = sum(self.ch_nll_mult_2.values()+[self.ch_other.values()[0],self.ch_other.values()[0]])
             self.nll_logr = sum(self.ch_nll_logr.values()+self.ch_other.values())
-        
+            self.nll_logr_2 = sum(self.ch_nll_logr_2.values()+[self.ch_other.values()[0],self.ch_other.values()[0]])
+
+            
             # Add missing channels to nll, with 0 contribution
             for ch in self.args.channels:
                 if not ch in self.ch_nll:
@@ -200,7 +233,9 @@ class Sigma(object):
             self.nll_add = self._nll_add
             self.nll_add_noC = self._nll_add_noC
             self.nll_mult = self._nll_mult
+            self.nll_mult_2 = self.nll_mult
             self.nll_logr = self._nll_logr
+            self.nll_logr_2 = self.nll_logr
 
         if self.lo is None: self.lo = np.zeros_like(self.nll)
         if self.nlo is None: self.nlo = np.zeros_like(self.nll)
@@ -217,7 +252,6 @@ class Sigma(object):
         xerr = self.xvals[::rebin][1:]-self.xvals[::rebin][:-1]
         deriv = (histo[1:]-histo[:-1])/xerr
         varder = np.empty((len(variations)*len(variations),len(deriv)))
-
         for i in range(len(variations)):
             for j in range(len(variations)):
                 varder[i*len(variations)+j] =  ([variations[i][1:]-variations[j][:-1]])/xerr
@@ -305,14 +339,41 @@ class Sigma(object):
                                    nlo=self.ch_nlo[ch],
                                    expnlo=self.ch_expNLO[ch])
 
+    def match_mult_ch_2(self,ch):
+        if not ch in self.ch_nll:
+            return np.array([np.zeros_like(self.nll),
+                             np.zeros_like(self.nll)])
+        if not self.has_lo:
+            return np.array([self.ch_nll[ch],
+                             self.ch_nll[ch]])
+        elif not self.has_nlo:
+            return self.match_mult(self.ch_nll[ch],
+                                   self.ch_lo[ch],
+                                   self.ch_expLO[ch],
+                                   self.ch_sigma_0[ch])
+        else:
+            return self.match_mult(self.ch_nll[ch],
+                                   self.ch_lo[ch],
+                                   self.ch_expLO[ch],
+                                   self.ch_sigma_0[ch],
+                                   aSC=sum(np.multiply(self.ch_expLO.values(),self.ch_aSC.values())),
+                                   nlo=self.nlo,
+                                   expnlo=self.expNLO,
+                                   s0nlo=self.sigma_0)
+
+        
     
-    def match_mult(self,nll,lo,explo,s0,aSC=0.,nlo=None,expnlo=None):
+    def match_mult(self,nll,lo,explo,s0,aSC=None,nlo=None,expnlo=None,s0nlo=None):
         if lo is None: return np.array([nll, nll])
         LO = nll*(1.+(lo-explo)/s0)
         if nlo is None: return np.array([LO, LO])
-        NLO = nll*(-nlo-expnlo-explo*(lo-explo)/s0)/s0
+        if aSC is None: aSC = explo*(lo-explo)/s0
+        if s0nlo is None: s0nlo = s0
+        NLO = nll*(-nlo-expnlo-aSC)/s0nlo
         return np.array([LO, LO+NLO])
+        
 
+    
     def match_logr_ch(self,ch):
         if not ch in self.ch_nll:
             return np.array([np.zeros_like(self.nll),
@@ -333,13 +394,36 @@ class Sigma(object):
                                    nlo=self.ch_nlo[ch],
                                    expnlo=self.ch_expNLO[ch])
 
-    
-    def match_logr(self,nll,lo,explo,s0,asC=0.,nlo=None,expnlo=None):
+    def match_logr_ch_2(self,ch):
+        if not ch in self.ch_nll:
+            return np.array([np.zeros_like(self.nll),
+                             np.zeros_like(self.nll)])
+        if not self.has_lo:
+            return np.array([self.ch_nll[ch],
+                             self.ch_nll[ch]])
+        elif not self.has_nlo:
+            return self.match_logr(self.ch_nll[ch],
+                               self.ch_lo[ch],
+                               self.ch_expLO[ch],
+                               self.ch_sigma_0[ch])
+        else:
+            return self.match_logr(self.ch_nll[ch],
+                                   self.ch_lo[ch],
+                                   self.ch_expLO[ch],
+                                   self.ch_sigma_0[ch],
+                                   aSC=sum(np.multiply(self.ch_expLO.values(),self.ch_aSC.values())),
+                                   nlo=self.nlo,
+                                   expnlo=self.expNLO,
+                                   s0nlo=self.sigma_0)
+
+        
+    def match_logr(self,nll,lo,explo,s0,aSC=None,nlo=None,expnlo=None,s0nlo=None):
         if lo is None: return np.array([nll, nll])
         LO = nll*np.exp((lo-explo)/s0)
         if nlo is None: return np.array([LO, LO])
-        NLO = np.exp((-nlo-expnlo-
-                     1./2.*(np.power(lo,2)-np.power(explo,2))/s0)/s0)
+        if aSC is None: aSC = 1./2.*(np.power(lo,2)-np.power(explo,2))/s0
+        if s0nlo is None: s0nlo = s0
+        NLO = np.exp((-nlo-expnlo-aSC)/s0nlo)
         return np.array([LO, LO*NLO])
         
             
@@ -407,30 +491,39 @@ if __name__=='__main__':
     yoda.writeYODA(sigma.toYODA(sigma.nll_add_noC[0][::args.rebin],
                                 variations=[s.nll_add_noC[0][::args.rebin]
                                             for s in variations]), 
-                   "{DIR}/{FILE_PREF}_add_LO_noC.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-
-    
+                   "{DIR}/{FILE_PREF}_add_LO_noC.yoda".format(DIR=dirName,FILE_PREF=file_prefix))    
     yoda.writeYODA(sigma.toYODA(sigma.nll_mult[1][::args.rebin], variations=[s.nll_mult[1][::args.rebin] for
                                                                s in variations]), 
                    "{DIR}/{FILE_PREF}_mult_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(sigma.nll_mult_2[1][::args.rebin], variations=[s.nll_mult_2[1][::args.rebin] for
+                                                                               s in variations]), 
+                   "{DIR}/{FILE_PREF}_mult_2_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
     yoda.writeYODA(sigma.toYODA(sigma.nll_logr[1][::args.rebin], variations=[s.nll_logr[1][::args.rebin] for
                                                                s in
                                                                variations]),
                    "{DIR}/{FILE_PREF}_LogR_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(sigma.nll_logr_2[1][::args.rebin], variations=[s.nll_logr_2[1][::args.rebin] for
+                                                                               s in
+                                                                               variations]),
+                   "{DIR}/{FILE_PREF}_LogR_2_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
     yoda.writeYODA(sigma.toYODA(sigma.nll_add[1][::args.rebin], variations=[s.nll_mult[1][::args.rebin] for
                                                               s in variations]),
                    "{DIR}/{FILE_PREF}_add_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
     yoda.writeYODA(sigma.toYODA(sigma.nll[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_NLL.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+
+    # print "{DIR}/{FILE_PREF}_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix)
+    # for p in sigma.toYODA((sigma.sigma_0+sigma.lo)[::args.rebin],normalize=False,scale=args.scale)[1].points: print p
+    # print ""
+    # for p in sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=args.scale)[1].points: print p
+
     yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.lo)[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
     yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.lo-sigma.nlo)[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-
     yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_expLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-
     yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_expNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
@@ -440,13 +533,31 @@ if __name__=='__main__':
                    "{DIR}/{FILE_PREF}_expNLO_C.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
     expNLO = np.zeros_like(sigma.expLO)
+    rem1 = np.zeros_like(sigma.expLO)
+    rem2 = np.zeros_like(sigma.expLO)
+    rem3 = np.zeros_like(sigma.expLO)
+    rem4 = np.zeros_like(sigma.expLO)
     for ch in args.channels:
         expNLO += sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch]
+        mult_fac = sigma.ch_nll_mult[ch][1]/sigma.ch_nll[ch]
+        rem1 += (sigma.ch_nll[ch]-sigma.ch_sigma_0[ch]-sigma.ch_expLO[ch]-sigma.ch_expNLO[ch])*mult_fac
+        rem2 += sigma.ch_expNLO[ch]*sigma.ch_aSC[ch]
+        rem3 += sigma.ch_expLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
+        rem4 += sigma.ch_expNLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
+    nlo_check = sigma.nll_mult[1]-rem1-rem2-rem3-rem4
     yoda.writeYODA(sigma.toYODA(expNLO[::args.rebin],normalize=False,scale=args.scale),
                    "{DIR}/{FILE_PREF}_expNLO_Channels.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(rem1[::args.rebin],normalize=False,scale=args.scale),
+                   "{DIR}/{FILE_PREF}_rem1.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(rem2[::args.rebin],normalize=False,scale=args.scale),
+                   "{DIR}/{FILE_PREF}_rem2.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(rem3[::args.rebin],normalize=False,scale=args.scale),
+                   "{DIR}/{FILE_PREF}_rem3.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(rem4[::args.rebin],normalize=False,scale=args.scale),
+                   "{DIR}/{FILE_PREF}_rem4.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(nlo_check[::args.rebin],normalize=False,scale=args.scale),
+                   "{DIR}/{FILE_PREF}_CheckNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
     
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC[0])*sigma.expLO+sigma.expNLO-(sigma.sigma_0+sigma.lo-sigma.nlo))[::args.rebin],normalize=False,scale=args.scale),
-                   "{DIR}/{FILE_PREF}_NLOdiff.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
     for ch in args.channels:
         dirName = args.output_dir+"-{CH}".format(CH=ch)
@@ -490,4 +601,6 @@ if __name__=='__main__':
                        "{DIR}/{FILE_PREF}_expNLO_Capprox.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
         yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch][0])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
                        "{DIR}/{FILE_PREF}_expNLO_C.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+        yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
+                       "{DIR}/{FILE_PREF}_expNLO_Channels.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
                     
