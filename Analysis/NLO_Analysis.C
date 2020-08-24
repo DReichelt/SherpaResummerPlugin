@@ -15,6 +15,7 @@ namespace RESUM {
     int n;
     void Evaluate(double weight, double ncount,int mode) override;
     void EndEvaluation(double scale) override;
+    void EndEvaluation(std::vector<ATOOLS::Histogram*>& hists, double scale) override;
     void Output(const std::string& pname) override;
     void EvaluateNLOevt() override;
 
@@ -195,6 +196,7 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
     } 
   }
   for(auto& c: m_channels) {
+    c.second->SetVarWeights(p_varweights);
     bool found = false;
     for(const std::string& cname: ch)
       if(c.first == cname) {
@@ -245,19 +247,17 @@ void NLO_Analysis::EvaluateNLOevt() {
   Analysis_Base::EvaluateNLOevt();
 }
 
-void NLO_Analysis::EndEvaluation(double scale)
+
+
+void NLO_Analysis::EndEvaluation(std::vector<ATOOLS::Histogram*>& hists, double scale)
 {
-  for(auto& ch: m_channels) {
-    //msg_Out()<<ch.first<<"\n";
-    ch.second->EndEvaluation(scale);
-  }
-  for(auto& h: m_histos) {
+  for(auto& h: hists) {
     h->MPISync();
   }
-  auto histos = m_histos;
-  m_histos.clear();
+  auto histos = hists;
+  hists.clear();
   for (size_t i=0; i<histos.size(); i+=2+histos[i]->Nbin()) {
-    m_histos.push_back(histos[i]);
+    hists.push_back(histos[i]);
     m_sigma[histos[i]->Name()] = std::vector<std::vector<double>>(histos[i]->Nbin()+1);
 
 
@@ -293,6 +293,14 @@ void NLO_Analysis::EndEvaluation(double scale)
       delete histos[i+j+1];
     }
   }
+  Analysis_Base::EndEvaluation(hists, scale);
+}
+
+void NLO_Analysis::EndEvaluation(double scale) {
+  for(auto& ch: m_channels) {
+    //msg_Out()<<ch.first<<"\n";
+    ch.second->EndEvaluation(scale);
+  }
   Analysis_Base::EndEvaluation(scale);
 }
 
@@ -314,7 +322,7 @@ void NLO_Analysis::Output(const std::string& pname) {
       *ofile<<"\n";
     }                         
   }
-  Analysis_Base::Output(pname);
+  // Analysis_Base::Output(pname);
 }
 
 Primitive_Observable_Base *NLO_Analysis::Copy() const 
