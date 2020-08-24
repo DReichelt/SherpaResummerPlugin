@@ -161,6 +161,21 @@ double NLO_Analysis::EtaBeam(const Vec4D& p, size_t beamId) {
 void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
 {
   DEBUG_FUNC("mode = "<<mode);
+  // if(Analysis()->Sub() and Analysis()->Real() and
+  //    Analysis()->Sub() != Analysis()->Real()) {
+  //   msg_Debugging()<<"Subtraction.\n";
+  // }
+  // else {
+  //   msg_Debugging()<<"Real.\n";
+  // }
+  // msg_Debugging()<<"Weight = "<<weight<<" "<<mode<<"\n";
+  // if(p_varweights) {
+  //   for(const auto& v: *p_varweights) msg_Debugging()<<v.first<<" "<<v.second<<"\n";
+  // }
+  // else {
+  //   msg_Debugging()<<"No variation weights.\n";
+  // }
+  // msg_Debugging()<<"\n";
   // sumW += weight;
   // n += ncount;
   // msg_Out()<<"weight: "<<sumW/n<<"\n";
@@ -196,7 +211,7 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
     } 
   }
   for(auto& c: m_channels) {
-    c.second->SetVarWeights(p_varweights);
+    if(p_varweights) c.second->SetVarWeights(p_varweights);
     bool found = false;
     for(const std::string& cname: ch)
       if(c.first == cname) {
