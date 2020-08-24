@@ -29,19 +29,19 @@ class Sigma(object):
             f_nll = yoda.readYODA(lo_file)
 
         if self.has_nll:
-            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_Sigma".format(OBS=obs),f_nll)
+            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
         else:
-            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_nll)
+            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_LO_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
         self.xvals = np.array([p.x for p in Sigma_NLL.points])
         self.nll = np.array([p.y for p in Sigma_NLL.points])
         self.ch_nll = {}
         for ch in args.channels:
             try:
                 if self.has_nll:
-                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLL_Channel_{CH}_Sigma".format(OBS=obs,
+                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLL_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                                CH=ch),f_nll)
                 else:
-                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,
+                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                               CH=ch),f_nll)
 
             except KeyError:
@@ -51,22 +51,22 @@ class Sigma(object):
             self.ch_nll[ch] = np.array([p.y for p in Sigma_NLL_ch.points])
 
         if self.has_nll:
-            Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_nll)
+            Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
             self.match_bins(Sigma_NLL,Sigma_expLO)
             self.expLO = np.array([p.y for p in Sigma_expLO.points])
             self.ch_expLO = {}
             for ch in self.ch_nll:
-                Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,
+                Sigma_expLO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                          CH=ch),f_nll)
                 self.match_bins(Sigma_NLL,Sigma_expLO)
                 self.ch_expLO[ch] = np.array([p.y for p in Sigma_expLO.points])
             
-            Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Sigma".format(OBS=obs),f_nll)
+            Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
             self.match_bins(Sigma_NLL,Sigma_expNLO)
             self.expNLO = np.array([p.y for p in Sigma_expNLO.points])
             self.ch_expNLO = {}
             for ch in self.ch_nll:
-                Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_Sigma".format(OBS=obs,
+                Sigma_expNLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                            CH=ch),f_nll)
                 self.match_bins(Sigma_NLL,Sigma_expNLO)
                 self.ch_expNLO[ch] = np.array([p.y for p in Sigma_expNLO.points])
@@ -88,11 +88,11 @@ class Sigma(object):
             logging.debug("Found LO file {}".format(lo_file))
             self.has_lo = True
             f_lo = yoda.readYODA(lo_file)
-            Sigma_LO = self.get_Sigma("/Resum/{OBS}_LO_Sigma".format(OBS=obs),f_lo)
+            Sigma_LO = self.get_Sigma("/Resum/{OBS}_LO_{NAME}".format(OBS=obs,NAME=args.name),f_lo)
             self.match_bins(Sigma_NLL,Sigma_LO)
             self.lo = np.array([p.y-self.sigma_0 for p in Sigma_LO.points])
             for ch in args.channels:
-                Sigma_LO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_Sigma".format(OBS=obs,CH=ch),f_lo)
+                Sigma_LO = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,CH=ch),f_lo)
                 self.match_bins(Sigma_NLL,Sigma_LO)
                 self.ch_lo[ch] = np.array([p.y-self.ch_sigma_0[ch] for p in Sigma_LO.points])
 
@@ -452,6 +452,7 @@ if __name__=='__main__':
     parser.add_argument('--file-prefix', '-O', default="Resum")
     parser.add_argument('--channels', '-ch', default=None, action='append')
     parser.add_argument('--scale', '-s', default=None, type=float)
+    parser.add_argument('--name', default=None)
     parser.add_argument('--message', '-m', default='warning')
     
     args = parser.parse_args(sys.argv[1:])
@@ -467,6 +468,8 @@ if __name__=='__main__':
 
     nll_file = np.array([args.nll_file.split(":")])
     args.nll_file = nll_file[:,0]
+    if args.name == 'None': args.name = "Sigma"
+    else: args.name = "{NAME}_Sigma".format(NAME=args.name)
     sigma = Sigma(args)
     if args.scale is None: args.scale = 1./sigma.sigma_0
     variations = []
