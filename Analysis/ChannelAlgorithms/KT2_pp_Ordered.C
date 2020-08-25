@@ -31,36 +31,36 @@ KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters)
     m_channelNames.push_back("other");
     for(int j=0; j<=m_nborn; j+=2) {
       std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      while ( std::next_permutation(help.begin(), help.end()) ) {
+      do {
         m_channelNames.push_back("qqTO"+help);
-      }
+      } while ( std::next_permutation(help.begin(), help.end()) );
       help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      while ( std::next_permutation(help.begin(), help.end()) ) {
+      do {
         m_channelNames.push_back("ggTO"+help);
-      }
+      } while ( std::next_permutation(help.begin(), help.end()) );
       if(m_nborn-j > 0) {
         help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
-        while ( std::next_permutation(help.begin(), help.end()) ) {
+        do {
           m_channelNames.push_back("gqTO"+help);
-        }
+        } while ( std::next_permutation(help.begin(), help.end()) );
       }
     }
   }
   else if(m_mode==MODE::BLAND) {
     for(int j=0; j<=m_nborn; j+=2) {
       std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      while ( std::next_permutation(help.begin(), help.end()) ) {
+      do {
         m_channelNames.push_back("qqTO"+help+std::string("_BLAND"));
-      }
+      } while ( std::next_permutation(help.begin(), help.end()) );
       help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      while ( std::next_permutation(help.begin(), help.end()) ) {
+      do {
         m_channelNames.push_back("ggTO"+help+std::string("_BLAND"));
-      }
+      } while ( std::next_permutation(help.begin(), help.end()) );
       if(m_nborn-j > 0) {
         help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
-        while ( std::next_permutation(help.begin(), help.end()) ) {
+        do {
           m_channelNames.push_back("gqTO"+help+std::string("_BLAND"));
-        }
+        } while ( std::next_permutation(help.begin(), help.end()) );
       }
     }
   }
@@ -167,7 +167,8 @@ double KT2_pp_Ordered::KT2(const vector<Vec4D> &ps,
 
   double ktB = 0;
   for(const Vec4D& p: ps) {
-    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -p.Y()-eta;
+    // TODO: is this correct???
+    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -(p.Y()-eta);
     if(IsZero(deltaEta)) ktB += p.PPerp()/2. * (1. + exp(deltaEta)); 
     else ktB += p.PPerp() * (deltaEta > 0 ? 1. : exp(deltaEta)); 
   }
@@ -181,7 +182,9 @@ double KT2_pp_Ordered::KT2(const vector<Vec4D> &p,
                    const int n) const {
   vector<Vec4D> pp(n);
   for(int i=0; i<n; i++) pp[i] = p[imap[i]];
-  return KT2(p, eta, beamIdx);
+  // TODO: something wrong here???
+  //return KT2(p, eta, beamIdx);
+  return KT2(pp, eta, beamIdx);
 }
 
 
@@ -194,13 +197,14 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
   size_t nn = ip.size();
   msg_Debugging()<<"Got "<<nn<<" momenta and "<<fl.size()<<" flavours. "
                  <<"From these, "<<nin<<" are initial states.\n";
-  if(nn == nin) {
-    std::string channel = "";
-    if(fl[0] == 21) channel += "g";
-    if(fl[1] == 21) channel += "g";
-    if(fl[0] != 21) channel += "q";
-    if(fl[1] != 21) channel += "q";
-  }
+  // TODO: was this doing something useful?
+  // if(nn == nin) {
+  //   std::string channel = "";
+  //   if(fl[0] == 21) channel += "g";
+  //   if(fl[1] == 21) channel += "g";
+  //   if(fl[0] != 21) channel += "q";
+  //   if(fl[1] != 21) channel += "q";
+  // }
   Vec4D sum;
   vector<Vec4D> p;
   vector<vector<int>> f;//(nn,vector<int>(6,0));
@@ -258,20 +262,25 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     (imap.size(),vector<double>(imap.size()));
   int ii=0;
   int jj=0;
+  // min distance between final states
   double dmin=std::numeric_limits<double>::infinity();
+  // min distance to first beam
   double dBmin=std::numeric_limits<double>::infinity();
+  // min distance to second beam
   double dBBmin=std::numeric_limits<double>::infinity(); 
   for (int i=0;i<n;++i) {
+    // distance of i to first beam
     const double dB = KT2(p[i],KT2(p,p[i].Y(),0,imap,n),
                           f[i+2],f[0],m_mode,num_flavd);
     msg_Debugging()<<i+2<<" with \n0: "<<dB<<"\n";
+    // distance of i to second beam
     const double dBB = KT2(p[i],KT2(p,p[i].Y(),1,imap,n),
                            f[i+2],f[1],m_mode,num_flavd);
     msg_Debugging()<<"1: "<<dBB<<"\n";
     const double di=Min(dB,dBB);
     if(di<dmin) { dmin=di; ii=i; jj=i; dBmin=dB; dBBmin=dBB; }
     for (int j=0;j<i;++j) {
-
+      // distance between i and j
       double dij=kt2ij[i][j]=KT2(p[i],p[j],f[i+2],f[j+2],m_mode,num_flavd);
       msg_Debugging()<<j+2<<": "<<dij<<"\n";
       if (dij<dmin) { dmin=dij; ii=i; jj=j; }
@@ -282,25 +291,33 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     msg_Debugging()<<"Need clustering because "<<m_nborn<<" < "<<n<<"\n";
     msg_Debugging()<<"Cluster "<<imap[ii]+2<<" to "<<imap[jj]+2<<"\n";
     if (ii!=jj) {
+      // combine particles imap[ii] and imap[jj]
       p[imap[jj]]+=p[imap[ii]];
       for(int i=0; i<6; i++) f[imap[jj]+2][i] += f[imap[ii]+2][i];
     }
     else {
       if(dBmin < dBBmin) {
+        if(dBmin!=dmin) THROW(fatal_error,"Something went wrong.");
+        // combine particle with first beam
         for(int i=0; i<6; i++) f[0][i] -= f[imap[ii]+2][i];
       }
       else {
+        if(dBBmin!=dmin) THROW(fatal_error,"Something went wrong.");
+        // combine particle with second beam
         for(int i=0; i<6; i++) f[1][i] -= f[imap[ii]+2][i];
       }
     }
     --n;
+    // remove ii from list
     for (int i=ii;i<n;++i) imap[i]=imap[i+1];
+    // determine how many flavoured objects are left
     num_flavd = 0;
     if(flavd(f[0])) num_flavd++;
     if(flavd(f[1])) num_flavd++;
     for(int i=0; i<n; i++) if(flavd(f[imap[i]+2])) num_flavd++;
     
     ii=jj=0; dmin=std::numeric_limits<double>::infinity();
+    // repeat distance calculation
     for (int i=0;i<n;++i) {
       const double dB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),0,imap,n),
                             f[imap[i]+2],f[0],m_mode,num_flavd);

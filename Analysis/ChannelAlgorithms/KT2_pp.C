@@ -149,7 +149,9 @@ double KT2_pp::KT2(const vector<Vec4D> &ps,
 
   double ktB = 0;
   for(const Vec4D& p: ps) {
-    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -p.Y()-eta;
+    // TODO: is this correct?
+    // const double deltaEta = beamIdx==0 ?  p.Y()-eta : -p.Y()-eta;
+    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -(p.Y()-eta);
     if(IsZero(deltaEta)) ktB += p.PPerp()/2. * (1. + exp(deltaEta)); 
     else ktB += p.PPerp() * (deltaEta > 0 ? 1. : exp(deltaEta)); 
   }
@@ -163,7 +165,9 @@ double KT2_pp::KT2(const vector<Vec4D> &p,
                    const int n) const {
   vector<Vec4D> pp(n);
   for(int i=0; i<n; i++) pp[i] = p[imap[i]];
-  return KT2(p, eta, beamIdx);
+  // TODO: is this correct??
+  // return KT2(p, eta, beamIdx);
+  return KT2(pp, eta, beamIdx);
 }
 
 
