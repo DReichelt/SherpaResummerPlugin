@@ -18,8 +18,8 @@ namespace RESUM {
 
     enum MODE {
                ALL = 0,
-               BLAND = 1   << 0,
-               ZPROD = 1   << 1,
+               BLAND = 1      << 0,
+               ZPROD = 1      << 1,
                BLAND_Z = BLAND|ZPROD
     };
     
@@ -40,11 +40,13 @@ namespace RESUM {
                const double eta,
                const int beamIdx,
                const std::vector<int> imap,
-               const int n) const;
+               const size_t n,
+               const std::vector<ATOOLS::Vec4D> &neutralFinal) const;
     bool flavd(const std::vector<int>& fls) const;
     
     MODE m_mode = MODE::ALL;
     int m_nborn = -1;
+    bool m_sumNeutral = false;
     std::vector<std::string> m_channelNames;
     
   }; // end of class KT2_pp_Ordered

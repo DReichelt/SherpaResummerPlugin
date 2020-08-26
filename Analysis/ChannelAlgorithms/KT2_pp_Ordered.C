@@ -26,6 +26,7 @@ KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters)
     else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
     else THROW(fatal_error,
                "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
+    m_sumNeutral = parameters.KwArg("SUMNEUTRAL","0") != "0"; 
   }
   if(m_mode==MODE::ALL) {
     m_channelNames.push_back("other");
@@ -103,7 +104,8 @@ double KT2_pp_Ordered::KT2(const Vec4D &p1, const Vec4D &p2,
   }
   // determine combined flavour
   vector<int> nfl(6,0);
-  for(int i=0; i<6; i++) nfl[i] = fl1[i]+fl2[i];
+  if(mode&MODE::BLAND)
+    for(int i=0; i<6; i++) nfl[i] = fl1[i]+fl2[i];
   // angular distance
   const double deltaR2 = sqr(p1.Y()-p2.Y())+sqr(p1.DPhi(p2));
 
@@ -160,31 +162,39 @@ double KT2_pp_Ordered::KT2(const Vec4D &p1,
 }
 
 double KT2_pp_Ordered::KT2(const vector<Vec4D> &ps,
-                   const double eta,
-                   const int beamIdx) const {
+                           const double eta,
+                           const int beamIdx) const {
   if(beamIdx != 0 and beamIdx != 1)
     THROW(fatal_error, "Beam idx > 1 provided.");
 
   double ktB = 0;
   for(const Vec4D& p: ps) {
     // TODO: is this correct???
-    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -(p.Y()-eta);
-    if(IsZero(deltaEta)) ktB += p.PPerp()/2. * (1. + exp(deltaEta)); 
-    else ktB += p.PPerp() * (deltaEta > 0 ? 1. : exp(deltaEta)); 
+    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -p.Y()-eta;
+    if(IsZero(deltaEta)) ktB += sqrt(p.PPerp2()+p.Abs2())/2. * (1. + exp(deltaEta)); 
+    else ktB += sqrt(p.PPerp2()+p.Abs2()) * (deltaEta > 0 ? 1. : exp(deltaEta)); 
   }
   return sqr(ktB);
 }
 
-double KT2_pp_Ordered::KT2(const vector<Vec4D> &p,
-                   const double eta,
-                   const int beamIdx,
-                   const vector<int> imap,
-                   const int n) const {
-  vector<Vec4D> pp(n);
-  for(int i=0; i<n; i++) pp[i] = p[imap[i]];
-  // TODO: something wrong here???
-  //return KT2(p, eta, beamIdx);
-  return KT2(pp, eta, beamIdx);
+double KT2_pp_Ordered::KT2(const vector<Vec4D> &pp,
+                           const double eta,
+                           const int beamIdx,
+                           const vector<int> imap,
+                           const size_t n,
+                           const vector<Vec4D> &neutralFinal) const {
+  if(beamIdx != 0 and beamIdx != 1)
+    THROW(fatal_error, "Beam idx > 1 provided.");
+
+
+  double ktB = 0;
+  for(size_t i=0; i<n+neutralFinal.size(); i++) {
+    const Vec4D& p = i<n ? pp[imap[i]] : neutralFinal[i-n];
+    const double deltaEta = beamIdx==0 ?  p.Y()-eta : -(p.Y()-eta);
+    if(IsZero(deltaEta)) ktB += sqrt(p.PPerp2()+p.Abs2())/2. * (1. + exp(deltaEta)); 
+    else ktB += sqrt(p.PPerp2()+p.Abs2()) * (deltaEta > 0 ? 1. : exp(deltaEta)); 
+  }
+  return sqr(ktB);
 }
 
 
@@ -207,6 +217,7 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
   // }
   Vec4D sum;
   vector<Vec4D> p;
+  vector<Vec4D> neutralFinal;
   vector<vector<int>> f;//(nn,vector<int>(6,0));
   for (size_t i=0; i<nn; i++) {
     msg_Debugging()<<i<<"th particle: "<<fl[i]<<", p = "<<ip[i];
@@ -236,7 +247,15 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
       }
     }
     else {
-      msg_Debugging()<<" is not colour charged.\n";
+      msg_Debugging()<<" is not colour charged ";
+      if(i < nin) {
+        msg_Debugging()<<" but not a final state.\n";
+      }
+      else {
+        msg_Debugging()<<" and a final state.\n";
+        if(!m_sumNeutral or neutralFinal.size()==0) neutralFinal.push_back(ip[i]);
+        else neutralFinal[0] += ip[i];
+      }
     }
   }
   int  n = p.size();
@@ -270,11 +289,11 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
   double dBBmin=std::numeric_limits<double>::infinity(); 
   for (int i=0;i<n;++i) {
     // distance of i to first beam
-    const double dB = KT2(p[i],KT2(p,p[i].Y(),0,imap,n),
+    const double dB = KT2(p[i],KT2(p,p[i].Y(),0,imap,n,neutralFinal),
                           f[i+2],f[0],m_mode,num_flavd);
     msg_Debugging()<<i+2<<" with \n0: "<<dB<<"\n";
     // distance of i to second beam
-    const double dBB = KT2(p[i],KT2(p,p[i].Y(),1,imap,n),
+    const double dBB = KT2(p[i],KT2(p,p[i].Y(),1,imap,n,neutralFinal),
                            f[i+2],f[1],m_mode,num_flavd);
     msg_Debugging()<<"1: "<<dBB<<"\n";
     const double di=Min(dB,dBB);
@@ -319,9 +338,9 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     ii=jj=0; dmin=std::numeric_limits<double>::infinity();
     // repeat distance calculation
     for (int i=0;i<n;++i) {
-      const double dB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),0,imap,n),
+      const double dB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),0,imap,n,neutralFinal),
                             f[imap[i]+2],f[0],m_mode,num_flavd);
-      const double dBB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),1,imap,n),
+      const double dBB = KT2(p[imap[i]],KT2(p,p[imap[i]].Y(),1,imap,n,neutralFinal),
                              f[imap[i]+2],f[1],m_mode,num_flavd);
       const double di=Min(dB,dBB);
       if(di<dmin) { dmin=di; ii=i; jj=i; dBmin=dB; dBBmin=dBB; }

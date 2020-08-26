@@ -13,7 +13,7 @@ NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
   for(int n=nmin; n<=nmax; n++) {
     params[0] = std::to_string(n);
     m_resolvers.emplace_back(new KT2_pp_Ordered({"KT2_pp_Ordered",params}));
-    for(const std::string& name: m_resolvers.back()->ChannelNames()) {
+    for(const std::string& name: m_resolvers.back()->ChannelNames(true)) {
       m_channelNames.push_back(name);
     }
     // m_channelNames.insert(m_channelNames.end(),
@@ -36,7 +36,7 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
   }
   const FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
   const int mult = fj.pseudoJets().size();
-  return m_resolvers.at(mult-1)->Channel(ip,fl,nin);
+  return m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }
 
 DECLARE_GETTER(NJet_pp_Resolved,"NJet_pp_Resolved",ChAlg,ChAlg_Key);
