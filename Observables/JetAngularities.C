@@ -51,7 +51,13 @@ namespace RESUM {
       // possibly enabling this also for the leading di-/multijet etc.
       // at the moment, assume we are in pp -> Zj, so only one colour charged final
       // state that corresponds to the leading jet
+      // updat: do that now, still assume that all final partons correspond to 
+      // individual jets
       if(!fl[l].Strong()) return {1,0,0,0,0,0};
+      const double pTl = p[l].PPerp();
+      for(size_t i=2; i<p.size(); i++) {
+        if(fl[i].Strong() and p[i].PPerp() > pTl) return {1,0,0,0,0,0};
+      }
       const double a = 1;
       const double b = m_alpha-1;
       const Poincare cms= {p[0]+p[1]};
@@ -101,16 +107,57 @@ namespace RESUM {
 
 
     double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
+      // See arXiv:1207.1640
+      // Note difference of factor 1./4. in definition of f_{l.a.} vs. T(L).
+      if(not ampl) THROW(fatal_error, "No amplitude provided.");
+      DEBUG_FUNC(*ampl);
       if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
         if(i<ampl->NIn() and j<ampl->NIn()) {
+          msg_Debugging()<<"Case: Initial + Initial dipole.\n";
           return sqr(m_R)/4.;
         }
         else {
-          // return sqr(m_R)*(1./4.)/4.;
-          return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+          msg_Debugging()<<"At least one of i,j is final state, so figure out if it is the leading jet.\n";
+          int lead = -1;
+          double pTlead = -1;
+          for(size_t k=ampl->NIn(); k<ampl->Legs().size(); k++) {
+            if(ampl->Leg(k)->Flav().Strong() and ampl->Leg(k)->Mom().PPerp() > pTlead) {
+              lead = k;
+              pTlead = ampl->Leg(k)->Mom().PPerp();
+            }
+          }
+          if(lead<0 or pTlead <0) 
+            THROW(fatal_error, "Did not find leading jet.");
+
+          if(i<ampl->NIn() or j<ampl->NIn()) {
+            const size_t initial = i<ampl->NIn() ? i : j; 
+            const size_t final = i<ampl->NIn() ? j : i;
+            if(final==lead) {
+              msg_Debugging()<<"Case: Leading + Initial dipole.\n";
+              return sqr(m_R)*(1./4.)/4.;
+              // return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+            }
+            else {
+              msg_Debugging()<<"Case: Recoil + Initial dipole.\n";
+              // TODO: figure out which order of the signs is correct
+              const double dY = (initial==0 ? 1.:-1.) * ampl->Leg(final)->Mom().DY(ampl->Leg(lead)->Mom());
+              return 1./8. * exp(dY)/(1.+cosh(dY));
+            }
+          }
+          else {
+            // both final state jets
+            if(lead==i or lead==j) {
+              msg_Debugging()<<"Case: Leading + Recoil dipole.\n";
+              return 1./16. * sqr(tanh(ampl->Leg(i)->Mom().DY(ampl->Leg(j)->Mom())));
+            }
+            else {
+              THROW(fatal_error, "Gamma not implemented for multijets.");
+            }
+          }
         }
       }
       else {
+        msg_Debugging()<<"Case: Colour singlet.\n";
         return 0;
       }
     }

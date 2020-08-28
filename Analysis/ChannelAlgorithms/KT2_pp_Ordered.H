@@ -9,10 +9,12 @@
 namespace RESUM {
   class KT2_pp_Ordered : public ChannelAlgorithm_Base {
   public:
-    KT2_pp_Ordered(const ChAlg_Key& parameters);
+    KT2_pp_Ordered(const ChAlg_Key& parameters, bool orderByPT=true);
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
-                        const size_t &nin) override;
+                        const size_t &nin,
+                        std::vector<ATOOLS::Vec4D>* pout) override;
+
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
 
@@ -47,6 +49,7 @@ namespace RESUM {
     MODE m_mode = MODE::ALL;
     int m_nborn = -1;
     bool m_sumNeutral = false;
+    bool m_orderByPT = true;
     std::vector<std::string> m_channelNames;
     
   }; // end of class KT2_pp_Ordered

@@ -18,7 +18,7 @@ namespace RESUM {
     const std::vector<std::set<size_t>>& Jets() const { return m_jets; }
     
     template <typename X>
-    std::vector<X> apply(std::vector<X> all, size_t jetIdx) {
+    std::vector<X> apply(const std::vector<X>& all, size_t jetIdx) const {
       std::vector<X> ret(m_jets.at(jetIdx).size());
       auto idit = m_jets[jetIdx].begin();
       for(auto retit = ret.begin(); retit != ret.end(); retit++, idit++) {

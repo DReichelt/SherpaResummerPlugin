@@ -41,10 +41,12 @@ namespace RESUM {
     }
   
 
-    virtual std::string Channel(const ATOOLS::Particle_List& particles, bool addTag);
+    virtual std::string Channel(const ATOOLS::Particle_List& particles, bool addTag,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr);
     virtual std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                 const std::vector<ATOOLS::Flavour>& fl,
-                                const size_t &nin, bool addTag);
+                                const size_t &nin, bool addTag,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr);
     
 
     virtual std::vector<std::string> ChannelNames(bool addTag);
@@ -53,7 +55,8 @@ namespace RESUM {
     virtual std::vector<std::string> ChannelNames() = 0;
     virtual std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                 const std::vector<ATOOLS::Flavour>& fl,
-                                const size_t &nin) = 0;
+                                const size_t &nin,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr) = 0;
 
     std::string m_name;
     std::string m_tag;

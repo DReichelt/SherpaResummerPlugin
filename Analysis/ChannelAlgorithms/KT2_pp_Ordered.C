@@ -15,9 +15,10 @@ using ATOOLS::Max;
 using ATOOLS::IsZero;
 using std::vector;
 
-KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters)
-  : ChannelAlgorithm_Base(parameters) {
+KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters, bool orderByPT)
+  : ChannelAlgorithm_Base(parameters), m_orderByPT(orderByPT) {
   m_nborn = RESUM::to_type<int>(m_params[0]);
+  m_orderByPT = RESUM::to_type<bool>(parameters.KwArg("OrderByPT",m_orderByPT?"1":"0"));
   if(m_params.size()>1) {
     if(m_params[1] == "" or
        m_params[1] == "''" or
@@ -185,8 +186,6 @@ double KT2_pp_Ordered::KT2(const vector<Vec4D> &pp,
                            const vector<Vec4D> &neutralFinal) const {
   if(beamIdx != 0 and beamIdx != 1)
     THROW(fatal_error, "Beam idx > 1 provided.");
-
-
   double ktB = 0;
   for(size_t i=0; i<n+neutralFinal.size(); i++) {
     const Vec4D& p = i<n ? pp[imap[i]] : neutralFinal[i-n];
@@ -199,8 +198,9 @@ double KT2_pp_Ordered::KT2(const vector<Vec4D> &pp,
 
 
 std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
-                            const vector<Flavour>& fl,
-                            const size_t &nin) {
+                                    const vector<Flavour>& fl,
+                                    const size_t &nin,
+                                    vector<Vec4D>* pout=nullptr) {
   if(!fl[0].Strong() or !fl[1].Strong())
     THROW(fatal_error,"This algorithm is only valid for pp collisions, but one beam had no strong charge.");
   
@@ -366,7 +366,6 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
   for(int i=0; i<n; i++) {
     msg_Debugging()<<"("<<i+2<<") "<<f[imap[i]+2]<<" "<<p[imap[i]]<<"\n";
   }
-
   if(!flavd(f[0])) {
     msg_Debugging()<<"Beam 1 not flavoured.\n";
     channel += "g";
@@ -417,9 +416,21 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
         }
     }
   }
-
   if(channel == "other") {
     msg_Debugging()<<"Beams not single flavoured.\n";
+    if(pout) {
+      const Vec4D p0 = ip[0];
+      const Vec4D p1 = ip[1];
+      pout->clear();
+      msg_Out()<<p0<<""<<p1<<"\n";
+      pout->push_back(p0);    
+      pout->push_back(p1);    
+      msg_Debugging()<<"Added beam to pout, pout = "<<*pout<<".\n";
+      for(int i=0; i<n; i++) {
+        pout->push_back(p[imap[i]]);
+      }
+      msg_Debugging()<<"pout = "<<*pout<<"\n";
+    }
     return channel;
   }
   else {
@@ -428,14 +439,32 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
   }
 
   std::string final_channel = "";
+  if(pout) {
+    const Vec4D p0 = ip[0];
+    const Vec4D p1 = ip[1];
+    pout->clear();
+    msg_Out()<<p0<<""<<p1<<"\n";
+    pout->push_back(p0);    
+    pout->push_back(p1);    
+    msg_Debugging()<<"Added beam to pout, pout = "<<*pout<<".\n";
+  }
   while(n>0) {
     int ind = -1;
-    double pTmax = -1;
-    for(int i=0; i<n; i++) {
-      if(p[imap[i]].PPerp() > pTmax) {
-        ind = i;
-        pTmax = p[imap[i]].PPerp();
+    if(m_orderByPT) {
+      double pTmax = -1;
+      for(int i=0; i<n; i++) {
+        if(p[imap[i]].PPerp() > pTmax) {
+          ind = i;
+          pTmax = p[imap[i]].PPerp();
+        }
       }
+    }
+    else {
+      ind = m_nborn-n;
+    }
+    if(pout) {
+      pout->push_back(p[imap[ind]]);
+      msg_Debugging()<<"pout = "<<*pout<<".\n";
     }
     msg_Debugging()<<p[imap[ind]]<<" "<<f[imap[ind]+2]<<"\n";
     if(flavd(f[imap[ind]+2])) {
@@ -481,4 +510,17 @@ operator()(const Parameter_Type &args) const
 void ATOOLS::Getter<ChAlg,ChAlg_Key,KT2_pp_Ordered>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"KT2_pp_byPT"; }
+
+class KT2_pp_Unordered : public KT2_pp_Ordered {
+public:
+  KT2_pp_Unordered(const ChAlg_Key& parameters) : KT2_pp_Ordered(parameters, false) {}
+};
+
+DECLARE_GETTER(KT2_pp_Unordered,"KT2_pp",ChAlg,ChAlg_Key);
+ChAlg *ATOOLS::Getter<ChAlg,ChAlg_Key,KT2_pp_Unordered>::
+operator()(const Parameter_Type &args) const 
+{ return new KT2_pp_Unordered(args); }
+void ATOOLS::Getter<ChAlg,ChAlg_Key,KT2_pp_Unordered>::
+PrintInfo(std::ostream &str,const size_t width) const
+{ str<<"KT2_pp"; }
 

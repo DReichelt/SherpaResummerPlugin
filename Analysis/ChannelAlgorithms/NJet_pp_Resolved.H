@@ -12,7 +12,8 @@ namespace RESUM {
     NJet_pp_Resolved(const ChAlg_Key& parameters);
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
-                        const size_t &nin) override;
+                        const size_t &nin,
+                        std::vector<ATOOLS::Vec4D>* pout) override;
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
 

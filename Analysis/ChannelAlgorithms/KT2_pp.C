@@ -173,7 +173,8 @@ double KT2_pp::KT2(const vector<Vec4D> &p,
 
 std::string KT2_pp::Channel(const vector<Vec4D>& ip,
                             const vector<Flavour>& fl,
-                            const size_t &nin) {
+                            const size_t &nin,
+                            vector<Vec4D>* pout) {
   if(!fl[0].Strong() or !fl[1].Strong())
     THROW(fatal_error,"This algorithm is only valid for pp collisions, but one beam had no strong charge.");
   

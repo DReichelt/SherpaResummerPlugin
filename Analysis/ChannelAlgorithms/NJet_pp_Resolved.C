@@ -25,18 +25,55 @@ NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
 
 std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                       const std::vector<ATOOLS::Flavour>& fl,
-                                      const size_t &nin) {
+                                      const size_t &nin,
+                                      std::vector<ATOOLS::Vec4D>* pout) {
+  DEBUG_FUNC("");
   std::vector<ATOOLS::Vec4D> p;
   std::vector<ATOOLS::Flavour> f;
   for(int i=0; i<ip.size(); i++) {
     if(fl[i].Strong()) {
       p.push_back(ip[i]);
       f.push_back(fl[i]);
+      msg_Debugging()<<"Added "<<f.back()<<" "<<p.back()<<"\n";
     }
   }
-  const FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
-  const int mult = fj.pseudoJets().size();
-  return m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
+  
+  size_t n = p.size()-2;
+  if(n-1>m_resolvers.size()) 
+    THROW(fatal_error, "No resolver for this multiplicity: "+std::to_string(n)+".");
+  std::string channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
+  msg_Debugging()<<"Channel candidate: "<<channel<<".\n";
+  FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
+  do {
+    for(auto& p: fj.pseudoJets()[0].constituents()) {
+      msg_Debugging()<<p.e()<<" "<<p.px()<<" "<<p.py()<<" "<<p.pz()<<"\n";
+    }
+    msg_Debugging()<<"Leading jet has "<<fj.pseudoJets()[0].constituents().size()<<" constituents, "<<p.size()-2<<" jets left to cluster.\n";
+    n--;
+    msg_Debugging()<<"Using cluster algorithm "<<n<<" of "<<m_resolvers.size()-1<<".\n";
+    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
+    f = std::vector<ATOOLS::Flavour>(p.size(),{21});
+    msg_Debugging()<<p<<" "<<f<<"\n";
+    msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
+    fj = FJmaxPTjet(p,f,nin,Observable_Key("ChAlg",m_params));
+  } while(fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1);
+  // std::vector<ATOOLS::Flavour> lead = fj.apply(f,0);
+  
+  // if(f.size()==5 and mult<3) {
+  //   for(int i=0; i<ip.size(); i++) {
+  //     if(fl[i].Strong()) {
+  //       msg_Out()<<ip[i]<<" "<<fl[i]<<"\n";
+  //     }
+  //   }
+  //   msg_Out()<<"Found "<<mult<<" jets.\n";
+  //   for(auto& f: lead) msg_Out()<<f<<" ";
+  //   msg_Out()<<" -> "<<channel<<"\n\n\n";
+  // }
+  msg_Debugging()<<"Returning "<<channel<<".\n";
+  if(pout) {
+    *pout = p;
+  }
+  return channel;//m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }
 
 DECLARE_GETTER(NJet_pp_Resolved,"NJet_pp_Resolved",ChAlg,ChAlg_Key);

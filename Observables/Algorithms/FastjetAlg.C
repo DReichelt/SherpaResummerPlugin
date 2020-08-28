@@ -7,7 +7,7 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
                        const std::vector<ATOOLS::Flavour>& fl,
                        const size_t &nin,
                        const Observable_Key& key)   {
-  
+  DEBUG_FUNC("");
   double R = to_type<double>(key.KwArg("R","0.5"));
   m_minPT = to_type<double>(key.KwArg("minPT","0"));
   double beta = to_type<double>(key.KwArg("beta","2"));
