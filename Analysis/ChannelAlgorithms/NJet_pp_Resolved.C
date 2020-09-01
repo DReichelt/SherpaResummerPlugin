@@ -9,7 +9,7 @@ NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
   : ChannelAlgorithm_Base(parameters) {
   int nmin = RESUM::to_type<int>(parameters.KwArg("NMIN","1"));
   int nmax = RESUM::to_type<int>(parameters.KwArg("NMAX"));
-  std::vector<std::string> params = {"-1",parameters.KwArg("MODE","ALL")};
+  std::vector<std::string> params = {"-1",parameters.KwArg("MODE","ALL"),"SUMNEUTRAL:"+parameters.KwArg("SUMNEUTRAL","0")};
   for(int n=nmin; n<=nmax; n++) {
     params[0] = std::to_string(n);
     m_resolvers.emplace_back(new KT2_pp_Ordered({"KT2_pp_Ordered",params}));
@@ -44,7 +44,7 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
   std::string channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
   msg_Debugging()<<"Channel candidate: "<<channel<<".\n";
   FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
-  do {
+  while(fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
     for(auto& p: fj.pseudoJets()[0].constituents()) {
       msg_Debugging()<<p.e()<<" "<<p.px()<<" "<<p.py()<<" "<<p.pz()<<"\n";
     }
@@ -56,7 +56,7 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
     msg_Debugging()<<p<<" "<<f<<"\n";
     msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
     fj = FJmaxPTjet(p,f,nin,Observable_Key("ChAlg",m_params));
-  } while(fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1);
+  }
   // std::vector<ATOOLS::Flavour> lead = fj.apply(f,0);
   
   // if(f.size()==5 and mult<3) {

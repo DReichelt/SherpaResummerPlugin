@@ -343,10 +343,10 @@ namespace RESUM {
                          const size_t &nin=2) = 0;
 
     
-    T Value
+    virtual T Value
     (const std::vector<Vec4T>& p,
      const std::vector<ATOOLS::Flavour>& fl,
-     std::map<std::string, typename Algorithm<T>::Ptr> algorithms,
+     std::map<std::string, typename Algorithm<T>::Ptr>& algorithms,
      const size_t &nin=2) {
       return Value(p, fl, nin);
     }

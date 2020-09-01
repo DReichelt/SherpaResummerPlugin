@@ -27,7 +27,9 @@ KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters, bool orderByPT)
     else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
     else THROW(fatal_error,
                "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
-    m_sumNeutral = parameters.KwArg("SUMNEUTRAL","0") != "0"; 
+    m_sumNeutral = parameters.KwArg("SUMNEUTRAL","0") != "0";
+    if(m_sumNeutral) msg_Debugging()<<"Will sum momenta of color-neutral particles.\n";
+    else msg_Debugging()<<"Will use momenta of color-neutral particles individually.\n";
   }
   if(m_mode==MODE::ALL) {
     m_channelNames.push_back("other");
@@ -422,7 +424,6 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
       const Vec4D p0 = ip[0];
       const Vec4D p1 = ip[1];
       pout->clear();
-      msg_Out()<<p0<<""<<p1<<"\n";
       pout->push_back(p0);    
       pout->push_back(p1);    
       msg_Debugging()<<"Added beam to pout, pout = "<<*pout<<".\n";
@@ -443,7 +444,6 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     const Vec4D p0 = ip[0];
     const Vec4D p1 = ip[1];
     pout->clear();
-    msg_Out()<<p0<<""<<p1<<"\n";
     pout->push_back(p0);    
     pout->push_back(p1);    
     msg_Debugging()<<"Added beam to pout, pout = "<<*pout<<".\n";

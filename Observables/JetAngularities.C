@@ -21,9 +21,6 @@ namespace RESUM {
     JetAngularities_Base(const Observable_Key &args): 
       Observable_Base(args), m_algkey(args) {
       m_algkey.m_name = "FJmaxPTjet";
-      m_algtag = m_algkey.Name();
-      m_algtag += ":"+args.KwArg("R","0.8");
-      m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
       m_R = to_type<double>(args.KwArg("R","0.8"));
       m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) == 0;
@@ -32,6 +29,13 @@ namespace RESUM {
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
       m_beta = to_type<double>(args.KwArg("beta","0"));
       m_R0 = m_R;
+
+      m_algtag = m_algkey.Name();
+      m_algtag += ":"+args.KwArg("R",std::to_string(m_R));
+      m_algtag += ":"+args.KwArg("minPT","0");
+      m_algtag += ":"+args.KwArg("zcut",std::to_string(m_zcut));
+      m_algtag += ":"+args.KwArg("beta",std::to_string(m_beta));
+
       if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
       DEBUG_FUNC(Name()+" -> "+Tag());
@@ -188,7 +192,7 @@ namespace RESUM {
     double Value(const std::vector<Vec4D>& ip,
             const std::vector<ATOOLS::Flavour>& fl,
             std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
-            const size_t& nin) {
+            const size_t& nin) override {
 
       for(const Vec4D& p: ip) {
         if(p.Nan()) {
@@ -205,11 +209,17 @@ namespace RESUM {
       msg_Debugging()<<"Start jet angularity.\n";
       
       auto alg = algorithms.find(m_algtag);
+      msg_Debugging()<<"Searching algs...\n";
       if(alg==algorithms.end()) {
+        msg_Debugging()<<"Known: \n";
+        for(auto alg: algorithms) msg_Debugging()<<alg.first<<"\n";
+        msg_Debugging()<<"Did not find "<<m_algtag<<".\n";
         alg = algorithms.insert({m_algtag,GetAlgorithm<double>(m_algkey, ip, fl, nin)}).first;
         msg_Debugging()<<"Found jets.\n";
       }
-      else msg_Debugging()<<"Reusing jets found earlier.\n";
+      else {
+        msg_Debugging()<<"Reusing jets found earlier.\n";
+      }
 
       const std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
       if(constits.size() <= 1) {

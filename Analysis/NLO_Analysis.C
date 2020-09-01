@@ -25,7 +25,8 @@ namespace RESUM {
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;
-
+    bool m_recycle = true;
+    bool m_oneFile = false;
 
     void PrintHistos() {
       for(auto& h: m_histos) {
@@ -48,6 +49,8 @@ namespace RESUM {
     double EtaBeam(const ATOOLS::Vec4D& p, size_t beamId);
     
     std::vector<ChannelAlgorithm_Base::Ptr> m_channelAlgs;
+
+    void Output(My_Out_File ofile);
   };// end of class NLO_Analysis
 
 }// end of namespace RESUM
@@ -86,6 +89,11 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   for (size_t i(1);i<params.size();++i) {
     std::vector<std::string> ps = {params[i].begin()+1,
                                    params[i].end()};
+    if (params[i][0] == "Options") {
+      Key_Base opts("Options",params[i]);
+      m_recycle = RESUM::to_type<bool>(opts.KwArg("REUSE_ALGS","1"));
+      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","0"));
+    }
     if (params[i][0] == "ChAlg") {
       m_channelAlgs.emplace_back(ChAlg_Getter::GetObject
                                  (params[i][1], {params[i][1],ps}));
@@ -205,10 +213,11 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
   }
 
   int obsId = 0;
+  std::map<std::string, typename Algorithm<double>::Ptr> algorithms;
   for (size_t i=0; i<m_histos.size(); i+=2+m_histos[i]->Nbin()) {
     if(mode == 0) m_fills += ncount;
     if(mode == 1) m_fills_tmp = ncount;
-    const double value = m_obss[obsId]->Value(mom, fl);
+    const double value = m_recycle ?  m_obss[obsId]->Value(mom, fl, algorithms) : m_obss[obsId]->Value(mom, fl);
     msg_Debugging()<<"value["<<i<<"] = "<<value
                    <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
     Fill(i,value,weight,ncount,mode);
@@ -296,25 +305,56 @@ void NLO_Analysis::EndEvaluation(double scale)
   Analysis_Base::EndEvaluation(scale);
 }
 
-void NLO_Analysis::Output(const std::string& pname) {
-// #ifdef USING__MPI
-//   if (MPI::COMM_WORLD.Get_rank()) return;
-// #endif
+void NLO_Analysis::Output(My_Out_File ofile) {
   for(auto& ch: m_channels) {
     ch.second->m_addition = "Channel_"+ch.first+"_";
-    ch.second->Output(pname);
+    ch.second->Output(ofile);
   }
   for(auto& sig: m_sigma) {
-    My_Out_File ofile(pname+"/"+m_addition+sig.first+"_Sigma.dat");
-    ofile.Open();
-    ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
+    //    msg_Out()<<sig.first<<"\n";
+    *ofile<<"# "<<m_addition<<sig.first<<"_Sigma.dat\n";
     *ofile<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
     for(auto& vals: sig.second) {
       for(double val: vals) *ofile<<val<<" ";
       *ofile<<"\n";
-    }                         
+    }
+    *ofile<<"\n\n";
   }
-  Analysis_Base::Output(pname);
+}
+
+void NLO_Analysis::Output(const std::string& pname) {
+// #ifdef USING__MPI
+//   if (MPI::COMM_WORLD.Get_rank()) return;
+// #endif
+  if(m_oneFile) {
+    msg_Out()<<"Write to file "<<pname<<"\n";
+    std::string fname = pname;
+    while(fname.back()=='/') fname.pop_back();
+    std::replace( fname.begin(), fname.end(), '/', '_');
+    My_Out_File ofile(fname);
+    ofile.Open();
+    ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
+    Output(ofile);
+    ofile.Close();
+  }
+  else {
+    for(auto& ch: m_channels) {
+      ch.second->m_addition = "Channel_"+ch.first+"_";
+      ch.second->Output(pname);
+    }
+    for(auto& sig: m_sigma) {
+      My_Out_File ofile(pname+"/"+m_addition+sig.first+"_Sigma.dat");
+      ofile.Open();
+      ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
+      *ofile<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
+      for(auto& vals: sig.second) {
+        for(double val: vals) *ofile<<val<<" ";
+        *ofile<<"\n";
+      }
+      ofile.Close();  
+    }
+  }
+  //Analysis_Base::Output(pname);
 }
 
 Primitive_Observable_Base *NLO_Analysis::Copy() const 
