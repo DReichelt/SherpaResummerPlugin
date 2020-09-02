@@ -23,6 +23,8 @@ namespace RESUM {
     /// The thrust axes.
     vector<Vec3D> m_thrustAxes;
     
+    double m_ymax;
+    
   public:
 
     SD_Thrust(const Observable_Key &args): 
@@ -30,12 +32,14 @@ namespace RESUM {
         m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
         m_beta = to_type<double>(args.KwArg("beta","0"));
         m_R0 = to_type<double>(args.KwArg("R0","1"));
+        m_ymax = to_type<double>(args.KwArg("ymax","-1"));
         if(m_zcut==0.) m_gmode = GROOM_MODE::NONE;
         else m_gmode = GROOM_MODE::SD;
         DEBUG_FUNC(Name()+" -> "+Tag());
         DEBUG_VAR(m_zcut);
         DEBUG_VAR(m_beta);
         DEBUG_VAR(m_R0);
+        DEBUG_VAR(m_ymax);
         DEBUG_VAR(m_gmode);
     }
 
@@ -131,6 +135,11 @@ namespace RESUM {
     {
       return a.Sqr()>b.Sqr();
     }
+    
+    static double rapidity(const Vec4D p)
+    {
+      return log((p[0]+p[3])/(p[0]-p[3]))/2.;
+    }
 
     double Value(const std::vector<Vec4D>& momenta,
                  const std::vector<Flavour>& fl,
@@ -140,7 +149,13 @@ namespace RESUM {
       Vec3D lastaxis, curraxis, thrustaxis, maxaxis, axis;
       double maxthrust=0., lastthrust , currthrust, thrust;
       std::vector<Vec3D> vectors(n-nin);
-      for (size_t i(nin);i<n;++i) vectors[i-nin]=Vec3D(momenta[i][1],momenta[i][2],0.0);
+      std::vector<Vec4D> momenta_ymax;
+      for (size_t i(nin);i<n;++i){
+          if(0.<m_ymax && abs(rapidity(momenta[i]))<m_ymax){
+            vectors[i-nin]=Vec3D(momenta[i][1],momenta[i][2],0.0);
+            momenta_ymax.push_back(momenta[i]);
+          }
+      }
       for (int pass=0;pass<2;++pass) {
 	if (pass==1) RotateMoms(vectors,thrustaxis);
 	sort(vectors.begin(),vectors.end(),&bigger);
@@ -190,15 +205,15 @@ namespace RESUM {
       
       // Partition event into hemispheres from the thrust axis
       vector<fastjet::PseudoJet> left_hemi, right_hemi;
-      for(int i = nin; i < momenta.size(); i++) {
+      for(int i = nin; i < momenta_ymax.size(); i++) {
         if(!fl[i].Strong()) continue;
-        Vec3D p = {momenta[i][1], momenta[i][2],0};
+        Vec3D p = {momenta_ymax[i][1], momenta_ymax[i][2],0};
         ptot_perp_ungroomed += p.Abs();
         if ( axis*p >= 0) {
-          right_hemi.push_back(fastjet::PseudoJet(momenta[i][1], momenta[i][2], momenta[i][3], momenta[i][0])); 
+          right_hemi.push_back(fastjet::PseudoJet(momenta_ymax[i][1], momenta_ymax[i][2], momenta_ymax[i][3], momenta_ymax[i][0])); 
         }											
         else if ( axis*p < 0) {
-          left_hemi.push_back(fastjet::PseudoJet(momenta[i][1], momenta[i][2], momenta[i][3], momenta[i][0]));
+          left_hemi.push_back(fastjet::PseudoJet(momenta_ymax[i][1], momenta_ymax[i][2], momenta_ymax[i][3], momenta_ymax[i][0]));
         }
         else {
           THROW(fatal_error, "Something went wrong.");
@@ -209,11 +224,11 @@ namespace RESUM {
 //         THROW(fatal_error,"Empty hemisphere.");
           std::cout << left_hemi.size()<< " " << right_hemi.size() << std::endl;
           std::cout << axis[0] << " " << axis[1] << std::endl;
-          std::cout << momenta[0][1] << " " << momenta[0][2] << " " << momenta[0][3] << std::endl;
-          std::cout << momenta[1][1] << " " << momenta[1][2] << " " << momenta[1][3] << std::endl;
-          std::cout << momenta[2][1] << " " << momenta[2][2] << " " << momenta[2][3] << std::endl;
-          std::cout << momenta[3][1] << " " << momenta[3][2] << " " << momenta[3][3] << std::endl;
-          std::cout << momenta[4][1] << " " << momenta[4][2] << " " << momenta[4][3] << std::endl;
+          std::cout << momenta_ymax[0][1] << " " << momenta_ymax[0][2] << " " << momenta_ymax[0][3] << std::endl;
+          std::cout << momenta_ymax[1][1] << " " << momenta_ymax[1][2] << " " << momenta_ymax[1][3] << std::endl;
+          std::cout << momenta_ymax[2][1] << " " << momenta_ymax[2][2] << " " << momenta_ymax[2][3] << std::endl;
+          std::cout << momenta_ymax[3][1] << " " << momenta_ymax[3][2] << " " << momenta_ymax[3][3] << std::endl;
+          std::cout << momenta_ymax[4][1] << " " << momenta_ymax[4][2] << " " << momenta_ymax[4][3] << std::endl;
           return 0.;
         // empty_hemisphere += 1;
         // cout << "Empty hemisphere!! in event " << nevent << ". Veto Event and skip. This has occured: " << empty_hemisphere << " times        " << endl;
