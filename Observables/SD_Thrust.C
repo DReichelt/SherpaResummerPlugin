@@ -150,8 +150,10 @@ namespace RESUM {
       double maxthrust=0., lastthrust , currthrust, thrust;
       std::vector<Vec3D> vectors(n-nin);
       std::vector<Vec4D> momenta_ymax;
+      momenta_ymax.push_back(momenta[0]);
+      momenta_ymax.push_back(momenta[1]);
       for (size_t i(nin);i<n;++i){
-          if(0.<m_ymax && abs(rapidity(momenta[i]))<m_ymax){
+          if(m_ymax<0. || abs(rapidity(momenta[i]))<m_ymax){
             vectors[i-nin]=Vec3D(momenta[i][1],momenta[i][2],0.0);
             momenta_ymax.push_back(momenta[i]);
           }
