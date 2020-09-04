@@ -15,19 +15,34 @@ NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
     m_binEdges.push_back(RESUM::to_type<double>(e));
   }
   std::vector<std::string> params = {"-1",parameters.KwArg("MODE","ALL"),"SUMNEUTRAL:"+parameters.KwArg("SUMNEUTRAL","0")};
+  m_collapse = parameters.KwArg("COLLAPSE","0") != "0";
   for(int n=nmin; n<=nmax; n++) {
     params[0] = std::to_string(n);
     m_resolvers.emplace_back(new KT2_pp_Ordered({"KT2_pp_Ordered",params}));
-    for(const std::string& name: m_resolvers.back()->ChannelNames(true)) {
+    std::set<std::string> names;
+    for(std::string name: m_resolvers.back()->ChannelNames(true)) {
+      collapse(name);
       for(size_t i=0; i<m_edges.size()-1; i++) {
-        m_channelNames.push_back(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
+        names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
       }
-      m_channelNames.push_back(name+"_PtLead_"+m_edges.back());
+      names.insert(name+"_PtLead_"+m_edges.back());
+      //m_channelNames.push_back(collapse(name));
     }
+    m_channelNames.assign(names.begin(), names.end());
     // m_channelNames.insert(m_channelNames.end(),
     //                       m_resolvers.back()->ChannelNames().begin(),
     //                       m_resolvers.back()->ChannelNames().end());
   }
+}
+
+std::string NJet_pp_Resolved_KTBins::collapse(std::string& name) {
+  if(!m_collapse) return name;
+  std::string fl = name.substr(name.find("TO")+2,1);
+  if(fl=="g") fl = "Gluon";
+  else if(fl=="q") fl = "Quark";
+  else THROW(fatal_error,"Unknown flavour "+fl);
+  name = fl+name.substr(name.find("_"));
+  return name;
 }
 
 
@@ -79,6 +94,7 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
       }
     }
   }
+  collapse(channel);
   return channel;//m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }
 

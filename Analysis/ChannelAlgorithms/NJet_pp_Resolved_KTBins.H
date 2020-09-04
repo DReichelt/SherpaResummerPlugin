@@ -25,13 +25,15 @@ namespace RESUM {
     };
     
   private:
+
+    std::string collapse(std::string& name);
         
     MODE m_mode = MODE::ALL;
     std::vector<std::string> m_channelNames;
     std::vector<double> m_binEdges;
     std::vector<std::string> m_edges;
     std::vector<ChannelAlgorithm_Base::Ptr> m_resolvers;
-
+    bool m_collapse = false;
   }; // end of class NJet_pp_Resolved_KTBins
   
 } // end of namespace RESUM

@@ -10,16 +10,32 @@ NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
   int nmin = RESUM::to_type<int>(parameters.KwArg("NMIN","1"));
   int nmax = RESUM::to_type<int>(parameters.KwArg("NMAX"));
   std::vector<std::string> params = {"-1",parameters.KwArg("MODE","ALL"),"SUMNEUTRAL:"+parameters.KwArg("SUMNEUTRAL","0")};
+  m_collapse = parameters.KwArg("COLLAPSE","0") != "0";
   for(int n=nmin; n<=nmax; n++) {
     params[0] = std::to_string(n);
     m_resolvers.emplace_back(new KT2_pp_Ordered({"KT2_pp_Ordered",params}));
-    for(const std::string& name: m_resolvers.back()->ChannelNames(true)) {
-      m_channelNames.push_back(name);
+    std::set<std::string> names;
+    for(std::string name: m_resolvers.back()->ChannelNames(true)) {
+      names.insert(collapse(name));
+      //m_channelNames.push_back(collapse(name));
     }
+    m_channelNames.assign(names.begin(), names.end());
     // m_channelNames.insert(m_channelNames.end(),
     //                       m_resolvers.back()->ChannelNames().begin(),
     //                       m_resolvers.back()->ChannelNames().end());
   }
+}
+
+std::string NJet_pp_Resolved::collapse(std::string& name) {
+  if(!m_collapse) return name;
+  msg_Out()<<name<<" -> ";
+  std::string fl = name.substr(name.find("TO")+3,name.find("TO")+4);
+  if(fl=="g") fl = "Gluon";
+  else if(fl=="q") fl = "Quark";
+  else THROW(fatal_error,"Unknown flavour "+fl);
+  name = fl+name.substr(name.find("_"));
+  msg_Out()<<name<<"\n";
+  return name;
 }
 
 
@@ -69,6 +85,7 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
   //   for(auto& f: lead) msg_Out()<<f<<" ";
   //   msg_Out()<<" -> "<<channel<<"\n\n\n";
   // }
+  collapse(channel);
   msg_Debugging()<<"Returning "<<channel<<".\n";
   if(pout) {
     *pout = p;

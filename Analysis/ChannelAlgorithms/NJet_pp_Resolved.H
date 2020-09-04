@@ -25,12 +25,14 @@ namespace RESUM {
     };
     
   private:
+
+    std::string collapse(std::string& name);
         
     MODE m_mode = MODE::ALL;
     std::vector<std::string> m_channelNames;
 
     std::vector<ChannelAlgorithm_Base::Ptr> m_resolvers;
-
+    bool m_collapse = false;
   }; // end of class NJet_pp_Resolved
   
 } // end of namespace RESUM
