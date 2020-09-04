@@ -22,7 +22,7 @@ namespace RESUM {
     void EvaluateNLOevt() override;
 
     void Fill(int i, double value, double weight, double ncount, int mode);
-    std::map<std::string, NLO_Analysis_2*> m_channels;
+    std::vector<std::string> m_channels;
     Primitive_Observable_Base * Copy() const;
     std::string m_addition = "";
     std::string m_fname;
@@ -105,6 +105,22 @@ NLO_Analysis_2::NLO_Analysis_2(const Argument_Matrix &params):
   Data_Reader reader(",",";","!","=");
   Algebra_Interpreter *ip=reader.Interpreter();
   m_channelAlgs.clear();
+
+  // msg_Out()<<"Start\n";
+  // ATOOLS::Blob* sig = Analysis()->AnalysisHandler()->EventHandler()->GetBlobs()->FindFirst(btp::Signal_Process);
+  // if(not sig) msg_Out()<<"No signal.\n";
+  // else msg_Out()<<"found sig\n";
+  // auto* vars = &(*sig)["Variation_Weights"]->Get<SHERPA::Variation_Weights>();
+  // if(not vars) msg_Out()<<"No vars.\n";
+  // const size_t nvars = vars->GetNumberOfVariations();
+  // std::map<std::string,double> varweights;
+  // if(nvars != 0) {
+  //   for(size_t i=0; i<nvars; i++) {
+  //     varweights[vars->GetVariationNameAt(i)] = vars->GetVariationWeightAt(i, SHERPA::Variations_Type::main);
+  //   }
+  //   SetVarWeights(&varweights);
+  // }
+
   for (size_t i(1);i<params.size();++i) {
     std::vector<std::string> ps = {params[i].begin()+1,
                                    params[i].end()};
@@ -113,63 +129,55 @@ NLO_Analysis_2::NLO_Analysis_2(const Argument_Matrix &params):
       m_recycle = RESUM::to_type<bool>(opts.KwArg("REUSE_ALGS","1"));
       m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","0"));
       if(m_oneFile) m_fname = opts.KwArg("FILENAME","ResumResults");
+      continue;
     }
     if (params[i][0] == "ChAlg") {
       m_channelAlgs.emplace_back(ChAlg_Getter::GetObject
                                  (params[i][1], {params[i][1],ps}));
+      for(const std::string& ch: m_channelAlgs.back()->ChannelNames(true))
+        m_channels.push_back(ch);
       continue;
     }
+  }
+  for (size_t i(1);i<params.size();++i) {
+    if (params[i][0] == "Options") continue;
+    if (params[i][0] == "ChAlg") continue;
     if (params[i].size()<5) continue;    
+    std::vector<std::string> ps = {params[i].begin()+1,
+                                   params[i].end()};
     Observable_Base *obs(Observable_Getter::GetObject
 			 (params[i][0],{params[i][0], ps}));
     if (obs == nullptr) {
       msg_Error()<<METHOD<<"(): Observable not found '"<<params[i][0]<<"'.\n";
       continue;
     }
-    double xmin = ToType<double>(ip->Interprete(params[i][1]));
-    double xmax = ToType<double>(ip->Interprete(params[i][2]));
-    size_t nbin = ToType<size_t>(ip->Interprete(params[i][3]));
-    int tp = HistogramType(params[i][4]);
-    msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp<<" ("<<params[i][4]<<") "
-		   <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
-    m_sigmas.push_back(std::make_shared<Cumulant>(Cumulant::Edges(tp,xmin,
-                                                                  xmax,nbin),
-                                                  obs->Tag()+"_Sigma"));
-    m_obss.push_back(obs);
-  }
-  // to stay consistent with previous defaults
-  if(m_channelAlgs.size()==0 &&
-     reader.GetValue<std::string>("RESUM::SORT_CHANNELS","YES")!="NO") {
-    int nborn = reader.GetValue<int>("RESUM::NBORN",-1);
-    if(nborn>0) {
-      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
-                                                         {"KT2_ee",
-                                                          {std::to_string(nborn),
-                                                           ""}}));
-      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
-                                                         {"KT2_ee",
-                                                          {std::to_string(nborn),
-                                                           "BLAND"}}));
-      m_channelAlgs.emplace_back(ChAlg_Getter::GetObject("KT2_ee",
-                                                         {"KT2_ee",
-                                                          {std::to_string(nborn),
-                                                           "BLAND_Z"}}));
+    std::valarray<double> edges;
+    size_t pos = params[i][1].find("EDGES:");
+    if (pos != std::string::npos) {
+      const std::vector<std::string> es = RESUM::split(params[i][1].substr(pos+6),"_");
+      edges = std::valarray<double>(es.size());
+      for(size_t j=0; j<es.size(); j++) edges[j] = ToType<double>(ip->Interprete(es[j]));
+      
     }
-  }
-  // get channels
-  if(rpa->gen.Variable("RESUM::ANALYSIS_DO_CHANNELS")!="NO") {
-    rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","NO");
-    for(ChannelAlgorithm_Base::Ptr alg: m_channelAlgs)
-      for(const std::string& ch: alg->ChannelNames(true))
-        m_channels.emplace(ch,dynamic_cast<NLO_Analysis_2*>(Copy()));
-    rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","YES"); 
+    else {
+      const double xmin = ToType<double>(ip->Interprete(params[i][1]));
+      const double xmax = ToType<double>(ip->Interprete(params[i][2]));
+      const size_t nbin = ToType<size_t>(ip->Interprete(params[i][3]));
+      const int tp = HistogramType(params[i][4]);
+      edges = Cumulant::Edges(tp,xmin,xmax,nbin);
+      msg_Debugging()<<"Init '"<<params[i][0]<<"', type "<<tp<<" ("<<params[i][4]<<") "
+                     <<" with "<<nbin<<" bins in ["<<xmin<<","<<xmax<<"]\n";
+    }
+    m_sigmas.push_back(std::make_shared<Cumulant>(edges, obs->Tag()+"_Sigma"));
+    // m_sigmas.back()->InitVarWeights(p_varweights);
+    // m_sigmas.back()->SetVariants(m_channels);
+    m_obss.push_back(obs);
   }
 }
 
 NLO_Analysis_2::~NLO_Analysis_2()
 {
   for (size_t i(0);i<m_obss.size();++i) delete m_obss[i];
-  for (auto& ch: m_channels) if(ch.second) delete ch.second;
 }
 
 double NLO_Analysis_2::EtaBeam(const Vec4D& p, size_t beamId) {
@@ -206,11 +214,10 @@ void NLO_Analysis_2::Evaluate(double weight,double ncount,int mode)
   // n += ncount;
   // msg_Out()<<"weight: "<<sumW/n<<"\n";
   // calculate observable for event and fill into histo
-  if(!m_filledOnce and p_varweights) {
-    for(auto& s: m_sigmas) s->InitVarWeights(p_varweights);
-    for(auto& c: m_channels) {
-      c.second->SetVarWeights(p_varweights);
-      for(auto& s: c.second->m_sigmas) s->InitVarWeights(p_varweights);
+  if(!m_filledOnce) {
+    for(auto& s: m_sigmas) {
+      if(p_varweights) s->InitVarWeights(p_varweights);
+      s->SetVariants(m_channels);
     }
     m_filledOnce=true;
   }
@@ -238,36 +245,28 @@ void NLO_Analysis_2::Evaluate(double weight,double ncount,int mode)
   std::vector<std::string> ch(m_channelAlgs.size(),"");
   for(size_t i=0; i<ch.size(); i++) {
     ch[i] = m_channelAlgs[i]->Channel(mom,fl,2,true);
-    if(m_channels.find(ch[i]) == m_channels.end()) {
+    if(std::find(m_channels.begin(), m_channels.end(), ch[i]) == m_channels.end()) {
       msg_Error()<<"Channel not found: "<<ch[i]<<"\n";
       msg_Error()<<"Available:\n";
-      for(auto& c: m_channels) msg_Error()<<c.first<<"\n";
+      for(auto& c: m_channels) msg_Error()<<c<<"\n";
     } 
   }
-  for(auto& c: m_channels) {
-    bool found = false;
-    for(const std::string& cname: ch)
-      if(c.first == cname) {
-        found = true;
-        if(p_varweights) c.second->SetVarWeights(p_varweights);
-        break;
-      }
-    if(!found) {
-      if(p_varweights) c.second->SetVarWeights(p_varweights);
-      c.second->AddZeroWeight(ncount,mode);              
-    }
-  }
+
 
   std::map<std::string, typename Algorithm<double>::Ptr> algorithms;
   for (size_t i=0; i<m_obss.size(); i++) {
     const double value = m_recycle ?  m_obss[i]->Value(mom, fl, algorithms) : m_obss[i]->Value(mom, fl);
     msg_Debugging()<<"value["<<i<<"] = "<<value
                    <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
-    Fill(i,value,weight,ncount,mode);
-    for(const std::string& c: ch) {
-      msg_Debugging()<<"Filling "<<c<<"\n";
-      m_channels.at(c)->Fill(i,value,weight,ncount,mode);
+    if(mode==0) {
+      m_sigmas[i]->Fill(value,weight,p_varweights,ncount);
+      m_sigmas[i]->Fill(ch);
     }
+    else if(mode==1) {
+      m_sigmas[i]->FillMCB(value,weight,p_varweights,ncount);
+      m_sigmas[i]->FillMCB(ch);
+    }
+    else THROW(fatal_error,"Unknown mode.");
   }
   return;
 }
@@ -279,9 +278,6 @@ void NLO_Analysis_2::Fill(int i, double value, double weight, double ncount, int
 }
 
 void NLO_Analysis_2::EvaluateNLOevt() {
-  for(auto& ch: m_channels) {
-    ch.second->EvaluateNLOevt();
-  }
   for(auto& s: m_sigmas) s->FinishMCB();
   Analysis_Base::EvaluateNLOevt();
 }
@@ -335,18 +331,11 @@ void NLO_Analysis_2::EndEvaluation(std::vector<ATOOLS::Histogram*>& hists, doubl
 }
 
 void NLO_Analysis_2::EndEvaluation(double scale) {
-  for(auto& ch: m_channels) {
-    ch.second->EndEvaluation(scale);
-  }
   for(auto& s: m_sigmas) s->Finalize();
   Analysis_Base::EndEvaluation(scale);
 }
 
 void NLO_Analysis_2::Output(My_Out_File& ofile) {
-  for(auto& ch: m_channels) {
-    ch.second->m_addition = "Channel_"+ch.first+"_";
-    ch.second->Output(ofile);
-  }
   // for(auto& sig: m_sigma) {
   //   //    msg_Out()<<sig.first<<"\n";
   //   *ofile<<"# "<<m_addition<<sig.first<<"_Sigma.dat\n";
@@ -360,15 +349,10 @@ void NLO_Analysis_2::Output(My_Out_File& ofile) {
 }
 
 void NLO_Analysis_2::Output(Gzip_Stream& ofile) {
-  for(auto& ch: m_channels) {
-    ch.second->m_addition = "Channel_"+ch.first+"_";
-    ch.second->Output(ofile);
-  }
   for(auto& s: m_sigmas) {
     //    msg_Out()<<sig.first<<"\n";
     // this becomes title
-    std::string title = "# "+m_addition+s->Name()+".dat";
-    s->Output(ofile, title);
+    s->Output(ofile, "", "Channel");
     *ofile.stream()<<"\n\n";
   }
 }
