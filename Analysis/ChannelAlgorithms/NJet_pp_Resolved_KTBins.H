@@ -1,5 +1,5 @@
-#ifndef RESUM_KT2_EE_H
-#define RESUM_KT2_EE_H
+#ifndef RESUM_NJET_PP_RES_H
+#define RESUM_NJET_PP_RES_H
 #include "Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.H"
 #include <string>
 #include <vector>
@@ -7,9 +7,9 @@
 
 
 namespace RESUM {
-  class KT2_ee : public ChannelAlgorithm_Base {
+  class NJet_pp_Resolved_KTBins : public ChannelAlgorithm_Base {
   public:
-    KT2_ee(const ChAlg_Key& parameters);
+    NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters);
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
                         const size_t &nin,
@@ -19,23 +19,20 @@ namespace RESUM {
 
     enum MODE {
                ALL = 0,
-               BLAND = 1 << 0,
-               ZDECAY = 1 << 1,
-               BLAND_Z = ALL|BLAND|ZDECAY
+               BLAND = 1   << 0,
+               ZPROD = 1   << 1,
+               BLAND_Z = BLAND|ZPROD
     };
     
   private:
-    
-    double KT2(const ATOOLS::Vec4D &p1, const ATOOLS::Vec4D &p2,
-               const std::vector<int>& fl1, const std::vector<int>& fl2, 
-               int mode, int num_flavd) const;
-    bool flavd(const std::vector<int>& fls) const;
-    
+        
     MODE m_mode = MODE::ALL;
-    int m_nborn = -1;
     std::vector<std::string> m_channelNames;
-    
-  }; // end of class KT2_ee
+    std::vector<double> m_binEdges;
+    std::vector<std::string> m_edges;
+    std::vector<ChannelAlgorithm_Base::Ptr> m_resolvers;
+
+  }; // end of class NJet_pp_Resolved_KTBins
   
 } // end of namespace RESUM
 

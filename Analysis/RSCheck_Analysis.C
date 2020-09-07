@@ -133,7 +133,7 @@ RSCheck_Analysis::RSCheck_Analysis(const Argument_Matrix &params):
   if(rpa->gen.Variable("RESUM::ANALYSIS_DO_CHANNELS")!="NO") {
     rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","NO");
     for(ChannelAlgorithm_Base::Ptr alg: m_channelAlgs)
-      for(const std::string& ch: alg->ChannelNames())
+      for(const std::string& ch: alg->ChannelNames(true))
         m_channels.emplace(ch,dynamic_cast<RSCheck_Analysis*>(Copy()));
     rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","YES"); 
   }
@@ -181,7 +181,7 @@ void RSCheck_Analysis::Evaluate(double weight,double ncount,int mode)
 
   std::vector<std::string> ch(m_channelAlgs.size(),"");
   for(size_t i=0; i<ch.size(); i++) {
-    ch[i] = m_channelAlgs[i]->Channel(mom,fl,2);
+    ch[i] = m_channelAlgs[i]->Channel(mom,fl,2,true);
     if(m_channels.find(ch[i]) == m_channels.end()) {
       msg_Error()<<"Channel not found: "<<ch[i]<<"\n";
       msg_Error()<<"Available:\n";

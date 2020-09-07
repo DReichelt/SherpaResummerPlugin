@@ -1,6 +1,7 @@
 #include "AddOns/Analysis/Analyses/Analysis_Base.H"
 #include "Analysis/Observable_Base.H"
 #include "Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.H"
+#include "ATOOLS/Org/Gzip_Stream.H"
 
 namespace RESUM {
 
@@ -15,6 +16,7 @@ namespace RESUM {
     int n;
     void Evaluate(double weight, double ncount,int mode) override;
     void EndEvaluation(double scale) override;
+    void EndEvaluation(std::vector<ATOOLS::Histogram*>& hists, double scale) override;
     void Output(const std::string& pname) override;
     void EvaluateNLOevt() override;
 
@@ -22,10 +24,14 @@ namespace RESUM {
     std::map<std::string, NLO_Analysis*> m_channels;
     Primitive_Observable_Base * Copy() const;
     std::string m_addition = "";
+    std::string m_fname;
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;
-
+    bool m_recycle = true;
+    bool m_oneFile = false;
+    bool m_properZeroFill = true;
+    bool m_filledOnce = false;
 
     void PrintHistos() {
       for(auto& h: m_histos) {
@@ -48,6 +54,9 @@ namespace RESUM {
     double EtaBeam(const ATOOLS::Vec4D& p, size_t beamId);
     
     std::vector<ChannelAlgorithm_Base::Ptr> m_channelAlgs;
+
+    void Output(My_Out_File& ofile);
+    void Output(ATOOLS::Gzip_Stream& ogzip);
   };// end of class NLO_Analysis
 
 }// end of namespace RESUM
@@ -86,6 +95,12 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   for (size_t i(1);i<params.size();++i) {
     std::vector<std::string> ps = {params[i].begin()+1,
                                    params[i].end()};
+    if (params[i][0] == "Options") {
+      Key_Base opts("Options",params[i]);
+      m_recycle = RESUM::to_type<bool>(opts.KwArg("REUSE_ALGS","1"));
+      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","0"));
+      if(m_oneFile) m_fname = opts.KwArg("FILENAME","ResumResults");
+    }
     if (params[i][0] == "ChAlg") {
       m_channelAlgs.emplace_back(ChAlg_Getter::GetObject
                                  (params[i][1], {params[i][1],ps}));
@@ -133,7 +148,7 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
   if(rpa->gen.Variable("RESUM::ANALYSIS_DO_CHANNELS")!="NO") {
     rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","NO");
     for(ChannelAlgorithm_Base::Ptr alg: m_channelAlgs)
-      for(const std::string& ch: alg->ChannelNames())
+      for(const std::string& ch: alg->ChannelNames(true))
         m_channels.emplace(ch,dynamic_cast<NLO_Analysis*>(Copy()));
     rpa->gen.SetVariable("RESUM::ANALYSIS_DO_CHANNELS","YES"); 
   }
@@ -160,10 +175,33 @@ double NLO_Analysis::EtaBeam(const Vec4D& p, size_t beamId) {
 void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
 {
   DEBUG_FUNC("mode = "<<mode);
+  // if(Analysis()->Sub() and Analysis()->Real() and
+  //    Analysis()->Sub() != Analysis()->Real()) {
+  //   msg_Debugging()<<"Subtraction.\n";
+  // }
+  // else {
+  //   msg_Debugging()<<"Real.\n";
+  // }
+  // msg_Debugging()<<"Weight = "<<weight<<" "<<mode<<"\n";
+  // if(p_varweights) {
+  //   for(const auto& v: *p_varweights) msg_Debugging()<<v.first<<" "<<v.second<<"\n";
+  // }
+  // else {
+  //   msg_Debugging()<<"No variation weights.\n";
+  // }
+  // msg_Debugging()<<"\n";
   // sumW += weight;
   // n += ncount;
   // msg_Out()<<"weight: "<<sumW/n<<"\n";
   // calculate observable for event and fill into histo
+  if(!m_filledOnce and !m_properZeroFill and p_varweights) {
+    AddZeroPoint(0,0);
+    for(auto& c: m_channels) {
+      c.second->SetVarWeights(p_varweights);
+      c.second->AddZeroPoint(0,0);
+    }
+    m_filledOnce=true;
+  }
   Particle_List all(*p_ana->GetParticleList(m_listname));
   Vec4D_Vector mom(2+all.size());
   Flavour_Vector fl(2+all.size());
@@ -187,7 +225,7 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
 
   std::vector<std::string> ch(m_channelAlgs.size(),"");
   for(size_t i=0; i<ch.size(); i++) {
-    ch[i] = m_channelAlgs[i]->Channel(mom,fl,2);
+    ch[i] = m_channelAlgs[i]->Channel(mom,fl,2,true);
     if(m_channels.find(ch[i]) == m_channels.end()) {
       msg_Error()<<"Channel not found: "<<ch[i]<<"\n";
       msg_Error()<<"Available:\n";
@@ -199,16 +237,21 @@ void NLO_Analysis::Evaluate(double weight,double ncount,int mode)
     for(const std::string& cname: ch)
       if(c.first == cname) {
         found = true;
+        if(p_varweights) c.second->SetVarWeights(p_varweights);
         break;
       }
-    if(!found) c.second->AddZeroPoint(ncount,mode);                          
+    if(!found and m_properZeroFill) {
+      if(p_varweights) c.second->SetVarWeights(p_varweights);
+      c.second->AddZeroPoint(ncount,mode);              
+    }
   }
 
   int obsId = 0;
+  std::map<std::string, typename Algorithm<double>::Ptr> algorithms;
   for (size_t i=0; i<m_histos.size(); i+=2+m_histos[i]->Nbin()) {
     if(mode == 0) m_fills += ncount;
     if(mode == 1) m_fills_tmp = ncount;
-    const double value = m_obss[obsId]->Value(mom, fl);
+    const double value = m_recycle ?  m_obss[obsId]->Value(mom, fl, algorithms) : m_obss[obsId]->Value(mom, fl);
     msg_Debugging()<<"value["<<i<<"] = "<<value
                    <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
     Fill(i,value,weight,ncount,mode);
@@ -231,7 +274,7 @@ void NLO_Analysis::Fill(int i, double value, double weight, double ncount, int m
     fill = 0.75;
     if(value < m_histos[i]->HighEdge(j))
       fill = 0.25;
-    msg_Debugging()<<m_histos[i]->HighEdge(j)<<" "<<value<<" "<<fill<<"\n";
+    //msg_Debugging()<<m_histos[i]->HighEdge(j)<<" "<<value<<" "<<fill<<"\n";
     FillHisto(i+j+2,fill,weight,ncount,mode);
   }
 }
@@ -245,19 +288,17 @@ void NLO_Analysis::EvaluateNLOevt() {
   Analysis_Base::EvaluateNLOevt();
 }
 
-void NLO_Analysis::EndEvaluation(double scale)
+
+
+void NLO_Analysis::EndEvaluation(std::vector<ATOOLS::Histogram*>& hists, double scale)
 {
-  for(auto& ch: m_channels) {
-    //msg_Out()<<ch.first<<"\n";
-    ch.second->EndEvaluation(scale);
-  }
-  for(auto& h: m_histos) {
+  for(auto& h: hists) {
     h->MPISync();
   }
-  auto histos = m_histos;
-  m_histos.clear();
+  auto histos = hists;
+  hists.clear();
   for (size_t i=0; i<histos.size(); i+=2+histos[i]->Nbin()) {
-    m_histos.push_back(histos[i]);
+    hists.push_back(histos[i]);
     m_sigma[histos[i]->Name()] = std::vector<std::vector<double>>(histos[i]->Nbin()+1);
 
 
@@ -265,7 +306,7 @@ void NLO_Analysis::EndEvaluation(double scale)
     if(h->Nbin()!=2) THROW(fatal_error,"All histograms here should have two bins, this has "+std::to_string(h->Nbin()));
 
     double v = histos[i]->LowEdge(0);
-    double N = h->Fills();
+    double N = m_properZeroFill ? h->Fills() : m_fills;
     double sigW = h->Bin(1)/N;
     double sigW2 = h->Bin2(1)/N;
     double sigErr = sqrt((sigW2-sqr(sigW))/(N-1));
@@ -275,46 +316,108 @@ void NLO_Analysis::EndEvaluation(double scale)
     double BsigErr = sqrt((BsigW2-sqr(BsigW))/(N-1));
     // msg_Out()<<BsigW<<" "<<BsigW2<<" "<<BsigErr<<"\n";
     m_sigma[histos[i]->Name()][0] = {v, sigW, sigW2, sigErr, BsigW, BsigW2, BsigErr, N};
-
     for(int j=0; j<histos[i]->Nbin(); j++) {
       auto& h = histos[i+j+2];
       if(h->Nbin()!=2) THROW(fatal_error,"All histograms here should have two bins, this has "+std::to_string(h->Nbin()));
-      double v = histos[i]->HighEdge(j);
-      double N = h->Fills();
-      double sigW = h->Bin(1)/N;
-      double sigW2 = h->Bin2(1)/N;
-      double sigErr = sqrt((sigW2-sqr(sigW))/(N-1));
+      v = histos[i]->HighEdge(j);
+      N = m_properZeroFill ? h->Fills() : m_fills;
+      sigW = h->Bin(1)/N;
+      sigW2 = h->Bin2(1)/N;
+      sigErr = sqrt((sigW2-sqr(sigW))/(N-1));
       // msg_Out()<<v<<" "<<sigW<<" "<<sigW2<<" "<<sigErr<<" ";
-      double BsigW = h->Bin(2)/N;
-      double BsigW2 = h->Bin2(2)/N;
-      double BsigErr = sqrt((BsigW2-sqr(BsigW))/(N-1));
+      BsigW = h->Bin(2)/N;
+      BsigW2 = h->Bin2(2)/N;
+      BsigErr = sqrt((BsigW2-sqr(BsigW))/(N-1));
       // msg_Out()<<BsigW<<" "<<BsigW2<<" "<<BsigErr<<"\n";
       m_sigma[histos[i]->Name()][j+1] = {v, sigW, sigW2, sigErr, BsigW, BsigW2, BsigErr, N};
       delete histos[i+j+1];
     }
   }
+  Analysis_Base::EndEvaluation(hists, scale);
+}
+
+void NLO_Analysis::EndEvaluation(double scale) {
+  for(auto& ch: m_channels) {
+    //msg_Out()<<ch.first<<"\n";
+    if(!m_properZeroFill) ch.second->m_fills = m_fills;
+    ch.second->EndEvaluation(scale);
+  }
   Analysis_Base::EndEvaluation(scale);
+}
+
+void NLO_Analysis::Output(My_Out_File& ofile) {
+  for(auto& ch: m_channels) {
+    ch.second->m_addition = "Channel_"+ch.first+"_";
+    ch.second->Output(ofile);
+  }
+  for(auto& sig: m_sigma) {
+    //    msg_Out()<<sig.first<<"\n";
+    *ofile<<"# "<<m_addition<<sig.first<<"_Sigma.dat\n";
+    *ofile<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
+    for(auto& vals: sig.second) {
+      for(double val: vals) *ofile<<val<<" ";
+      *ofile<<"\n";
+    }
+    *ofile<<"\n\n";
+  }
+}
+
+void NLO_Analysis::Output(Gzip_Stream& ofile) {
+  for(auto& ch: m_channels) {
+    ch.second->m_addition = "Channel_"+ch.first+"_";
+    ch.second->Output(ofile);
+  }
+  for(auto& sig: m_sigma) {
+    //    msg_Out()<<sig.first<<"\n";
+    *ofile.stream()<<"# "<<m_addition<<sig.first<<"_Sigma.dat\n";
+    *ofile.stream()<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
+    for(auto& vals: sig.second) {
+      for(double val: vals) *ofile.stream()<<val<<" ";
+      *ofile.stream()<<"\n";
+    }
+    *ofile.stream()<<"\n\n";
+  }
 }
 
 void NLO_Analysis::Output(const std::string& pname) {
 // #ifdef USING__MPI
 //   if (MPI::COMM_WORLD.Get_rank()) return;
 // #endif
-  for(auto& ch: m_channels) {
-    ch.second->m_addition = "Channel_"+ch.first+"_";
-    ch.second->Output(pname);
+  if(m_oneFile) {
+    std::string fname = pname+"/"+m_fname;
+    //while(fname.back()=='/') fname.pop_back();
+    //std::replace( fname.begin(), fname.end(), '/', '_');
+    fname += ".dat";
+    msg_Out()<<"Write to file "<<fname<<"\n";
+    // My_Out_File ofile(fname);
+    // ofile.Open();
+    // ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
+    // Output(ofile);
+    // ofile.Close();
+    fname += ".gz";
+    Gzip_Stream ogzip;
+    ogzip.open(fname);
+    Output(ogzip);
+    ogzip.close();
   }
-  for(auto& sig: m_sigma) {
-    My_Out_File ofile(pname+"/"+m_addition+sig.first+"_Sigma.dat");
-    ofile.Open();
-    ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
-    *ofile<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
-    for(auto& vals: sig.second) {
-      for(double val: vals) *ofile<<val<<" ";
-      *ofile<<"\n";
-    }                         
+  else {
+    for(auto& ch: m_channels) {
+      ch.second->m_addition = "Channel_"+ch.first+"_";
+      ch.second->Output(pname);
+    }
+    for(auto& sig: m_sigma) {
+      My_Out_File ofile(pname+"/"+m_addition+sig.first+"_Sigma.dat");
+      ofile.Open();
+      ofile->precision(ToType<int>(rpa->gen.Variable("HISTOGRAM_OUTPUT_PRECISION")));
+      *ofile<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
+      for(auto& vals: sig.second) {
+        for(double val: vals) *ofile<<val<<" ";
+        *ofile<<"\n";
+      }
+      ofile.Close();  
+    }
   }
-  Analysis_Base::Output(pname);
+  //Analysis_Base::Output(pname);
 }
 
 Primitive_Observable_Base *NLO_Analysis::Copy() const 

@@ -21,9 +21,6 @@ namespace RESUM {
     JetAngularities_Base(const Observable_Key &args): 
       Observable_Base(args), m_algkey(args) {
       m_algkey.m_name = "FJmaxPTjet";
-      m_algtag = m_algkey.Name();
-      m_algtag += ":"+args.KwArg("R","0.8");
-      m_algtag += ":"+args.KwArg("minPT","0");
       m_alpha = to_type<double>(args.KwArg("alpha","2"));
       m_R = to_type<double>(args.KwArg("R","0.8"));
       m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) == 0;
@@ -32,6 +29,13 @@ namespace RESUM {
       m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
       m_beta = to_type<double>(args.KwArg("beta","0"));
       m_R0 = m_R;
+
+      m_algtag = m_algkey.Name();
+      m_algtag += ":"+args.KwArg("R",std::to_string(m_R));
+      m_algtag += ":"+args.KwArg("minPT","0");
+      m_algtag += ":"+args.KwArg("zcut",std::to_string(m_zcut));
+      m_algtag += ":"+args.KwArg("beta",std::to_string(m_beta));
+
       if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
       DEBUG_FUNC(Name()+" -> "+Tag());
@@ -51,7 +55,13 @@ namespace RESUM {
       // possibly enabling this also for the leading di-/multijet etc.
       // at the moment, assume we are in pp -> Zj, so only one colour charged final
       // state that corresponds to the leading jet
+      // updat: do that now, still assume that all final partons correspond to 
+      // individual jets
       if(!fl[l].Strong()) return {1,0,0,0,0,0};
+      const double pTl = p[l].PPerp();
+      for(size_t i=2; i<p.size(); i++) {
+        if(fl[i].Strong() and p[i].PPerp() > pTl) return {1,0,0,0,0,0};
+      }
       const double a = 1;
       const double b = m_alpha-1;
       const Poincare cms= {p[0]+p[1]};
@@ -101,16 +111,57 @@ namespace RESUM {
 
 
     double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
+      // See arXiv:1207.1640
+      // Note difference of factor 1./4. in definition of f_{l.a.} vs. T(L).
+      if(not ampl) THROW(fatal_error, "No amplitude provided.");
+      DEBUG_FUNC(*ampl);
       if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
         if(i<ampl->NIn() and j<ampl->NIn()) {
+          msg_Debugging()<<"Case: Initial + Initial dipole.\n";
           return sqr(m_R)/4.;
         }
         else {
-          // return sqr(m_R)*(1./4.)/4.;
-          return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+          msg_Debugging()<<"At least one of i,j is final state, so figure out if it is the leading jet.\n";
+          int lead = -1;
+          double pTlead = -1;
+          for(size_t k=ampl->NIn(); k<ampl->Legs().size(); k++) {
+            if(ampl->Leg(k)->Flav().Strong() and ampl->Leg(k)->Mom().PPerp() > pTlead) {
+              lead = k;
+              pTlead = ampl->Leg(k)->Mom().PPerp();
+            }
+          }
+          if(lead<0 or pTlead <0) 
+            THROW(fatal_error, "Did not find leading jet.");
+
+          if(i<ampl->NIn() or j<ampl->NIn()) {
+            const size_t initial = i<ampl->NIn() ? i : j; 
+            const size_t final = i<ampl->NIn() ? j : i;
+            if(final==lead) {
+              msg_Debugging()<<"Case: Leading + Initial dipole.\n";
+              return sqr(m_R)*(1./4.)/4.;
+              // return sqr(m_R)*(1./4.+sqr(m_R)/288.)/4.;
+            }
+            else {
+              msg_Debugging()<<"Case: Recoil + Initial dipole.\n";
+              // TODO: figure out which order of the signs is correct
+              const double dY = (initial==0 ? 1.:-1.) * ampl->Leg(final)->Mom().DY(ampl->Leg(lead)->Mom());
+              return 1./8. * exp(dY)/(1.+cosh(dY));
+            }
+          }
+          else {
+            // both final state jets
+            if(lead==i or lead==j) {
+              msg_Debugging()<<"Case: Leading + Recoil dipole.\n";
+              return 1./16. * sqr(tanh(ampl->Leg(i)->Mom().DY(ampl->Leg(j)->Mom())));
+            }
+            else {
+              THROW(fatal_error, "Gamma not implemented for multijets.");
+            }
+          }
         }
       }
       else {
+        msg_Debugging()<<"Case: Colour singlet.\n";
         return 0;
       }
     }
@@ -141,7 +192,7 @@ namespace RESUM {
     double Value(const std::vector<Vec4D>& ip,
             const std::vector<ATOOLS::Flavour>& fl,
             std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
-            const size_t& nin) {
+            const size_t& nin) override {
 
       for(const Vec4D& p: ip) {
         if(p.Nan()) {
@@ -158,11 +209,17 @@ namespace RESUM {
       msg_Debugging()<<"Start jet angularity.\n";
       
       auto alg = algorithms.find(m_algtag);
+      msg_Debugging()<<"Searching algs...\n";
       if(alg==algorithms.end()) {
+        msg_Debugging()<<"Known: \n";
+        for(auto alg: algorithms) msg_Debugging()<<alg.first<<"\n";
+        msg_Debugging()<<"Did not find "<<m_algtag<<".\n";
         alg = algorithms.insert({m_algtag,GetAlgorithm<double>(m_algkey, ip, fl, nin)}).first;
         msg_Debugging()<<"Found jets.\n";
       }
-      else msg_Debugging()<<"Reusing jets found earlier.\n";
+      else {
+        msg_Debugging()<<"Reusing jets found earlier.\n";
+      }
 
       const std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
       if(constits.size() <= 1) {

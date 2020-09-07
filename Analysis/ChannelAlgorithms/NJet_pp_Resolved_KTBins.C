@@ -1,21 +1,28 @@
-#ifdef USING_FJCONTRIB 
-#include "Analysis/ChannelAlgorithms/NJet_pp_Resolved.H"
+#include "Analysis/ChannelAlgorithms/NJet_pp_Resolved_KTBins.H"
 #include "Analysis/ChannelAlgorithms/KT2_pp_Ordered.H"
 #include "Observables/Algorithms/FastjetAlg.H"
 #include "Analysis/Observable_Base.H"
+#include "Tools/StringTools.H"
 
 using namespace RESUM;
 
-NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
+NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
   : ChannelAlgorithm_Base(parameters) {
   int nmin = RESUM::to_type<int>(parameters.KwArg("NMIN","1"));
   int nmax = RESUM::to_type<int>(parameters.KwArg("NMAX"));
+  m_edges = split(parameters.KwArg("EDGES"),"_");
+  for(const std::string& e: m_edges) {
+    m_binEdges.push_back(RESUM::to_type<double>(e));
+  }
   std::vector<std::string> params = {"-1",parameters.KwArg("MODE","ALL"),"SUMNEUTRAL:"+parameters.KwArg("SUMNEUTRAL","0")};
   for(int n=nmin; n<=nmax; n++) {
     params[0] = std::to_string(n);
     m_resolvers.emplace_back(new KT2_pp_Ordered({"KT2_pp_Ordered",params}));
     for(const std::string& name: m_resolvers.back()->ChannelNames(true)) {
-      m_channelNames.push_back(name);
+      for(size_t i=0; i<m_edges.size()-1; i++) {
+        m_channelNames.push_back(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
+      }
+      m_channelNames.push_back(name+"_PtLead_"+m_edges.back());
     }
     // m_channelNames.insert(m_channelNames.end(),
     //                       m_resolvers.back()->ChannelNames().begin(),
@@ -24,7 +31,7 @@ NJet_pp_Resolved::NJet_pp_Resolved(const ChAlg_Key& parameters)
 }
 
 
-std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
+std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                       const std::vector<ATOOLS::Flavour>& fl,
                                       const size_t &nin,
                                       std::vector<ATOOLS::Vec4D>* pout) {
@@ -45,6 +52,8 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
   std::string channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
   msg_Debugging()<<"Channel candidate: "<<channel<<".\n";
   FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
+  // pt of leading (ungroomed) jet
+  const double PT = fj.jetScales(0);
   while(fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
     for(auto& p: fj.pseudoJets()[0].constituents()) {
       msg_Debugging()<<p.e()<<" "<<p.px()<<" "<<p.py()<<" "<<p.pz()<<"\n";
@@ -58,31 +67,27 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
     msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
     fj = FJmaxPTjet(p,f,nin,Observable_Key("ChAlg",m_params));
   }
-  // std::vector<ATOOLS::Flavour> lead = fj.apply(f,0);
-  
-  // if(f.size()==5 and mult<3) {
-  //   for(int i=0; i<ip.size(); i++) {
-  //     if(fl[i].Strong()) {
-  //       msg_Out()<<ip[i]<<" "<<fl[i]<<"\n";
-  //     }
-  //   }
-  //   msg_Out()<<"Found "<<mult<<" jets.\n";
-  //   for(auto& f: lead) msg_Out()<<f<<" ";
-  //   msg_Out()<<" -> "<<channel<<"\n\n\n";
-  // }
   msg_Debugging()<<"Returning "<<channel<<".\n";
   if(pout) {
     *pout = p;
   }
+  if(PT > m_binEdges.back()) channel += "_PtLead_"+m_edges.back();
+  else {
+    for(size_t i=0; i<m_edges.size()-1; i++) {
+      if(PT < m_binEdges[i+1] and PT > m_binEdges[i]) {
+        channel += "_PtLead_"+m_edges[i]+"_"+m_edges[i+1];
+      }
+    }
+  }
   return channel;//m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }
 
-DECLARE_GETTER(NJet_pp_Resolved,"NJet_pp_Resolved",ChAlg,ChAlg_Key);
-ChAlg *ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved>::
+DECLARE_GETTER(NJet_pp_Resolved_KTBins,"NJet_pp_Resolved_KTBins",ChAlg,ChAlg_Key);
+ChAlg *ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved_KTBins>::
 operator()(const Parameter_Type &args) const 
-{ return new NJet_pp_Resolved(args); }
-void ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved>::
+{ return new NJet_pp_Resolved_KTBins(args); }
+void ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved_KTBins>::
 PrintInfo(std::ostream &str,const size_t width) const
-{ str<<"NJet_pp_Resolved"; }
+{ str<<"NJet_pp_Resolved_KTBins"; }
 
-#endif
+

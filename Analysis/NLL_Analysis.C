@@ -162,7 +162,7 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   // find out channels
   vector<string> channels(m_channelAlgs.size());
   for(size_t i=0; i<channels.size(); i++) {
-    channels[i] = m_channelAlgs[i]->Channel(mom,fl,2);
+    channels[i] = m_channelAlgs[i]->Channel(mom,fl,2,true);
   }
   for(const string& channel: channels) {
     msg_Debugging()<<"Found channel "<< channel<<"...\n";

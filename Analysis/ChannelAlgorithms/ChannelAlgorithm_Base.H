@@ -36,18 +36,30 @@ namespace RESUM {
     typedef std::shared_ptr<ChannelAlgorithm_Base> Ptr;
     ChannelAlgorithm_Base() = default;
     ChannelAlgorithm_Base(const ChAlg_Key& params)
-      : m_name(params.Name()),  m_params(params.m_params) { }
+      : m_name(params.Name()),  m_params(params.m_params) { 
+      m_tag = params.KwArg("TAG","");
+    }
   
+
+    virtual std::string Channel(const ATOOLS::Particle_List& particles, bool addTag,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr);
     virtual std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                 const std::vector<ATOOLS::Flavour>& fl,
-                                const size_t &nin) = 0;
+                                const size_t &nin, bool addTag,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr);
+    
 
-    std::string Channel(const ATOOLS::Particle_List& particles);
-    
-    virtual std::vector<std::string> ChannelNames() = 0;
-    
+    virtual std::vector<std::string> ChannelNames(bool addTag);
+
   protected:
+    virtual std::vector<std::string> ChannelNames() = 0;
+    virtual std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
+                                const std::vector<ATOOLS::Flavour>& fl,
+                                const size_t &nin,
+                                std::vector<ATOOLS::Vec4D>* pout=nullptr) = 0;
+
     std::string m_name;
+    std::string m_tag;
     std::vector<std::string> m_params;
 
   }; // end of class ChannelAlgorithm_Base
