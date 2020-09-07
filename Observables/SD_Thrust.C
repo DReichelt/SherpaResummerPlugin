@@ -273,7 +273,10 @@ namespace RESUM {
       double T = ( p_l.Abs() + p_r.Abs() );
       double tau = (ptot - T) / ptot_perp_ungroomed;
       return tau;  
-#endif        
+#else
+      THROW(fatal_error, "No grooming without fastjet.");
+      return 0;
+#endif
     }
     
   };// end of class Thrust

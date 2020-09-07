@@ -22,14 +22,14 @@ KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters, bool orderByPT)
   if(m_params.size()>1) {
     if(m_params[1] == "" or
        m_params[1] == "''" or
-       m_params[1] == "ALL") m_mode = MODE::ALL;
-    else if(m_params[1] == "BLAND") m_mode = MODE::BLAND;
-    else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
-    else THROW(fatal_error,
-               "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
+       m_params[1] == "ALL") { m_mode = MODE::ALL; }
+    else if(m_params[1] == "BLAND") { m_mode = MODE::BLAND; }
+    else if(m_params[1] == "BLAND_Z") { m_mode = MODE::BLAND_Z; }
+    else { THROW(fatal_error,
+                 "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+"."); }
     m_sumNeutral = parameters.KwArg("SUMNEUTRAL","0") != "0";
-    if(m_sumNeutral) msg_Debugging()<<"Will sum momenta of color-neutral particles.\n";
-    else msg_Debugging()<<"Will use momenta of color-neutral particles individually.\n";
+    if(m_sumNeutral) { msg_Debugging()<<"Will sum momenta of color-neutral particles.\n"; }
+    else { msg_Debugging()<<"Will use momenta of color-neutral particles individually.\n"; }
   }
   if(m_orderByPT) {
     if(m_mode==MODE::ALL) {
