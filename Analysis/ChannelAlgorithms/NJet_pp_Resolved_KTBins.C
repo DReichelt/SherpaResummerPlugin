@@ -1,3 +1,4 @@
+#ifdef USING_FJCONTRIB 
 #include "Analysis/ChannelAlgorithms/NJet_pp_Resolved_KTBins.H"
 #include "Analysis/ChannelAlgorithms/KT2_pp_Ordered.H"
 #include "Observables/Algorithms/FastjetAlg.H"
@@ -89,5 +90,5 @@ operator()(const Parameter_Type &args) const
 void ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved_KTBins>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"NJet_pp_Resolved_KTBins"; }
-
+#endif
 

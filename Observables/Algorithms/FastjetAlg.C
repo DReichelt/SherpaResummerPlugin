@@ -1,3 +1,4 @@
+#ifdef USING_FJCONTRIB
 #include "Observables/Algorithms/FastjetAlg.H"
 #include "Analysis/Observable_Base.H"
 
@@ -62,3 +63,4 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
                {m_jetAxis.px(),m_jetAxis.py(),m_jetAxis.pz()}};
   m_jetScales = {m_jet.perp(), m_sdJet.perp()};
 }
+#endif

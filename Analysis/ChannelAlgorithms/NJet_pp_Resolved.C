@@ -1,3 +1,4 @@
+#ifdef USING_FJCONTRIB 
 #include "Analysis/ChannelAlgorithms/NJet_pp_Resolved.H"
 #include "Analysis/ChannelAlgorithms/KT2_pp_Ordered.H"
 #include "Observables/Algorithms/FastjetAlg.H"
@@ -84,4 +85,4 @@ void ATOOLS::Getter<ChAlg,ChAlg_Key,NJet_pp_Resolved>::
 PrintInfo(std::ostream &str,const size_t width) const
 { str<<"NJet_pp_Resolved"; }
 
-
+#endif

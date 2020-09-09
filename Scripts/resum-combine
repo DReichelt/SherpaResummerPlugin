@@ -543,13 +543,13 @@ if __name__=='__main__':
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                         else:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{OBS}_Sigma.dat"
-                            outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
+                        outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
                     else:
                         if args.channel_fo_add is None:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{VAR}_{OBS}_Sigma.dat"
                         else:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{VAR}_{OBS}_Sigma.dat"
-                            outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}_{VAR}"
+                        outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}_{VAR}"
                             
                     rs = Sigma.from_file(
                         inpath.format(ANALYSIS=args.nlo_rs_file,

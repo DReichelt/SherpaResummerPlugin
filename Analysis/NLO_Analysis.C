@@ -22,7 +22,7 @@ namespace RESUM {
 
     void Fill(int i, double value, double weight, double ncount, int mode);
     std::map<std::string, NLO_Analysis*> m_channels;
-    Primitive_Observable_Base * Copy() const;
+    Primitive_Observable_Base * Copy() const override;
     std::string m_addition = "";
     std::string m_fname;
     int m_nborn = -1;
