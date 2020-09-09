@@ -417,7 +417,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV and m_gmode & GROOM_MODE::SD){
       double temp = 0.;
       const double Rpp0 = CalcRpp(0., GROOM_MODE::SD, temp);
-      const double Fp0 = -(GAMMA_E+DiGamma(1.+Rp0))*Rpp0;
+      const double Fp0 = (GAMMA_E+DiGamma(1.+Rp0))*Rpp0;
       weight*=exp(-epRatio*pow(L,1) * Fp0);
     }
   }
@@ -1270,7 +1270,7 @@ double Resum::CalcColl(const double L, const double LResum, const int order, dou
         const double r2_beta1AtEnd = -as*beta1/M_PI/beta0/beta0*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
         const double r2_cmwAtEnd = 2.*as*beta0*(K_CMW/pow(2.*M_PI*beta0,2.)+Lmur/M_PI/beta0/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
         const double r2_hardcollAtEnd = 2.*as/M_PI/(m_a[i]+m_b[i]);
-        const double r1pAtEnd = -2.*as*beta0/m_b[i]*(1./(m_a[i]+m_b[i])-(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i])));
+        const double r1pAtEnd = -2.*as/M_PI/m_b[i]*(1./(m_a[i]+m_b[i])-(1.+m_beta)/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i])));
         const double r1dAtEnd = 2.*as/M_PI/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
         
         const double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+LResum*r1pAtEnd;
