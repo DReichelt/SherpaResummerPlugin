@@ -417,7 +417,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV and m_gmode & GROOM_MODE::SD){
       double temp = 0.;
       const double Rpp0 = CalcRpp(0., GROOM_MODE::SD, temp);
-      const double Fp0 = (GAMMA_E+DiGamma(1.+Rp0))*Rpp0;
+      const double Fp0 = -(GAMMA_E+DiGamma(1.+Rp0))*Rpp0;
       weight*=exp(-epRatio*pow(L,1) * Fp0);
     }
   }
