@@ -135,11 +135,6 @@ namespace RESUM {
     {
       return a.Sqr()>b.Sqr();
     }
-    
-    static double rapidity(const Vec4D p)
-    {
-      return log((p[0]+p[3])/(p[0]-p[3]))/2.;
-    }
 
     double Value(const std::vector<Vec4D>& momenta,
                  const std::vector<Flavour>& fl,
@@ -153,7 +148,7 @@ namespace RESUM {
       momenta_ymax.push_back(momenta[0]);
       momenta_ymax.push_back(momenta[1]);
       for (size_t i(nin);i<n;++i){
-          if(m_ymax<0. || abs(rapidity(momenta[i]))<m_ymax){
+          if(m_ymax<0. || abs(momenta[i].Y())<m_ymax){
             vectors[i-nin]=Vec3D(momenta[i][1],momenta[i][2],0.0);
             momenta_ymax.push_back(momenta[i]);
           }
@@ -200,8 +195,9 @@ namespace RESUM {
           axis = maxaxis;
         }
       }
-
       
+      if(!(m_gmode & GROOM_MODE::SD)) return 1.-thrust;
+
       double ptot_perp_ungroomed = 0; //scaling factor
 
       
@@ -221,54 +217,69 @@ namespace RESUM {
           THROW(fatal_error, "Something went wrong.");
         }
       }
-
+/*
       if (left_hemi.size() == 0 or right_hemi.size() == 0) {
 //         THROW(fatal_error,"Empty hemisphere.");
-          std::cout << left_hemi.size()<< " " << right_hemi.size() << std::endl;
+          std::cout << left_hemi.size()<< " " << right_hemi.size() << " " << momenta.size() << " " << momenta_ymax.size() << std::endl;
           std::cout << axis[0] << " " << axis[1] << std::endl;
-          std::cout << momenta_ymax[0][1] << " " << momenta_ymax[0][2] << " " << momenta_ymax[0][3] << std::endl;
-          std::cout << momenta_ymax[1][1] << " " << momenta_ymax[1][2] << " " << momenta_ymax[1][3] << std::endl;
-          std::cout << momenta_ymax[2][1] << " " << momenta_ymax[2][2] << " " << momenta_ymax[2][3] << std::endl;
-          std::cout << momenta_ymax[3][1] << " " << momenta_ymax[3][2] << " " << momenta_ymax[3][3] << std::endl;
-          std::cout << momenta_ymax[4][1] << " " << momenta_ymax[4][2] << " " << momenta_ymax[4][3] << std::endl;
-          return 0.;
+//          std::cout << momenta_ymax[0][1] << " " << momenta_ymax[0][2] << " " << momenta_ymax[0][3] << std::endl;
+//          std::cout << momenta_ymax[1][1] << " " << momenta_ymax[1][2] << " " << momenta_ymax[1][3] << std::endl;
+//          std::cout << momenta_ymax[2][1] << " " << momenta_ymax[2][2] << " " << momenta_ymax[2][3] << std::endl;
+//          std::cout << momenta_ymax[3][1] << " " << momenta_ymax[3][2] << " " << momenta_ymax[3][3] << std::endl;
+//          std::cout << momenta_ymax[4][1] << " " << momenta_ymax[4][2] << " " << momenta_ymax[4][3] << std::endl;
+          std::cout << momenta[0][1] << " " << momenta[0][2] << " " << momenta[0][3] << std::endl;
+          std::cout << momenta[1][1] << " " << momenta[1][2] << " " << momenta[1][3] << std::endl;
+          std::cout << momenta[2][1] << " " << momenta[2][2] << " " << momenta[2][3] << std::endl;
+          std::cout << momenta[3][1] << " " << momenta[3][2] << " " << momenta[3][3] << std::endl;
+          std::cout << momenta[4][1] << " " << momenta[4][2] << " " << momenta[4][3] << std::endl;
+          std::cout << abs(momenta[2].Y()) << " " << abs(momenta[3].Y()) << " " << abs(momenta[4].Y()) << std::endl;
+//          return 0.;
         // empty_hemisphere += 1;
         // cout << "Empty hemisphere!! in event " << nevent << ". Veto Event and skip. This has occured: " << empty_hemisphere << " times        " << endl;
         // AddZero(ncount,0);
       }
+*/
       
+      // Calculate ptot
+      double ptot = 0;
+
       int number_of_particles = left_hemi.size() + right_hemi.size();
       
       fastjet::JetDefinition jet_def(fastjet::genkt_algorithm, 1000., 0.0, fastjet::E_scheme, fastjet::Best);
-      fastjet::ClusterSequence   cs_l(left_hemi, jet_def);
-      fastjet::ClusterSequence   cs_r(right_hemi, jet_def);
-      vector<fastjet::PseudoJet> right_jets = cs_r.exclusive_jets(1);
-      vector<fastjet::PseudoJet> left_jets = cs_l.exclusive_jets(1);
-      
-
       fastjet::contrib::SoftDrop softdrop(m_beta, m_zcut, m_R0); // Inputs are beta, zcut, R0
-      vector<fastjet::PseudoJet> sd_right_hemi = softdrop(right_jets);
-      vector<fastjet::PseudoJet> sd_left_hemi = softdrop(left_jets);
-      vector<fastjet::PseudoJet>  right = sd_right_hemi[0].constituents();
-      vector<fastjet::PseudoJet>  left = sd_left_hemi[0].constituents();
-      vector<fastjet::PseudoJet>  left_ungroom = left_jets[0].constituents();
-      vector<fastjet::PseudoJet>  right_ungroom = right_jets[0].constituents();
 
-      // Calculate ptot
-      double ptot = 0;
-      
-      for (unsigned i = 0; i < right.size(); i++){
-        ptot += right[i].pt();
+      Vec3D p_l, p_r;
+
+      if(left_hemi.size()>0){
+        fastjet::ClusterSequence   cs_l(left_hemi, jet_def);
+        vector<fastjet::PseudoJet> left_jets = cs_l.exclusive_jets(1);
+        vector<fastjet::PseudoJet> sd_left_hemi = softdrop(left_jets);
+        vector<fastjet::PseudoJet>  left = sd_left_hemi[0].constituents();
+        vector<fastjet::PseudoJet>  left_ungroom = left_jets[0].constituents();
+        for (unsigned i = 0; i < left.size(); i++){
+          ptot += left[i].pt();
+        } 
+        p_l = {sd_left_hemi[0].px(), sd_left_hemi[0].py(), 0};
+      }
+      else{
+        p_l = {0., 0., 0.};
       }
 
-      for (unsigned i = 0; i < left.size(); i++){
-        ptot += left[i].pt();
-      } 
-      
-      // Calculate SD thrust axes
-      Vec3D p_r = {sd_right_hemi[0].px(), sd_right_hemi[0].py(), 0};
-      Vec3D p_l = {sd_left_hemi[0].px(), sd_left_hemi[0].py(), 0};
-      
+      if(right_hemi.size()>0){
+        fastjet::ClusterSequence   cs_r(right_hemi, jet_def);
+        vector<fastjet::PseudoJet> right_jets = cs_r.exclusive_jets(1);
+        vector<fastjet::PseudoJet> sd_right_hemi = softdrop(right_jets);
+        vector<fastjet::PseudoJet>  right = sd_right_hemi[0].constituents();
+        vector<fastjet::PseudoJet>  right_ungroom = right_jets[0].constituents();
+        for (unsigned i = 0; i < right.size(); i++){
+          ptot += right[i].pt();
+        }
+        p_r = {sd_right_hemi[0].px(), sd_right_hemi[0].py(), 0};
+      }
+      else{
+        p_r = {0., 0., 0.};
+      }
+     
       // thrust
       double T = ( p_l.Abs() + p_r.Abs() );
       double tau = (ptot - T) / ptot_perp_ungroomed;
