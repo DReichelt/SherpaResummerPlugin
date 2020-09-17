@@ -680,37 +680,42 @@ if __name__=='__main__':
             
 
                 
+    if args.match:
+        for var in [None]+args.variations:
+            if var is None: resultDir = args.output_match
+            else: resultDir = '{DIR}-{VAR}'.format(DIR=args.output_match,
+                                                   VAR=var)
+            fs = {}
+            for obs_mode in args.observable:
+                obs = obs_mode.split(":")[0]
+                for f in glob.glob("{DIR}/{OBS}/*.yoda".format(DIR=resultDir,
+                                                               OBS=obs)):
+                    name = f.split("/")[-1]
+                    if not name in fs:
+                        fs[name] = yoda.readYODA(f,asdict=False)
+                    else:
+                        fs[name] += yoda.readYODA(f,asdict=False)
+
+            dirName = "{DIR}/Summary".format(DIR=resultDir)
+            if not os.path.exists(dirName): os.makedirs(dirName)
+            for key in fs:
+                yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
+                                                             NAME=key))
+
+            for ch in channels:
                 fs = {}
                 for obs_mode in args.observable:
                     obs = obs_mode.split(":")[0]
-                    for f in glob.glob("{DIR}/{OBS}/*.yoda".format(DIR=resultDir,
-                                                                   OBS=obs)):
+                    for f in glob.glob("{DIR}/{OBS}-{CH}/*.yoda".format(DIR=resultDir,
+                                                                        OBS=obs,CH=ch)):
                         name = f.split("/")[-1]
                         if not name in fs:
                             fs[name] = yoda.readYODA(f,asdict=False)
                         else:
                             fs[name] += yoda.readYODA(f,asdict=False)
 
-                dirName = "{DIR}/Summary".format(DIR=resultDir)
+                dirName = "{DIR}/Summary-{CH}".format(DIR=resultDir,CH=ch)
                 if not os.path.exists(dirName): os.makedirs(dirName)
                 for key in fs:
                     yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
                                                                  NAME=key))
-
-                for ch in channels:
-                    fs = {}
-                    for obs_mode in args.observable:
-                        obs = obs_mode.split(":")[0]
-                        for f in glob.glob("{DIR}/{OBS}-{CH}/*.yoda".format(DIR=resultDir,
-                                                                            OBS=obs,CH=ch)):
-                            name = f.split("/")[-1]
-                            if not name in fs:
-                                fs[name] = yoda.readYODA(f,asdict=False)
-                            else:
-                                fs[name] += yoda.readYODA(f,asdict=False)
-
-                    dirName = "{DIR}/Summary-{CH}".format(DIR=resultDir,CH=ch)
-                    if not os.path.exists(dirName): os.makedirs(dirName)
-                    for key in fs:
-                        yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
-                                                                     NAME=key))
