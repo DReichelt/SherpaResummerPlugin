@@ -157,7 +157,9 @@ NLO_Analysis_2::NLO_Analysis_2(const Argument_Matrix &params):
       const std::vector<std::string> es = RESUM::split(params[i][1].substr(pos+6),"_");
       edges = std::valarray<double>(es.size());
       for(size_t j=0; j<es.size(); j++) edges[j] = ToType<double>(ip->Interprete(es[j]));
-      
+      msg_Debugging()<<"Init "<<params[i][0]<<" with edges ";
+      for(double e: edges) msg_Debugging()<<e<<" ";
+      msg_Debugging()<<".\n";
     }
     else {
       const double xmin = ToType<double>(ip->Interprete(params[i][1]));
