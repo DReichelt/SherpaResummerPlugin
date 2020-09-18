@@ -186,9 +186,9 @@ void NLL_Analysis::Evaluate(const ATOOLS::Blob_List& blobs,
   // get results from resum and fill
   for(size_t k=0; k<m_nObs; k++) {
     const std::string& name = m_ObsNames[k];
-    const std::vector<double>& resNLL = p_resum->m_resNLL[k];
-    const std::vector<double>& resExpLO = p_resum->m_resExpLO[k];
-    const std::vector<double>& resExpNLO = p_resum->m_resExpNLO[k];
+    const std::vector<double>& resNLL = p_resum->resNLL(k);
+    const std::vector<double>& resExpLO = p_resum->resExpLO(k);
+    const std::vector<double>& resExpNLO = p_resum->resExpNLO(k);
     const size_t n = p_resum->m_xvals[k].size();
     for(size_t i=0; i<n; i++) {
       const double nll = weight*resNLL[i];
