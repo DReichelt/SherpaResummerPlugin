@@ -188,7 +188,9 @@ if __name__=='__main__':
     parser.add_argument('--channel-nll-duplicate', default=None)
     parser.add_argument('--variations', default=None)
     parser.add_argument('--match', action='store_true', default=False)
+    parser.add_argument('--match-args')
     parser.add_argument('--message', '-m', default='info')
+
     
     args = parser.parse_args(sys.argv[1:])
     if args.channels is None: 
@@ -610,8 +612,8 @@ if __name__=='__main__':
             yodas = []
             for var in [None]+args.variations:
                 if var is None:
-                    inpath = "{ANALYSIS}/{ACC}/{VAR}_{OBS}_Sigma.dat"
-                    outpath = "/Resum/{OBS}_{ACC}_{VAR}"
+                    inpath = "{ANALYSIS}/{ACC}/{OBS}_Sigma.dat"
+                    outpath = "/Resum/{OBS}_{ACC}"
                 else:
                     inpath = "{ANALYSIS}/{ACC}/{VAR}/{OBS}_Sigma.dat"
                     outpath = "/Resum/{OBS}_{ACC}_{VAR}"
@@ -637,13 +639,13 @@ if __name__=='__main__':
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{OBS}_Sigma.dat"
                         else:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{OBS}_Sigma.dat"
-                            outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
+                        outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}"
                     else:
                         if args.channel_fo_add is None:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{VAR}_{OBS}_Sigma.dat"
                         else:
                             inpath = "{ANALYSIS}/{ACC}/Channel_{CH}_{ADD}_{VAR}_{OBS}_Sigma.dat"
-                            outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}_{VAR}"
+                        outpath = "/Resum/{OBS}_{ACC}_Channel_{CH}_{VAR}"
                     sigma = Sigma.from_file(
                         inpath.format(ANALYSIS=args.lo_file,
                                       ACC="NLO",
@@ -696,7 +698,7 @@ if __name__=='__main__':
                                                        VAR=var)
                     logging.info("Matching for {VAR}, {OBS}".format(VAR=var,OBS=obs))
                     
-                command = (['resum-match',
+                command = ['resum-match',
                             '-lo',args.output_lo,
                             '-nlo',args.output_nlo,
                             '-nll',args.output_nll,
@@ -706,7 +708,9 @@ if __name__=='__main__':
                             '--name',str(var),
                             '-o', '{DIR}/{OBS}'.format(DIR=resultDir,
                                                        OBS=obs)]
-                           + chstring)
+                if not args.match_args is None:
+                    command += args.match_args.split()
+                command += chstring
 
                 logging.debug("Calling resum-match with command "+" ".join(command))
 
@@ -768,18 +772,23 @@ for var in [None]+args.variations:
             yoda.writeYODA(fs[key],"{DIR}/{NAME}".format(DIR=dirName,
                                                          NAME=key))
 
+
 genDirName = "{DIR}/Envelopes"
 genSummaryName = "{DIR}/Summary"
 dirName = genDirName.format(DIR=args.output_match)
 summaryName = genSummaryName.format(DIR=args.output_match)
 if not os.path.exists(dirName): os.makedirs(dirName)
 logging.info("Create envelopes in {DIR}".format(DIR=dirName))
-for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
-    name = f.split("/")[-1]
-    command = (['yodaenvelopes',
-               '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
-               '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
-               +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d),NAME=name) for d in varDirs])
+if len(args.variations) > 0:
+    for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
+        name = f.split("/")[-1]
+        command = (['yodaenvelopes',
+                    '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
+                    '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
+                   +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d),NAME=name) for d in varDirs])
+        subprocess.call(command)
+else:
+    command = ['cp','-r',summaryName,dirName]
     subprocess.call(command)
     
 genDirName = "{DIR}/Envelopes-{CH}"
@@ -789,10 +798,14 @@ for ch in channels:
     dirName = genDirName.format(DIR=args.output_match,CH=ch)
     summaryName = genSummaryName.format(DIR=args.output_match,CH=ch)
     if not os.path.exists(dirName): os.makedirs(dirName)
-    for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
-        name = f.split("/")[-1]
-        command = (['yodaenvelopes',
-                    '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
-                    '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
-                   +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d,CH=ch),NAME=name) for d in varDirs])
+    if len(args.variations) > 0:
+        for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
+            name = f.split("/")[-1]
+            command = (['yodaenvelopes',
+                        '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
+                        '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
+                       +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d,CH=ch),NAME=name) for d in varDirs])
+            subprocess.call(command)
+    else:
+        command = ['cp','-r',summaryName,dirName]
         subprocess.call(command)

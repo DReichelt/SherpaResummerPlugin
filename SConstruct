@@ -28,8 +28,8 @@ AddOption('--enable-arblib',
           dest='arblib',
           action='store_true',
           default=False,
-          help=('Enable use of arblib.') )
-
+          help=('Enable use of arblib.',
+                'Use arblibpath to set path if needed.'))
 
 
 vars = Variables('.SConstruct')
@@ -43,8 +43,9 @@ vars.Add(PathVariable('fjcpath','path to fastjetcontrib','${sherpa}'))
 vars.Add(BoolVariable('yoda','Whether to enable yoda.', GetOption('yoda')))
 vars.Add(PathVariable('yodapath','path to yoda','${sherpa}'))
 vars.Add(BoolVariable('hyppy','Whether to enable python.', GetOption('hyppy')))
-vars.Add(PathVariable('pythonpath','path to yoda','${sherpa}'))
+vars.Add(PathVariable('pythonpath','path to python','${sherpa}'))
 vars.Add(BoolVariable('arblib','Whether to enable arblib.', GetOption('arblib')))
+vars.Add(PathVariable('arblibpath','path to arblib','${sherpa}'))
 
 env = Environment(variables=vars,
                   CPPPATH=['${sherpa}/include/SHERPA-MC',
@@ -84,6 +85,7 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                   'Math/blas0.cpp',
                                   'Math/blas1_d.cpp',
                                   'Math/HypGeo.C',
+                                  'Math/DiGamma.C',
                                   'Tools/StringTools.C',
                                   'Tools/Key_Base.C'],
 	                        LIBPATH=(['${sherpa}/lib/SHERPA-MC']
@@ -92,14 +94,18 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                          + (['${yodapath}/lib']
                                             if yoda else [])
                                          + (['${pythonpath}/lib']
-                                            if hyppy else [])),
+                                            if hyppy else [])
+                                         + (['${arblibpath}/lib']
+                                            if arblib else [])),
 	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
                                        + (['${fjcpath}/lib']
                                           if fjc else [])
                                        + (['${yodapath}/lib']
                                           if yoda else [])
                                        + (['${pythonpath}/lib']
-                                          if hyppy else [])),
+                                          if hyppy else [])
+                                       + (['${arblibpath}/lib']
+                                          if arblib else [])),
 	                        LIBS=([]
                                       + (['python2.7']
                                          if hyppy else [])
@@ -176,14 +182,18 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                          + (['${yodapath}/lib']
                                             if yoda else [])
                                          + (['${pythonpath}/lib']
-                                            if hyppy else [])),
+                                            if hyppy else [])
+                                         + (['${arblibpath}/lib']
+                                            if arblib else [])),
 	                        RPATH=(['${sherpa}/lib/SHERPA-MC']
                                        + (['${fjcpath}/lib']
                                           if fjc else [])
                                        + (['${yodapath}/lib']
                                           if yoda else [])
                                        + (['${pythonpath}/lib']
-                                          if hyppy else [])),
+                                          if hyppy else [])
+                                       + (['${arblibpath}/lib']
+                                          if arblib else [])),
 	                        LIBS=(['SherpaAnalyses',
                                       'SherpaAnalysis',
                                       'ResumCommon']

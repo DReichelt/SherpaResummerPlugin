@@ -42,10 +42,10 @@ namespace RESUM {
 
     void Evaluate(const ATOOLS::Blob_List & blobs,
 		  double weight,double ncount) override;
-    void Evaluate(double weight, double ncount,int mode) {}
+    void Evaluate(double weight, double ncount,int mode) override {}
     void Output(const std::string& pname) override;
     void EndEvaluation(double scale) override;
-    Primitive_Observable_Base * Copy() const;
+    Primitive_Observable_Base * Copy() const override;
 
   };// end of class NLL_Analysis
 

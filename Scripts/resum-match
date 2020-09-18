@@ -115,16 +115,15 @@ class Sigma(object):
             else:
                 # likely intentionally skipping LO
                 logging.debug("No LO file ({FILE}).".format(FILE=lo_file))
-            self.lo = None
+            self.lo = np.zeros_like(self.nll)
             for ch in args.channels:
-                self.ch_lo[ch] = None
+                self.ch_lo[ch] = np.zeros_like(self.ch_nll[ch])
 
         self.ch_nlo = {}
         if os.path.exists(nlo_file):
             logging.debug("Found NLO file {}".format(nlo_file))
             if not self.has_lo:
-                logging.critical("NLO provided but not LO. Aborting.")
-                exit(1)
+                logging.error("NLO provided but not LO.")
             self.has_nlo = True
             f_nlo = yoda.readYODA(nlo_file)
             for ch in args.channels:
@@ -138,7 +137,6 @@ class Sigma(object):
                 Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_barSigma".format(OBS=obs),f_nlo)
                 self.match_bins(Sigma_NLL,Sigma_NLO)
                 self.nlo = np.array([p.y for p in Sigma_NLO.points])
-
                 
         else:
             self.has_nlo = False

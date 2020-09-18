@@ -22,69 +22,113 @@ KT2_pp_Ordered::KT2_pp_Ordered(const ChAlg_Key& parameters, bool orderByPT)
   if(m_params.size()>1) {
     if(m_params[1] == "" or
        m_params[1] == "''" or
-       m_params[1] == "ALL") m_mode = MODE::ALL;
-    else if(m_params[1] == "BLAND") m_mode = MODE::BLAND;
-    else if(m_params[1] == "BLAND_Z") m_mode = MODE::BLAND_Z;
-    else THROW(fatal_error,
-               "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+".");
+       m_params[1] == "ALL") { m_mode = MODE::ALL; }
+    else if(m_params[1] == "BLAND") { m_mode = MODE::BLAND; }
+    else if(m_params[1] == "BLAND_Z") { m_mode = MODE::BLAND_Z; }
+    else { THROW(fatal_error,
+                 "Channel mode not knwon: Name = "+m_name+", mode = "+m_params[1]+"."); }
     m_sumNeutral = parameters.KwArg("SUMNEUTRAL","0") != "0";
-    if(m_sumNeutral) msg_Debugging()<<"Will sum momenta of color-neutral particles.\n";
-    else msg_Debugging()<<"Will use momenta of color-neutral particles individually.\n";
+    if(m_sumNeutral) { msg_Debugging()<<"Will sum momenta of color-neutral particles.\n"; }
+    else { msg_Debugging()<<"Will use momenta of color-neutral particles individually.\n"; }
   }
-  if(m_mode==MODE::ALL) {
-    m_channelNames.push_back("other");
-    for(int j=0; j<=m_nborn; j+=2) {
-      std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      do {
-        m_channelNames.push_back("qqTO"+help);
-      } while ( std::next_permutation(help.begin(), help.end()) );
-      help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      do {
-        m_channelNames.push_back("ggTO"+help);
-      } while ( std::next_permutation(help.begin(), help.end()) );
-      if(m_nborn-j > 0) {
-        help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
+  if(m_orderByPT) {
+    if(m_mode==MODE::ALL) {
+      m_channelNames.push_back("other");
+      for(int j=0; j<=m_nborn; j+=2) {
+        std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
         do {
-          m_channelNames.push_back("gqTO"+help);
+          m_channelNames.push_back("qqTO"+help);
         } while ( std::next_permutation(help.begin(), help.end()) );
-      }
-    }
-  }
-  else if(m_mode==MODE::BLAND) {
-    for(int j=0; j<=m_nborn; j+=2) {
-      std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      do {
-        m_channelNames.push_back("qqTO"+help+std::string("_BLAND"));
-      } while ( std::next_permutation(help.begin(), help.end()) );
-      help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      do {
-        m_channelNames.push_back("ggTO"+help+std::string("_BLAND"));
-      } while ( std::next_permutation(help.begin(), help.end()) );
-      if(m_nborn-j > 0) {
-        help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
-        do {
-          m_channelNames.push_back("gqTO"+help+std::string("_BLAND"));
-        } while ( std::next_permutation(help.begin(), help.end()) );
-      }
-    }
-  }
-  else if(m_mode==MODE::BLAND_Z) {
-    for(int j=0; j<=m_nborn; j+=2) {
-      std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
-      do {
-        m_channelNames.push_back("qqTO"+help+std::string("_BLAND_Z"));
-      } while ( std::next_permutation(help.begin(), help.end()) );
-      if(j>1) {
         help = std::string(m_nborn-j,'g')+std::string(j,'q');
         do {
-          m_channelNames.push_back("ggTO"+help+std::string("_BLAND_Z"));
+          m_channelNames.push_back("ggTO"+help);
         } while ( std::next_permutation(help.begin(), help.end()) );
+        if(m_nborn-j > 0) {
+          help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
+          do {
+            m_channelNames.push_back("gqTO"+help);
+          } while ( std::next_permutation(help.begin(), help.end()) );
+        }
       }
-      if(m_nborn-j > 0) {
-        help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
+    }
+    else if(m_mode==MODE::BLAND) {
+      for(int j=0; j<=m_nborn; j+=2) {
+        std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
         do {
-          m_channelNames.push_back("gqTO"+help+std::string("_BLAND_Z"));
+          m_channelNames.push_back("qqTO"+help+std::string("_BLAND"));
         } while ( std::next_permutation(help.begin(), help.end()) );
+        help = std::string(m_nborn-j,'g')+std::string(j,'q');
+        do {
+          m_channelNames.push_back("ggTO"+help+std::string("_BLAND"));
+        } while ( std::next_permutation(help.begin(), help.end()) );
+        if(m_nborn-j > 0) {
+          help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
+          do {
+            m_channelNames.push_back("gqTO"+help+std::string("_BLAND"));
+          } while ( std::next_permutation(help.begin(), help.end()) );
+        }
+      }
+    }
+    else if(m_mode==MODE::BLAND_Z) {
+      for(int j=0; j<=m_nborn; j+=2) {
+        std::string help = std::string(m_nborn-j,'g')+std::string(j,'q');
+        do {
+          m_channelNames.push_back("qqTO"+help+std::string("_BLAND_Z"));
+        } while ( std::next_permutation(help.begin(), help.end()) );
+        if(j>1) {
+          help = std::string(m_nborn-j,'g')+std::string(j,'q');
+          do {
+            m_channelNames.push_back("ggTO"+help+std::string("_BLAND_Z"));
+          } while ( std::next_permutation(help.begin(), help.end()) );
+        }
+        if(m_nborn-j > 0) {
+          help = std::string(m_nborn-j-1,'g')+std::string(j+1,'q');
+          do {
+            m_channelNames.push_back("gqTO"+help+std::string("_BLAND_Z"));
+          } while ( std::next_permutation(help.begin(), help.end()) );
+        }
+      }
+    }
+  }
+  else {
+    if(m_mode==MODE::ALL) {
+      m_channelNames.push_back("other");
+      for(int j=0; j<=m_nborn; j+=2) {
+        m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
+                                 +std::string(j,'q'));
+        m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
+                                 +std::string(j,'q'));
+        if(m_nborn-j > 0) {
+          m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                   +std::string(j+1,'q'));
+        }
+      }
+    }
+    else if(m_mode==MODE::BLAND) {
+      for(int j=0; j<=m_nborn; j+=2) {
+        m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
+                                 +std::string(j,'q')+std::string("_BLAND"));
+        m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
+                                 +std::string(j,'q')+std::string("_BLAND"));
+
+        if(m_nborn-j > 0) {
+          m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                   +std::string(j+1,'q')+std::string("_BLAND"));
+        }
+      }
+    }
+    else if(m_mode==MODE::BLAND_Z) {
+      for(int j=0; j<=m_nborn; j+=2) {
+        m_channelNames.push_back("qqTO"+std::string(m_nborn-j,'g')
+                                 +std::string(j,'q')+std::string("_BLAND_Z"));
+        if(j>1) {
+          m_channelNames.push_back("ggTO"+std::string(m_nborn-j,'g')
+                                   +std::string(j,'q')+std::string("_BLAND_Z"));
+        }
+        if(m_nborn-j > 0) {
+          m_channelNames.push_back("gqTO"+std::string(m_nborn-j-1,'g')
+                                   +std::string(j+1,'q')+std::string("_BLAND_Z"));
+        }
       }
     }
   }
@@ -490,7 +534,10 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
         else break;
       }
     }
-    else final_channel += "g";
+    else {
+      if(m_orderByPT) final_channel += "g";
+      else final_channel = "g"+final_channel;
+    }
     --n;
     for (int i=ind;i<n;++i) imap[i]=imap[i+1];
   }
