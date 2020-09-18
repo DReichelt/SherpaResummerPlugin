@@ -22,6 +22,8 @@ namespace RESUM {
       if (type=="LogErr") return Edges(11,lower,upper,nbin);
       if (type=="LnErr") return Edges(21,lower,upper,nbin);
       if (type=="LinErr") return Edges(1,lower,upper,nbin);
+      else THROW(fatal_error,"Unknown histo type "+type+".");
+      return std::valarray<double>();
     }
 
     static std::valarray<double> Edges(int type, double lower, 
@@ -64,7 +66,8 @@ namespace RESUM {
     //     m_barWeights(0.,m_nEdges), m_barWeight2s(0.,m_nEdges) {}
 
     Cumulant(std::valarray<double> edges, const std::string& name, 
-             std::shared_ptr<VarWeightMap> varweights=nullptr, int oform=1)
+             std::shared_ptr<VarWeightMap> varweights=nullptr, int oform=1,
+             const std::string& cname="CENTRAL")
       : m_name(name), m_edges(edges), m_nEdges(m_edges.size()), m_oform(oform),  
         p_varweights(varweights),
         m_nVarWeights((p_varweights?p_varweights->size():1)),
@@ -72,7 +75,8 @@ namespace RESUM {
         m_weights(0.,m_nWeights),
         m_weight2s(0.,m_nWeights),
         m_barWeights(0.,m_nWeights), 
-        m_barWeight2s(0.,m_nWeights)
+        m_barWeight2s(0.,m_nWeights),
+        m_cname(cname)
     {
       DEBUG_FUNC(name);
       // if(!p_varweights) {
@@ -85,7 +89,6 @@ namespace RESUM {
       // }
     }
 
-
     Cumulant& operator+=(Cumulant other) {
       if(m_nEdges == other.m_nEdges) {
         m_weights += other.m_weights;
@@ -97,6 +100,8 @@ namespace RESUM {
           else m_variants[var.first] = std::make_shared<Cumulant>(*var.second);
         } 
         m_fills += other.m_fills;
+        m_maxvalue = std::max(m_maxvalue,other.m_maxvalue);
+        m_minvalue = std::min(m_minvalue,other.m_minvalue);
       }
       else {
         THROW(fatal_error,"Merging of cumulants not implemented.");
@@ -120,9 +125,9 @@ namespace RESUM {
       if(!p_varweights) {
         InitVarWeights(weights);
       }
-      if(!weights) Fill(val,{{"CENTRAL",cweight}},ncount);
+      if(!weights) Fill(val,{{m_cname,cweight}},ncount);
       else {
-        (*weights)["CENTRAL"] = cweight;
+        (*weights)[m_cname] = cweight;
         Fill(val,weights,ncount);
       }
     }
@@ -133,9 +138,9 @@ namespace RESUM {
       if(!p_varweights) {
         InitVarWeights(weights);
       }
-      if(!weights) FillMCB(val,{{"CENTRAL",cweight}},ncount);
+      if(!weights) FillMCB(val,{{m_cname,cweight}},ncount);
       else {
-        (*weights)["CENTRAL"] = cweight;
+        (*weights)[m_cname] = cweight;
         FillMCB(val,weights,ncount);
       }      
     }
@@ -156,6 +161,8 @@ namespace RESUM {
     void Fill(double val, std::map<std::string,double>* weights, int ncount) {
       DEBUG_FUNC(val);
       m_fills += ncount;
+      m_maxvalue = std::max(m_maxvalue,val);
+      m_minvalue = std::min(m_minvalue,val);
       if(!p_varweights) {
         InitVarWeights(weights);
       }
@@ -167,6 +174,23 @@ namespace RESUM {
       p_fill->_Fill(val,weights,ncount);
       *this += *p_fill;
     }
+
+    void Fill(std::map<std::string,double>* weights, 
+              std::map<std::string,std::valarray<double>>* factors, int ncount) { 
+      DEBUG_FUNC("");
+      m_fills += ncount;
+      if(!p_varweights) {
+        InitVarWeights(weights);
+      }
+      if(!weights or !factors) return;
+      if(!p_fill) {
+        p_fill = std::make_shared<Cumulant>(m_edges,m_name+"_fill",p_varweights);
+      }
+      p_fill->Reset();
+      p_fill->_Fill(weights,factors,ncount);
+      *this += *p_fill;
+    }
+
 
     void Fill(const std::vector<std::string>& names) {
       for(const std::string& name: names) {
@@ -183,7 +207,9 @@ namespace RESUM {
 
     void SetVariants(const std::vector<std::string>& names) {
       m_variantNames = names;
-      for(const std::string& name: names) m_variants[name] = std::make_shared<Cumulant>(m_edges,name+"_"+m_name,p_varweights);;
+      for(const std::string& name: names) {
+        m_variants[name] = std::make_shared<Cumulant>(m_edges,name+"_"+m_name,p_varweights);;
+      }
     }
 
     void _Fill(double val, std::map<std::string,double>* weights, int  ncount) {
@@ -211,6 +237,20 @@ namespace RESUM {
       }
     }
 
+    void _Fill(std::map<std::string,double>* weights, 
+               std::map<std::string,std::valarray<double>>* factors, int ncount) {
+      if(!p_varweights) THROW(fatal_error,"Internal error.");
+      for(const auto& var: *p_varweights) {
+        const double w = (*weights)[var.first];
+        const std::valarray<double>& f = (*factors)[var.first];
+        m_weights[var.second] += w*f;
+        m_weight2s[var.second] += std::pow(w*f,2);
+        m_barWeights[var.second] += w*(1.-f);
+        m_barWeight2s[var.second] += std::pow(w*(1.-f),2);
+      }
+    }
+
+
     void FillMCB(double val, std::map<std::string,double>* weights, int ncount) {
       DEBUG_FUNC(val);
       if(!p_varweights) {
@@ -234,6 +274,12 @@ namespace RESUM {
         // msg_Out()<<"\n";
         p_tmp->m_weight2s = p_tmp->m_weights*p_tmp->m_weights;
         p_tmp->m_barWeight2s = p_tmp->m_barWeights*p_tmp->m_barWeights;
+        for(auto& v: p_tmp->m_variants) {
+          if(v.second) {
+            v.second->m_weight2s = v.second->m_weights*v.second->m_weights;
+            v.second->m_barWeight2s = v.second->m_barWeight2s*v.second->m_barWeight2s;
+          }
+        }
         // for(auto w: p_tmp->m_weight2) msg_Out()<<w<<" ";
         // msg_Out()<<"\n";
         // for(auto w: p_tmp->m_weight2s) msg_Out()<<w<<" ";
@@ -328,6 +374,7 @@ namespace RESUM {
         if(title!="") *ofile.stream()<<title<<"_";
         *ofile.stream()<<Name()<<" "<<var.first<<"\n";
         *ofile.stream()<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
+        *ofile.stream()<<"# v_min = "<<m_minvalue<<", v_max = "<<m_maxvalue<<"\n";
         const std::valarray<double>& weights = m_weights[var.second];
         const std::valarray<double>& weight2s = m_weight2s[var.second];
         const std::valarray<double>& errors = m_errors[var.second];
@@ -355,12 +402,13 @@ namespace RESUM {
 
     const std::string& Name() {return m_name;}
 
+
     void InitVarWeights(std::map<std::string,double>* weightsMap=nullptr) {
       DEBUG_FUNC((weightsMap ? weightsMap->size()+1:1));
       std::valarray<size_t> central(m_nEdges);
       std::iota(std::begin(central), std::end(central), 0);
       p_varweights = std::make_shared<VarWeightMap>();
-      (*p_varweights)["CENTRAL"] = central;
+      (*p_varweights)[m_cname] = central;
       if(!weightsMap) {
         m_nVarWeights = 1;
         return;
@@ -400,6 +448,7 @@ namespace RESUM {
 
   protected:
     std::string m_name;
+    std::string m_cname;
     std::valarray<double> m_edges;
     size_t m_nEdges;
     std::shared_ptr<VarWeightMap> p_varweights = nullptr;
@@ -414,7 +463,9 @@ namespace RESUM {
     std::valarray<double> m_barErrors;
 
     int m_fills = 0;
-    
+    double m_maxvalue = -std::numeric_limits<double>::infinity();
+    double m_minvalue = std::numeric_limits<double>::infinity();
+
     // output format, 
     // 1 ... keep bins as is, 
     // 11 .. convert to log10, 
