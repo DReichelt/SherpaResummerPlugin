@@ -29,7 +29,7 @@ namespace RESUM {
     int m_fills = 0;
     int m_fills_tmp = 0;
     bool m_recycle = true;
-    bool m_oneFile = false;
+    bool m_oneFile = true;
     bool m_properZeroFill = true;
     bool m_filledOnce = false;
 
@@ -98,7 +98,7 @@ NLO_Analysis::NLO_Analysis(const Argument_Matrix &params):
     if (params[i][0] == "Options") {
       Key_Base opts("Options",params[i]);
       m_recycle = RESUM::to_type<bool>(opts.KwArg("REUSE_ALGS","1"));
-      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","0"));
+      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","1"));
       if(m_oneFile) m_fname = opts.KwArg("FILENAME","ResumResults");
     }
     if (params[i][0] == "ChAlg") {
