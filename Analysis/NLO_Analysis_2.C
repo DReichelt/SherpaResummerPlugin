@@ -25,7 +25,7 @@ namespace RESUM {
     std::vector<std::string> m_channels;
     Primitive_Observable_Base * Copy() const;
     std::string m_addition = "";
-    std::string m_fname;
+    std::string m_fname = "ResumResults";
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;
@@ -127,7 +127,7 @@ NLO_Analysis_2::NLO_Analysis_2(const Argument_Matrix &params):
     if (params[i][0] == "Options") {
       Key_Base opts("Options",params[i]);
       m_recycle = RESUM::to_type<bool>(opts.KwArg("REUSE_ALGS","1"));
-      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","0"));
+      m_oneFile = RESUM::to_type<bool>(opts.KwArg("ONEFILE","1"));
       if(m_oneFile) m_fname = opts.KwArg("FILENAME","ResumResults");
       continue;
     }
