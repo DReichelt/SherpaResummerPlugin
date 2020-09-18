@@ -32,9 +32,8 @@ using namespace MODEL;
 using std::string;
 
 using std::vector;
+using std::valarray;
 using std::complex;
-
-
 
 
 Resum::Resum(ISR_Handler *const isr,
@@ -691,9 +690,9 @@ std::string Resum::AddObservable(const RESUM::Observable_Key& key,
   if(obs != nullptr) {
     m_obss.push_back(obs);
     m_xvals.push_back(xvals);
-    m_resNLL.push_back(vector<double>(xvals.size()));
-    m_resExpLO.push_back(vector<double>(xvals.size()));
-    m_resExpNLO.push_back(vector<double>(xvals.size()));
+    m_resNLL.push_back(valarray<double>(xvals.size()));
+    m_resExpLO.push_back(valarray<double>(xvals.size()));
+    m_resExpNLO.push_back(valarray<double>(xvals.size()));
     m_ress.push_back({-1,-1});
     msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
   }

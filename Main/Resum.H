@@ -216,9 +216,13 @@ namespace RESUM {
     bool Initialized() const { return m_init; } 
     virtual void ResetObservables();
 
-    std::vector<std::vector<double>> m_resNLL;
-    std::vector<std::vector<double>> m_resExpLO;
-    std::vector<std::vector<double>> m_resExpNLO;
+    std::vector<std::valarray<double>> m_resNLL;
+    std::vector<double> resNLL(size_t i) { return {std::begin(m_resNLL[i]),std::end(m_resNLL[i])};}
+    std::vector<std::valarray<double>> m_resExpLO;
+    std::vector<double> resExpLO(size_t i) { return {std::begin(m_resExpLO[i]),std::end(m_resExpLO[i])};}
+    std::vector<std::valarray<double>> m_resExpNLO;
+    std::vector<double> resExpNLO(size_t i) { return {std::begin(m_resExpNLO[i]),std::end(m_resExpNLO[i])};}
+
     std::vector<std::vector<double>> m_xvals;
     
   };// end of class Resum
