@@ -24,7 +24,7 @@ namespace RESUM {
     std::map<std::string, NLO_Analysis*> m_channels;
     Primitive_Observable_Base * Copy() const override;
     std::string m_addition = "";
-    std::string m_fname;
+    std::string m_fname = "ResumResults";
     int m_nborn = -1;
     int m_fills = 0;
     int m_fills_tmp = 0;

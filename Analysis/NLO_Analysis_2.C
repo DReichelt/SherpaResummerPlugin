@@ -30,7 +30,7 @@ namespace RESUM {
     int m_fills = 0;
     int m_fills_tmp = 0;
     bool m_recycle = true;
-    bool m_oneFile = false;
+    bool m_oneFile = true;
     bool m_properZeroFill = false;
     bool m_filledOnce = false;
 
