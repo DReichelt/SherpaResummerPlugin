@@ -188,6 +188,33 @@ namespace RESUM {
       return Value(moms, flavs, dummy, nin);
     }
 
+#ifdef USING_FJCONTRIB
+    double Value(const fastjet::PseudoJet &jet) const{
+      // get the jet constituents
+      std::vector<fastjet::PseudoJet> constits = jet.constituents();
+      if (constits.size() == 0) return 0.0;
+    
+      // get the reference axis
+      fastjet::PseudoJet reference_axis = _get_reference_axis(jet);
+
+      // do the actual coputation
+      double numerator = 0.0, denominator = 0.0;
+      for (const auto &c : constits){
+        double pt = c.pt();
+        // Note: better compute (dist^2)^(alpha/2) to avoid an extra square root
+        numerator   += pt * pow(c.squared_distance(reference_axis), 0.5*m_alpha);
+        denominator += pt;
+      }
+      return numerator/(denominator*pow(m_R, m_alpha));
+    }
+
+    fastjet::PseudoJet _get_reference_axis(const fastjet::PseudoJet &jet) const{
+      if (m_alpha>1) return jet;
+
+      fastjet::Recluster recluster(fastjet::JetDefinition(fastjet::antikt_algorithm, fastjet::JetDefinition::max_allowable_R,  fastjet::WTA_pt_scheme));
+      return recluster(jet);
+    }
+#endif
 
     double Value(const std::vector<Vec4D>& ip,
             const std::vector<ATOOLS::Flavour>& fl,
@@ -221,35 +248,61 @@ namespace RESUM {
         msg_Debugging()<<"Reusing jets found earlier.\n";
       }
 
+#ifdef USING_FJCONTRIB
+      const double lambdaFJ = Value(GROOM ? std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->SDLeadJet() :
+                                  std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->LeadJet());      
+      rpa->gen.SetVariable(m_tag, std::to_string(lambdaFJ));
+      return lambdaFJ;
+#else
+      const double lambdaFJ = -1;
+#endif
+
       const std::vector<ATOOLS::Vec4D> constits =  alg->second->apply(ip,GROOM);
+      double lambda = 0.;
       if(constits.size() <= 1) {
         msg_Debugging()<<"Jet with single constiutent -> lambda = 0\n";
-        return 0;
       }
-      const ATOOLS::Vec4D axis(0., m_WTA ? alg->second->jetAxes(GROOM)
-                                         : alg->second->jetVectors(GROOM));
+      else {
+        const ATOOLS::Vec4D axis(0., m_WTA ? alg->second->jetAxes(GROOM)
+                                 : alg->second->jetVectors(GROOM));
       
-      
-      double lambda = 0.;
-      msg_Debugging()<<"Final States:\n";
-      for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "
-                                                    <<ip[i]<<" "
-                                                    <<ip[i].PPerp()<<"\n";
-      msg_Debugging()<<"... in jet:\n";
-      for (ATOOLS::Vec4D con: constits) {
-        // even with grooming , pt is defined without grooming
-        const double z = con.PPerp() / alg->second->jetVectors(0).PPerp();
-        const double dR = con.DR(axis) / m_R;
-
-        msg_Debugging()<<con<<"\n"<<axis<<"\n";
-        msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
-        msg_Debugging()<<"DeltaR / R0 = "<<con.DR(axis)<<" / "<<m_R<<" = "<< dR<<" -> (DeltaR/R0)^(alpha = "<<m_alpha<<")"
-                 <<" = "<<pow(dR, m_alpha)<<"\n";
-        msg_Debugging()<<"z*(DeltaR/R0)^alpha = "<<z * pow(dR, m_alpha)<<"\n";
-
-        lambda +=  z * pow(dR, m_alpha);
+        
+        double norm = 0.;
+        msg_Debugging()<<"Final States:\n";
+        for(int i=0; i<ip.size(); i++) msg_Debugging()<<fl[i]<<" "
+                                                      <<ip[i]<<" "
+                                                      <<ip[i].PPerp()<<"\n";
+        msg_Debugging()<<"... in jet:\n";
+        for (const ATOOLS::Vec4D& con: constits) {
+          // even with grooming , pt is defined without grooming
+          const double z = con.PPerp();// / alg->second->jetVectors(0).PPerp();
+          norm += z;
+          const double dR = con.DR(axis) / m_R;
+          
+          msg_Debugging()<<con<<"\n"<<axis<<"\n";
+          msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
+          msg_Debugging()<<"DeltaR / R0 = "<<con.DR(axis)<<" / "<<m_R<<" = "<< dR<<" -> (DeltaR/R0)^(alpha = "<<m_alpha<<")"
+                         <<" = "<<pow(dR, m_alpha)<<"\n";
+          msg_Debugging()<<"z*(DeltaR/R0)^alpha = "<<z * pow(dR, m_alpha)<<"\n";
+          
+          lambda +=  z * pow(dR, m_alpha);
+        }
+        //norm = alg->second->jetVectors(0).PPerp();
+        lambda /= norm;
+        msg_Debugging()<<"\n";
       }
-      msg_Debugging()<<"\n";
+      // if(m_alpha==0.5 and GROOM==0 and lambda < 0.47 and lambda > 0.39) {
+      //   if(GROOM==0) msg_Out()<<"Ungroomed\n";
+      //   else msg_Out()<<"Groomed\n";
+      //   msg_Out()<<"Internal: Angularity(alpha = "<<m_alpha<<") = "<<lambda<<".\n";
+      //   msg_Debugging()<<"Final States:\n";
+      //   for(int i=0; i<ip.size(); i++) msg_Out()<<fl[i]<<" "
+      //                                           <<ip[i]<<" "
+      //                                           <<ip[i].PPerp()<<"\n";
+      //   msg_Out()<<lambda<<" "<<lambdaFJ<<"\n";
+      //   msg_Out()<<"\n";
+
+      // }
       return lambda;
     }           
 
