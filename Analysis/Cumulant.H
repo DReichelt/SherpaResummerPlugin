@@ -36,7 +36,7 @@ namespace RESUM {
         break;
       case 11:
         ret[0] = std::log10(lower);
-        ret[nbin-1] = std::log10(upper);
+        ret[nbin] = std::log10(upper);
         break;
       case 21:
         ret[0] = std::log(lower);
@@ -45,7 +45,7 @@ namespace RESUM {
       default:
         THROW(fatal_error, "Histo type unknown.");
       }
-      const double binsize = (ret[nbin-1]-ret[0])/nbin;
+      const double binsize = (ret[nbin]-ret[0])/nbin;
       for(int i=1; i<nbin; i++) ret[i] = ret[i-1]+binsize;
       switch(type) {
       case 1:
