@@ -189,6 +189,7 @@ if __name__=='__main__':
     parser.add_argument('--variations', default=None)
     parser.add_argument('--match', action='store_true', default=False)
     parser.add_argument('--match-args')
+    parser.add_argument('--no-envelopes', action='store_true', default=False)
     parser.add_argument('--message', '-m', default='info')
 
     
@@ -790,22 +791,25 @@ if len(args.variations) > 0:
 else:
     command = ['cp','-r',summaryName,dirName]
     subprocess.call(command)
-    
-genDirName = "{DIR}/Envelopes-{CH}"
-genSummaryName = "{DIR}/Summary-{CH}"
-logging.info("Create envelopes in {DIR}".format(DIR=dirName))
-for ch in channels:
-    dirName = genDirName.format(DIR=args.output_match,CH=ch)
-    summaryName = genSummaryName.format(DIR=args.output_match,CH=ch)
-    if not os.path.exists(dirName): os.makedirs(dirName)
-    if len(args.variations) > 0:
-        for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
-            name = f.split("/")[-1]
-            command = (['yodaenvelopes',
-                        '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
-                        '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
-                       +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d,CH=ch),NAME=name) for d in varDirs])
-            subprocess.call(command)
-    else:
-        command = ['cp','-r',summaryName,dirName]
+  
+if(args.no_envelopes):
+    logging.info("Done!")
+else:
+    genDirName = "{DIR}/Envelopes-{CH}"
+    genSummaryName = "{DIR}/Summary-{CH}"
+    logging.info("Create envelopes in {DIR}".format(DIR=dirName))
+    for ch in channels:
+        dirName = genDirName.format(DIR=args.output_match,CH=ch)
+        summaryName = genSummaryName.format(DIR=args.output_match,CH=ch)
+        if not os.path.exists(dirName): os.makedirs(dirName)
+        if len(args.variations) > 0:
+            for f in glob.glob("{DIR}/*.yoda".format(DIR=summaryName)):
+                name = f.split("/")[-1]
+                command = (['yodaenvelopes',
+                            '-o','{DIR}/{NAME}'.format(DIR=dirName,NAME=name),
+                            '-c','{DIR}/{NAME}'.format(DIR=summaryName,NAME=name)]
+                           +['{DIR}/{NAME}'.format(DIR=genSummaryName.format(DIR=d,CH=ch),NAME=name) for d in varDirs])
+                subprocess.call(command)
+        else:
+            command = ['cp','-r',summaryName,dirName]
         subprocess.call(command)
