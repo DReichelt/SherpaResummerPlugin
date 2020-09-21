@@ -10,7 +10,8 @@ using namespace RESUM;
 #include "ATOOLS/Org/Run_Parameter.H"
 
 std::string ChannelAlgorithm_Base::Channel(const ATOOLS::Particle_List& particles, bool addTag, 
-                                           std::vector<ATOOLS::Vec4D>* pout) {
+                                           std::vector<ATOOLS::Vec4D>* pout,
+                                           std::vector<ATOOLS::Flavour>* fout) {
   Vec4D_Vector mom(2+particles.size());
   Flavour_Vector fl(2+particles.size());
   for (size_t i=0; i<particles.size(); i++) {
@@ -19,14 +20,15 @@ std::string ChannelAlgorithm_Base::Channel(const ATOOLS::Particle_List& particle
   }
   fl[0]=rpa->gen.Beam1();
   fl[1]=rpa->gen.Beam2();
-  return Channel(mom,fl,2,addTag,pout);
+  return Channel(mom,fl,2,addTag,pout,fout);
 }
 
 std::string ChannelAlgorithm_Base::Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                            const std::vector<ATOOLS::Flavour>& fl,
                                            const size_t &nin, bool addTag,
-                                           std::vector<ATOOLS::Vec4D>* pout) {
-  std::string ch = Channel(ip,fl,nin,pout);
+                                           std::vector<ATOOLS::Vec4D>* pout,
+                                           std::vector<ATOOLS::Flavour>* fout) {
+  std::string ch = Channel(ip,fl,nin,pout,fout);
   if(addTag and m_tag != "") ch += "_"+m_tag;
   return ch;
 }

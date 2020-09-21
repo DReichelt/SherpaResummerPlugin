@@ -43,7 +43,8 @@ std::string NJet_pp_Resolved::collapse(std::string& name) {
 std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
                                       const std::vector<ATOOLS::Flavour>& fl,
                                       const size_t &nin,
-                                      std::vector<ATOOLS::Vec4D>* pout) {
+                                      std::vector<ATOOLS::Vec4D>* pout,
+                                      std::vector<ATOOLS::Flavour>* fout) {
   DEBUG_FUNC("");
   std::vector<ATOOLS::Vec4D> p;
   std::vector<ATOOLS::Flavour> f;
@@ -68,7 +69,7 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
     msg_Debugging()<<"Leading jet has "<<fj.pseudoJets()[0].constituents().size()<<" constituents, "<<p.size()-2<<" jets left to cluster.\n";
     n--;
     msg_Debugging()<<"Using cluster algorithm "<<n<<" of "<<m_resolvers.size()-1<<".\n";
-    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
+    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p,&f);
     f = std::vector<ATOOLS::Flavour>(p.size(),{21});
     msg_Debugging()<<p<<" "<<f<<"\n";
     msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
@@ -90,6 +91,9 @@ std::string NJet_pp_Resolved::Channel(const std::vector<ATOOLS::Vec4D>& ip,
   msg_Debugging()<<"Returning "<<channel<<".\n";
   if(pout) {
     *pout = p;
+  }
+  if(fout) {
+    *fout = f;
   }
   return channel;//m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }

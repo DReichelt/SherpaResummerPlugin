@@ -22,7 +22,7 @@ namespace RESUM {
                const size_t &nin,
                const Observable_Key& key);
 
-    std::vector<fastjet::PseudoJet> pseudoJets() const {return fastjet::sorted_by_pt( cs.inclusive_jets(m_minPT) );}
+    std::vector<fastjet::PseudoJet> pseudoJets() const {return fastjet::sorted_by_pt( fastjet::SelectorAbsRapMax(m_maxRap)(cs.inclusive_jets(m_minPT)) );}
 
     const fastjet::PseudoJet LeadJet() const {return m_jet;}
     const fastjet::PseudoJet SDLeadJet() const {return m_sdJet;}
@@ -35,6 +35,7 @@ namespace RESUM {
     fastjet::PseudoJet m_jet;
     fastjet::PseudoJet m_jetAxis;
     double m_minPT;
+    double m_maxRap;
     // @TODO: make this dynamic
     fastjet::Strategy strategy = fastjet::Best;
     fastjet::RecombinationScheme recombScheme = fastjet::E_scheme;

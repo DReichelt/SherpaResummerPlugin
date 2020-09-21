@@ -35,6 +35,7 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("minPT","0");
       m_algtag += ":"+args.KwArg("zcut",std::to_string(m_zcut));
       m_algtag += ":"+args.KwArg("beta",std::to_string(m_beta));
+      m_algtag += ":"+args.KwArg("maxRap","-1");
 
       if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
@@ -192,20 +193,27 @@ namespace RESUM {
     double Value(const fastjet::PseudoJet &jet) const{
       // get the jet constituents
       std::vector<fastjet::PseudoJet> constits = jet.constituents();
-      if (constits.size() == 0) return 0.0;
-    
-      // get the reference axis
-      fastjet::PseudoJet reference_axis = _get_reference_axis(jet);
-
-      // do the actual coputation
-      double numerator = 0.0, denominator = 0.0;
-      for (const auto &c : constits){
-        double pt = c.pt();
-        // Note: better compute (dist^2)^(alpha/2) to avoid an extra square root
-        numerator   += pt * pow(c.squared_distance(reference_axis), 0.5*m_alpha);
-        denominator += pt;
+      double lambda = -1;
+      if (constits.size() == 0) {
+        msg_Debugging()<<"Empty jet -> lambda = 0.";
+        lambda = 0;
       }
-      return numerator/(denominator*pow(m_R, m_alpha));
+      else {
+        // get the reference axis
+        fastjet::PseudoJet reference_axis = _get_reference_axis(jet);
+        
+        // do the actual coputation
+        double numerator = 0.0, denominator = 0.0;
+        for (const auto &c : constits){
+          double pt = c.pt();
+          // Note: better compute (dist^2)^(alpha/2) to avoid an extra square root
+          numerator   += pt * pow(c.squared_distance(reference_axis), 0.5*m_alpha);
+          denominator += pt;
+        }
+        lambda = numerator/(denominator*pow(m_R, m_alpha));
+      }
+      msg_Debugging()<<"lambda = "<<lambda<<" from "<<constits.size()<<" constituents."<<"\n";
+      return lambda;
     }
 
     fastjet::PseudoJet _get_reference_axis(const fastjet::PseudoJet &jet) const{
@@ -233,7 +241,7 @@ namespace RESUM {
 
 
       if(ip.size() <= nin) return 0;
-      msg_Debugging()<<"Start jet angularity.\n";
+      msg_Debugging()<<"Start jet angularity, alpha = "<<m_alpha<<".\n";
       
       auto alg = algorithms.find(m_algtag);
       msg_Debugging()<<"Searching algs...\n";
@@ -252,7 +260,7 @@ namespace RESUM {
       const double lambdaFJ = Value(GROOM ? std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->SDLeadJet() :
                                   std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->LeadJet());      
       rpa->gen.SetVariable(m_tag, std::to_string(lambdaFJ));
-      return lambdaFJ;
+      //return lambdaFJ;
 #else
       const double lambdaFJ = -1;
 #endif
@@ -279,7 +287,7 @@ namespace RESUM {
           norm += z;
           const double dR = con.DR(axis) / m_R;
           
-          msg_Debugging()<<con<<"\n"<<axis<<"\n";
+          //msg_Debugging()<<con<<"\n"<<axis<<"\n";
           msg_Debugging()<<con<<" -> z = "<<con.PPerp()<< " / "<< alg->second->jetVectors(GROOM).PPerp()<<" = "<<z<<"\n";
           msg_Debugging()<<"DeltaR / R0 = "<<con.DR(axis)<<" / "<<m_R<<" = "<< dR<<" -> (DeltaR/R0)^(alpha = "<<m_alpha<<")"
                          <<" = "<<pow(dR, m_alpha)<<"\n";

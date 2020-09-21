@@ -13,7 +13,8 @@ namespace RESUM {
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
                         const size_t &nin,
-                        std::vector<ATOOLS::Vec4D>* pout) override;
+                        std::vector<ATOOLS::Vec4D>* pout,
+                        std::vector<ATOOLS::Flavour>* fout) override;
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
 

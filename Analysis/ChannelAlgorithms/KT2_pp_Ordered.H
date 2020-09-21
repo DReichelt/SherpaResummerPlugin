@@ -13,7 +13,8 @@ namespace RESUM {
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
                         const size_t &nin,
-                        std::vector<ATOOLS::Vec4D>* pout) override;
+                        std::vector<ATOOLS::Vec4D>* pout,
+                        std::vector<ATOOLS::Flavour>* fout) override;
 
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
@@ -45,7 +46,22 @@ namespace RESUM {
                const size_t n,
                const std::vector<ATOOLS::Vec4D> &neutralFinal) const;
     bool flavd(const std::vector<int>& fls) const;
-    
+    ATOOLS::Flavour afl(const std::vector<int>& fls) const {
+      if(!flavd(fls)) return {21};
+      ATOOLS::Flavour ret;
+      for(int i=1; i<6; i++) {
+        if(fls[i] != 0) {
+          if(ret.IsDummy()) {
+            ret = {fls[i]*i};
+          }
+          else {
+            return ATOOLS::Flavour();
+          }
+        }
+      }
+      return ret;
+    }
+
     MODE m_mode = MODE::ALL;
     int m_nborn = -1;
     bool m_sumNeutral = false;

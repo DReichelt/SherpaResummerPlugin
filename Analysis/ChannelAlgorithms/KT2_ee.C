@@ -70,7 +70,8 @@ double KT2_ee::KT2(const Vec4D &p1, const Vec4D &p2,
 std::string KT2_ee::Channel(const std::vector<Vec4D>& ip,
                             const std::vector<Flavour>& fl,
                             const size_t &nin,
-                            std::vector<Vec4D>* pout) {
+                            std::vector<Vec4D>* pout,
+                            std::vector<Flavour>* fout) {
   Vec4D sum;
   size_t nn = ip.size();
   std::vector<Vec4D> p(&ip[nin],&ip[nn]);

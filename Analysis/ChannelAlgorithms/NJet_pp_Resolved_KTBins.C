@@ -27,7 +27,11 @@ NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
         names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
       }
       names.insert(name+"_PtLead_"+m_edges.back());
-      //m_channelNames.push_back(collapse(name));
+      collapse(name,"Other");
+      for(size_t i=0; i<m_edges.size()-1; i++) {
+        names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
+      }
+      names.insert(name+"_PtLead_"+m_edges.back());
     }
     m_channelNames.assign(names.begin(), names.end());
     // m_channelNames.insert(m_channelNames.end(),
@@ -36,21 +40,25 @@ NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
   }
 }
 
-std::string NJet_pp_Resolved_KTBins::collapse(std::string& name) {
+std::string NJet_pp_Resolved_KTBins::collapse(std::string& name, std::string fl) {
   if(!m_collapse) return name;
-  std::string fl = name.substr(name.find("TO")+2,1);
-  if(fl=="g") fl = "Gluon";
-  else if(fl=="q") fl = "Quark";
-  else THROW(fatal_error,"Unknown flavour "+fl);
+  if(name.find("Other") != std::string::npos) return name;
+  if(fl=="") {
+    fl = name.substr(name.find("TO")+2,1);
+    if(fl=="g") fl = "Gluon";
+    else if(fl=="q") fl = "Quark";
+    else THROW(fatal_error,"Unknown flavour "+fl);
+  }
   name = fl+name.substr(name.find("_"));
   return name;
 }
 
 
 std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& ip,
-                                      const std::vector<ATOOLS::Flavour>& fl,
-                                      const size_t &nin,
-                                      std::vector<ATOOLS::Vec4D>* pout) {
+                                             const std::vector<ATOOLS::Flavour>& fl,
+                                             const size_t &nin,
+                                             std::vector<ATOOLS::Vec4D>* pout,
+                                             std::vector<ATOOLS::Flavour>* fout) {
   DEBUG_FUNC("");
   std::vector<ATOOLS::Vec4D> p;
   std::vector<ATOOLS::Flavour> f;
@@ -70,15 +78,16 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   FJmaxPTjet fj(p,f,nin,Observable_Key("ChAlg",m_params));
   // pt of leading (ungroomed) jet
   const double PT = fj.jetScales(0);
-  while(fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
-    for(auto& p: fj.pseudoJets()[0].constituents()) {
-      msg_Debugging()<<p.e()<<" "<<p.px()<<" "<<p.py()<<" "<<p.pz()<<"\n";
+  std::string flname = "";
+  while(fj.pseudoJets().size() > 0 and fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
+    for(auto& pd: fj.pseudoJets()[0].constituents()) {
+      msg_Debugging()<<pd.e()<<" "<<pd.px()<<" "<<pd.py()<<" "<<pd.pz()<<"\n";
     }
     msg_Debugging()<<"Leading jet has "<<fj.pseudoJets()[0].constituents().size()<<" constituents, "<<p.size()-2<<" jets left to cluster.\n";
     n--;
     msg_Debugging()<<"Using cluster algorithm "<<n<<" of "<<m_resolvers.size()-1<<".\n";
-    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p);
-    f = std::vector<ATOOLS::Flavour>(p.size(),{21});
+    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p,&f);
+    // create dummy flavours
     msg_Debugging()<<p<<" "<<f<<"\n";
     msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
     fj = FJmaxPTjet(p,f,nin,Observable_Key("ChAlg",m_params));
@@ -86,6 +95,9 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   msg_Debugging()<<"Returning "<<channel<<".\n";
   if(pout) {
     *pout = p;
+  }
+  if(fout) {
+    *fout = f;
   }
   if(PT > m_binEdges.back()) channel += "_PtLead_"+m_edges.back();
   else {
@@ -95,7 +107,17 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
       }
     }
   }
-  collapse(channel);
+  if(m_collapse){
+    std::string chname = "";
+    if(fj.pseudoJets().size() > 0) {
+      if(fj.apply(f,0)[0].IsQuark()) chname = "Quark";
+      else chname = "Gluon";
+    }
+    else {
+      chname = "Other";
+    }
+    collapse(channel,chname); 
+  }
   return channel;//m_resolvers.at(mult-1)->Channel(ip,fl,nin,false);
 }
 

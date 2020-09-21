@@ -13,7 +13,8 @@ namespace RESUM {
     std::string Channel(const std::vector<ATOOLS::Vec4D>& ip,
                         const std::vector<ATOOLS::Flavour>& fl,
                         const size_t &nin,
-                        std::vector<ATOOLS::Vec4D>* pout) override;
+                        std::vector<ATOOLS::Vec4D>* pout,
+                        std::vector<ATOOLS::Flavour>* fout) override;
 
     std::vector<std::string> ChannelNames() override {return m_channelNames;}
 
@@ -26,7 +27,7 @@ namespace RESUM {
     
   private:
 
-    std::string collapse(std::string& name);
+    std::string collapse(std::string& name, std::string fl="");
         
     MODE m_mode = MODE::ALL;
     std::vector<std::string> m_channelNames;

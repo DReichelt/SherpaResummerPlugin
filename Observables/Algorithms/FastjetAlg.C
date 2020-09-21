@@ -11,6 +11,8 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   DEBUG_FUNC("");
   double R = to_type<double>(key.KwArg("R","0.5"));
   m_minPT = to_type<double>(key.KwArg("minPT","0"));
+  m_maxRap = to_type<double>(key.KwArg("maxRap","-1"));
+  if(m_maxRap < 0) m_maxRap = std::numeric_limits<double>::infinity();
   double beta = to_type<double>(key.KwArg("beta","2"));
   double zcut = to_type<double>(key.KwArg("zcut","0.05"));
   fastjet::JetDefinition jetDef = fastjet::JetDefinition(fastjet::antikt_algorithm,  R, recombScheme, strategy);

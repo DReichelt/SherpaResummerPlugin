@@ -246,7 +246,8 @@ double KT2_pp_Ordered::KT2(const vector<Vec4D> &pp,
 std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
                                     const vector<Flavour>& fl,
                                     const size_t &nin,
-                                    vector<Vec4D>* pout=nullptr) {
+                                    vector<Vec4D>* pout=nullptr,
+                                    vector<Flavour>* fout=nullptr) {
   if(!fl[0].Strong() or !fl[1].Strong())
     THROW(fatal_error,"This algorithm is only valid for pp collisions, but one beam had no strong charge.");
   
@@ -476,6 +477,19 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
       }
       msg_Debugging()<<"pout = "<<*pout<<"\n";
     }
+    if(fout) {
+      const Flavour f0 = afl(f[0]);
+      const Flavour f1 = afl(f[1]);
+      fout->clear();
+      fout->push_back(f0);    
+      fout->push_back(f1);    
+      msg_Debugging()<<"Added beam to fout, fout = "<<*fout<<".\n";
+      for(int i=0; i<n; i++) {
+        fout->push_back(afl(f[imap[i]+2]));
+      }
+      msg_Debugging()<<"fout = "<<*fout<<"\n";
+    }
+
     return channel;
   }
   else {
@@ -491,6 +505,14 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     pout->push_back(p0);    
     pout->push_back(p1);    
     msg_Debugging()<<"Added beam to pout, pout = "<<*pout<<".\n";
+  }
+  if(fout) {
+    const Flavour f0 = afl(f[0]);
+    const Flavour f1 = afl(f[1]);
+    fout->clear();
+    fout->push_back(f0);    
+    fout->push_back(f1);    
+    msg_Debugging()<<"Added beam to fout, fout = "<<*fout<<".\n";
   }
   while(n>0) {
     int ind = -1;
@@ -509,6 +531,10 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     if(pout) {
       pout->push_back(p[imap[ind]]);
       msg_Debugging()<<"pout = "<<*pout<<".\n";
+    }
+    if(fout) {
+      fout->push_back(afl(f[imap[ind]+2]));
+      msg_Debugging()<<"fout = "<<*fout<<".\n";
     }
     msg_Debugging()<<p[imap[ind]]<<" "<<f[imap[ind]+2]<<"\n";
     if(flavd(f[imap[ind]+2])) {
