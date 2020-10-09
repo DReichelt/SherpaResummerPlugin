@@ -49,10 +49,10 @@ namespace RESUM {
     ATOOLS::Flavour afl(const std::vector<int>& fls) const {
       if(!flavd(fls)) return {21};
       ATOOLS::Flavour ret;
-      for(int i=1; i<6; i++) {
+      for(int i=0; i<5; i++) {
         if(fls[i] != 0) {
           if(ret.IsDummy()) {
-            ret = {fls[i]*i};
+            ret = {fls[i]*(i+1)};
           }
           else {
             return ATOOLS::Flavour();
