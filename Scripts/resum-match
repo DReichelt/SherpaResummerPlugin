@@ -420,11 +420,15 @@ class Sigma(object):
                                self.ch_expLO[ch],
                                self.ch_sigma_0[ch])
         else:
+            asc_ch = 1./2. * (np.power(self.ch_lo.values(),2)-  
+                              np.power(self.ch_expLO.values(),2)) 
+            for i in range(len(asc_ch)): 
+                asc_ch[i] /= self.ch_sigma_0.values()[i] 
             return self.match_logr(self.ch_nll[ch],
                                    self.ch_lo[ch],
                                    self.ch_expLO[ch],
                                    self.ch_sigma_0[ch],
-                                   aSC=sum(np.multiply(self.ch_expLO.values(),self.ch_aSC.values())),
+                                   aSC=sum(asc_ch),
                                    nlo=self.nlo,
                                    expnlo=self.expNLO,
                                    s0nlo=self.sigma_0)
