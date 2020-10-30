@@ -161,8 +161,6 @@ namespace RESUM {
     void Fill(double val, std::map<std::string,double>* weights, int ncount) {
       DEBUG_FUNC(val);
       m_fills += ncount;
-      m_maxvalue = std::max(m_maxvalue,val);
-      m_minvalue = std::min(m_minvalue,val);
       if(!p_varweights) {
         InitVarWeights(weights);
       }
@@ -215,6 +213,8 @@ namespace RESUM {
     void _Fill(double val, std::map<std::string,double>* weights, int  ncount) {
       DEBUG_FUNC(val);
       if(!p_varweights) THROW(fatal_error,"Internal error.");
+      m_maxvalue = std::max(m_maxvalue,val);
+      m_minvalue = std::min(m_minvalue,val);
       for(const auto& var: *p_varweights) {
         const double w = (*weights)[var.first];
         const std::valarray<bool> fill = m_edges > val;
