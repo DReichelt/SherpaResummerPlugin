@@ -36,6 +36,10 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("zcut",std::to_string(m_zcut));
       m_algtag += ":"+args.KwArg("beta",std::to_string(m_beta));
       m_algtag += ":"+args.KwArg("maxRap","-1");
+      m_algtag += ":"+args.KwArg("maxAsym",args.KwArg("maxAsym","-1"));
+      m_algtag += ":"+args.KwArg("minDPhi",args.KwArg("minDPhi","0"));
+      m_algtag += ":"+args.KwArg("minZPT",args.KwArg("minZPT","0"));
+      m_algtag += ":"+args.KwArg("weakCluster",args.KwArg("weakCluster","no"));
 
       if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
@@ -168,6 +172,7 @@ namespace RESUM {
     }
 
     double SoftNonGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) override {
+      // See arXiv:1207.1640
       if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
         if(i<ampl->NIn() and j<ampl->NIn()) {
           return 4.*pow(m_R,2)*(1.17-log(2.*m_R));
@@ -217,7 +222,7 @@ namespace RESUM {
     }
 
     fastjet::PseudoJet _get_reference_axis(const fastjet::PseudoJet &jet) const{
-      if (m_alpha>1) return jet;
+      if (not m_WTA) return jet;
 
       fastjet::Recluster recluster(fastjet::JetDefinition(fastjet::antikt_algorithm, fastjet::JetDefinition::max_allowable_R,  fastjet::WTA_pt_scheme));
       return recluster(jet);
@@ -258,9 +263,9 @@ namespace RESUM {
 
 #ifdef USING_FJCONTRIB
       const double lambdaFJ = Value(GROOM ? std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->SDLeadJet() :
-                                  std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->LeadJet());      
+                                    std::dynamic_pointer_cast<FJmaxPTjet>(alg->second)->LeadJet());      
       rpa->gen.SetVariable(m_tag, std::to_string(lambdaFJ));
-      //return lambdaFJ;
+      return lambdaFJ;
 #else
       const double lambdaFJ = -1;
 #endif
@@ -313,6 +318,37 @@ namespace RESUM {
       // }
       return lambda;
     }           
+
+    bool VetoEvent(const std::vector<Vec4D>& ip,
+            const std::vector<ATOOLS::Flavour>& fl,
+            std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
+            const size_t& nin) override {
+      for(const Vec4D& p: ip) {
+        if(p.Nan()) {
+          return true;
+        }
+      }
+
+      if(ip.size() <= nin) return true;
+      msg_Debugging()<<"Start jet angularity, alpha = "<<m_alpha<<".\n";
+      
+      auto alg = algorithms.find(m_algtag);
+      msg_Debugging()<<"Searching algs...\n";
+      if(alg==algorithms.end()) {
+        msg_Debugging()<<"Known: \n";
+        for(auto alg: algorithms) msg_Debugging()<<alg.first<<"\n";
+        msg_Debugging()<<"Did not find "<<m_algtag<<".\n";
+        alg = algorithms.insert({m_algtag,GetAlgorithm<double>(m_algkey, ip, fl, nin)}).first;
+        msg_Debugging()<<"Found jets.\n";
+      }
+      else {
+        msg_Debugging()<<"Reusing jets found earlier.\n";
+      }
+      // If jets are found, there are always 2, the ungroomed and the groomed one.
+      if(alg->second->numJets() != 2) return true;
+      return false;
+    }
+
 
   private:
     double m_R;
