@@ -127,14 +127,15 @@ class Sigma(object):
             self.has_nlo = True
             f_nlo = yoda.readYODA(nlo_file)
             for ch in args.channels:
-                Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_barSigma".format(OBS=obs,
-                                                                                           CH=ch),f_nlo)
+                Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_{NAME}".format(OBS=obs,
+                                                                                         CH=ch,
+                                                                                         NAME=args.name).replace("Sigma","barSigma"),f_nlo)
                 self.match_bins(Sigma_NLL,Sigma_NLO)
                 self.ch_nlo[ch] = np.array([p.y for p in Sigma_NLO.points])
             if len(self.ch_nlo) > 0:
                 self.nlo = sum(self.ch_nlo.values())
             else:
-                Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_barSigma".format(OBS=obs),f_nlo)
+                Sigma_NLO = self.get_Sigma("/Resum/{OBS}_NLO_{NAME}".format(OBS=obs,NAME=args.name).replace("Sigma","barSigma"),f_nlo)
                 self.match_bins(Sigma_NLL,Sigma_NLO)
                 self.nlo = np.array([p.y for p in Sigma_NLO.points])
                 
@@ -421,9 +422,9 @@ class Sigma(object):
                                self.ch_sigma_0[ch])
         else:
             ch_aSC = {ch : ((self.ch_lo[ch]**2
-                                  -self.ch_expLO[ch]**2)/self.ch_sigma_0[ch]/2.
-                                 if ch in self.ch_nll else np.zeros_like(self.aSC))
-                           for ch in self.args.channels}
+                             -self.ch_expLO[ch]**2)/self.ch_sigma_0[ch]/2.
+                            if ch in self.ch_nll else np.zeros_like(self.aSC))
+                      for ch in self.args.channels}
             return self.match_logr(self.ch_nll[ch],
                                    self.ch_lo[ch],
                                    self.ch_expLO[ch],
