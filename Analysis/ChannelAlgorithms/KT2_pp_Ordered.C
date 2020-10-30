@@ -567,6 +567,18 @@ std::string KT2_pp_Ordered::Channel(const vector<Vec4D>& ip,
     --n;
     for (int i=ind;i<n;++i) imap[i]=imap[i+1];
   }
+  for (size_t i=0; i<nn; i++) {
+    if(not fl[i].Strong()) {
+      if(pout) {
+        pout->push_back(ip[i]);
+        msg_Debugging()<<"pout = "<<*pout<<".\n";
+      }
+      if(fout) {
+        fout->push_back(fl[i]);
+        msg_Debugging()<<"fout = "<<*fout<<".\n";
+      }
+    }
+  }
   if(final_channel == "other") channel = "other";
   else channel += final_channel;
   if(m_mode&BLAND) channel += "_BLAND";
