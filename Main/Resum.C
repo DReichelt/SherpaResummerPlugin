@@ -760,7 +760,10 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   
   const size_t numlegs = n_g + n_q + n_aq;
   //Exception for n_colored = 2
-  if(numlegs == 2) return 1.;
+  if(numlegs == 2) {
+    SoftexpNLL_NLO = pow(SoftexpNLL_LO,2)/2.;
+    return 1.;
+  }
 
   const double as = m_params.alphaS(p_ampl->MuR2());
   const double beta0 = m_params.beta0(p_ampl->MuR2());
