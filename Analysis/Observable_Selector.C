@@ -14,8 +14,9 @@ namespace PHASIC {
 
     RESUM::Observable_Base *p_tau;
 
-    double m_taumin;
+    double m_taumin = -std::numeric_limits<double>::infinity();
     double m_taumax = std::numeric_limits<double>::infinity();
+    bool m_checkRange = true;
   public:
 
     Observable_Selector(const Selector_Key &key): 
@@ -27,8 +28,13 @@ namespace PHASIC {
       p_tau = RESUM::Observable_Getter::GetObject
 	(key[0][0],RESUM::Observable_Key(key[0][0],{key[0].begin(),key[0].end()}));
       if (p_tau==nullptr) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
-      m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
-      if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));      
+      if(key[0][1] == "CHECK_VETO") {
+        m_checkRange = false;
+      }
+      else {
+        m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
+        if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));      
+      }
     }
 
     ~Observable_Selector() { delete p_tau; }
@@ -44,8 +50,12 @@ namespace PHASIC {
       //   return true;
       // }
       //msg_Out()<<p<<"\n";
-      double tau=p_tau->Value(&p.front(),m_fl,p.size(),p_proc->NIn());
-      bool pass=tau>m_taumin && tau<m_taumax;
+      std::map<std::string, typename RESUM::Algorithm<double>::Ptr> algorithms;
+      bool pass = not p_tau->VetoEvent(p,p_proc->Process()->Flavours(), algorithms, p_proc->NIn());
+      if(m_checkRange and pass) {
+        const double tau=p_tau->Value(p, p_proc->Process()->Flavours(), algorithms, p_proc->NIn());
+        pass=tau>m_taumin && tau<m_taumax;
+      }
       m_sel_log->Hit(1-pass);
       return pass;
     }
@@ -56,9 +66,13 @@ namespace PHASIC {
       //msg_Out()<<p<<"\n";
       //if (sub->back()->m_i!=sub->back()->m_j) return true;
       //msg_Out()<<"Bla\n";
-      double tau=p_tau->Value(&p.front(),sub->back()->p_fl,
-			      sub->back()->m_n,p_proc->NIn());
-      bool pass=tau>m_taumin && tau<m_taumax;
+      std::map<std::string, typename RESUM::Algorithm<double>::Ptr> algorithms;
+      std::vector<ATOOLS::Flavour> flavs = {sub->back()->p_fl, sub->back()->p_fl+sub->back()->m_n};
+      bool pass = not p_tau->VetoEvent(p, flavs, algorithms,p_proc->NIn());
+      if(m_checkRange and pass) {
+        const double tau=p_tau->Value(p, flavs, algorithms, p_proc->NIn());
+        pass=tau>m_taumin && tau<m_taumax;
+      }
       m_sel_log->Hit(1-pass);
       return pass;
     }

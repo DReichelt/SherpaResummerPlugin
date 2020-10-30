@@ -257,18 +257,25 @@ void NLO_Analysis_2::Evaluate(double weight,double ncount,int mode)
 
   std::map<std::string, typename Algorithm<double>::Ptr> algorithms;
   for (size_t i=0; i<m_obss.size(); i++) {
-    const double value = m_recycle ?  m_obss[i]->Value(mom, fl, algorithms) : m_obss[i]->Value(mom, fl);
-    msg_Debugging()<<"value["<<i<<"] = "<<value
-                   <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
-    if(mode==0) {
-      m_sigmas[i]->Fill(value,weight,p_varweights,ncount);
-      m_sigmas[i]->Fill(ch);
+    if(m_obss[i]->VetoEvent(mom, fl, algorithms)) {
+      if(mode==0) m_sigmas[i]->AddZeroPoint(ncount);
+      else if(mode==1) m_sigmas[i]->AddZeroPointMCB(ncount);
+      else THROW(fatal_error,"Unknown mode.");
     }
-    else if(mode==1) {
-      m_sigmas[i]->FillMCB(value,weight,p_varweights,ncount);
-      m_sigmas[i]->FillMCB(ch);
+    else {
+      const double value = m_recycle ?  m_obss[i]->Value(mom, fl, algorithms) : m_obss[i]->Value(mom, fl);
+      msg_Debugging()<<"value["<<i<<"] = "<<value
+                     <<" ( w = "<<weight<<", n = "<<ncount<<" )\n";
+      if(mode==0) {
+        m_sigmas[i]->Fill(value,weight,p_varweights,ncount);
+        m_sigmas[i]->Fill(ch);
+      }
+      else if(mode==1) {
+        m_sigmas[i]->FillMCB(value,weight,p_varweights,ncount);
+        m_sigmas[i]->FillMCB(ch);
+      }
+      else THROW(fatal_error,"Unknown mode.");
     }
-    else THROW(fatal_error,"Unknown mode.");
   }
   return;
 }

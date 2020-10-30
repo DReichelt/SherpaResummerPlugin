@@ -351,6 +351,12 @@ namespace RESUM {
       return Value(p, fl, nin);
     }
 
+    virtual bool VetoEvent(const std::vector<Vec4T>& p,
+                           const std::vector<ATOOLS::Flavour>& fl,
+                           std::map<std::string, typename Algorithm<T>::Ptr>& algorithms,
+                           const size_t &nin=2) {
+      return false;
+    }
     
     T Value(ATOOLS::Particle_List *const pl) {
         //TODO: make this work with T
