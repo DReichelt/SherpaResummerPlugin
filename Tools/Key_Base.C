@@ -12,16 +12,23 @@ Key_Base::Key_Base(const std::string& name) : m_name(name) {
 
 Key_Base::Key_Base(const std::string& name,
                    std::vector<std::string> params)
-  : m_name(name), m_params(params) {
+  : m_name(name) {
   DEBUG_FUNC(name);
   // conventionally remove key from parmas if present
-  if(m_params[0]==m_name) m_params.erase(m_params.begin());
-  for(const std::string& p: m_params) {
+  // m_params.clear();
+  // m_params.reserve(params.size());
+  if(params[0]==m_name) params.erase(params.begin());
+  for(std::string p: std::move(params)) {
     msg_Debugging()<<p<<"\n";
-    std::vector<std::string> keyVal = split(p,std::set<std::string>({":"," ",","}));
-    if(keyVal.size() > 1) {
-      msg_Debugging()<<keyVal[0]<<" -> "<<keyVal[1]<<"\n";
-      m_params_map[keyVal[0]] = keyVal[1];
+    for(std::string pp: split(p,std::set<std::string>({" ",","}))) { 
+      msg_Debugging()<<pp<<"\n";
+      m_params.emplace_back(std::move(pp));
+      std::vector<std::string> keyVal = split(m_params.back(),std::set<std::string>({":"}));
+      if(keyVal.size() > 1) {
+        msg_Debugging()<<keyVal[0]<<" -> "<<keyVal[1]<<"\n";
+        m_params_map[keyVal[0]] = keyVal[1];
+      }
+      
     }
   }
 }
