@@ -20,15 +20,16 @@ namespace RESUM {
 
     JetAngularities_Base(const Observable_Key &args): 
       Observable_Base(args), m_algkey(args) {
+      DEBUG_FUNC(Name()+" -> "+Tag());
       m_algkey.m_name = "FJmaxPTjet";
-      m_alpha = to_type<double>(args.KwArg("alpha","2"));
-      m_R = to_type<double>(args.KwArg("R","0.8"));
+      m_alpha = to_type<double>(args.KwArg("alpha","2")); DEBUG_VAR(m_alpha);
+      m_R = to_type<double>(args.KwArg("R","0.8")); DEBUG_VAR(m_R);
       m_WTA = std::set<std::string>({"no","NO","n","N","0"}).count(args.KwArg("WTA","no")) == 0;
-
+      msg_Debugging()<<(m_WTA ? "Using wta axis.\n" : "Using jet axis.\n");
       // soft drop parameters
-      m_zcut = to_type<double>(args.KwArg("zcut","0.0"));
-      m_beta = to_type<double>(args.KwArg("beta","0"));
-      m_R0 = m_R;
+      m_zcut = to_type<double>(args.KwArg("zcut","0.0")); DEBUG_VAR(m_zcut);
+      m_beta = to_type<double>(args.KwArg("beta","0")); DEBUG_VAR(m_beta);
+      m_R0 = m_R; DEBUG_VAR(m_R0);
 
       m_algtag = m_algkey.Name();
       m_algtag += ":"+args.KwArg("R",std::to_string(m_R));
@@ -40,13 +41,9 @@ namespace RESUM {
       m_algtag += ":"+args.KwArg("minDPhi",args.KwArg("minDPhi","0"));
       m_algtag += ":"+args.KwArg("minZPT",args.KwArg("minZPT","0"));
       m_algtag += ":"+args.KwArg("weakCluster",args.KwArg("weakCluster","no"));
-
+      msg_Debugging()<<"Algtag: "<<m_algtag<<"\n";
       if(GROOM==0 or m_zcut==0.) m_gmode = GROOM_MODE::NONE;
       else m_gmode = GROOM_MODE::SD;
-      DEBUG_FUNC(Name()+" -> "+Tag());
-      DEBUG_VAR(m_zcut);
-      DEBUG_VAR(m_beta);
-      DEBUG_VAR(m_R);
       DEBUG_VAR(m_gmode);
     }
 

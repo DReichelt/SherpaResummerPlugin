@@ -23,7 +23,8 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   fastjet::JetDefinition jetDef = fastjet::JetDefinition(fastjet::antikt_algorithm,  R, recombScheme, strategy);
   // TODO: get groom params from key
   fastjet::contrib::SoftDrop sd_groomer = {beta, zcut, R};          
-  
+
+
   std::vector<fastjet::PseudoJet> fjs;
   std::vector<fastjet::PseudoJet> strongfjs;
   std::vector<fastjet::PseudoJet> ewfjs;
@@ -92,8 +93,8 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   else {
     msg_Debugging()<<"Jets ok.\n\n";
     m_jet = pseudoJets()[0];
-    if (Zfj.delta_phi_to(m_jet) < minDPhi or 
-        abs((m_jet.pt() - Zfj.pt()) / (m_jet.pt()+Zfj.pt())) > maxAsym) {
+    if (std::abs(Zfj.delta_phi_to(m_jet)) < minDPhi or 
+        std::abs((m_jet.pt() - Zfj.pt()) / (m_jet.pt()+Zfj.pt())) > maxAsym) {
       msg_Debugging()<<"Cut on Z failed.\n\n";
       m_jets.clear();
       m_jetVectors.clear();

@@ -112,6 +112,7 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
       msg_Debugging()<<p<<" "<<f<<"\n";
       msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
       fj = FJmaxPTjet(p,f,nin,ChKey);
+      if(fj.numJets() != 2) break;
     }
   }
   msg_Debugging()<<"Returning "<<channel<<".\n";
@@ -131,7 +132,7 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   }
   if(m_collapse and not ew){
     std::string chname = "";
-    if(fj.pseudoJets().size() > 0) {
+    if(fj.numJets() == 2) {
       if(fj.apply(f,0)[0].IsQuark()) chname = "Quark";
       else chname = "Gluon";
     }
