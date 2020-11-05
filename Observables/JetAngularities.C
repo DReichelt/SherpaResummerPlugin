@@ -230,7 +230,7 @@ namespace RESUM {
             const std::vector<ATOOLS::Flavour>& fl,
             std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
             const size_t& nin) override {
-
+      DEBUG_FUNC(m_alpha);
       for(const Vec4D& p: ip) {
         if(p.Nan()) {
           // _rejected++;
@@ -240,7 +240,6 @@ namespace RESUM {
           return 0;
         }
       }
-
 
       if(ip.size() <= nin) return 0;
       msg_Debugging()<<"Start jet angularity, alpha = "<<m_alpha<<".\n";
@@ -320,8 +319,10 @@ namespace RESUM {
             const std::vector<ATOOLS::Flavour>& fl,
             std::map<std::string, typename Algorithm<double>::Ptr>& algorithms,
             const size_t& nin) override {
+      DEBUG_FUNC("");
       for(const Vec4D& p: ip) {
         if(p.Nan()) {
+          msg_Debugging()<<"Nan in momenta, veto event.\n";
           return true;
         }
       }
@@ -342,7 +343,11 @@ namespace RESUM {
         msg_Debugging()<<"Reusing jets found earlier.\n";
       }
       // If jets are found, there are always 2, the ungroomed and the groomed one.
-      if(alg->second->numJets() != 2) return true;
+      if(alg->second->numJets() != 2) {
+        msg_Debugging()<<"Veto Event.\n";
+        return true;
+      }
+      msg_Debugging()<<"Pass Event\n";
       return false;
     }
 
