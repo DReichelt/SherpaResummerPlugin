@@ -95,8 +95,16 @@ Resum_Enhance_Observable::Resum_Enhance_Observable
 double Resum_Enhance_Observable::operator()
   (const ATOOLS::Vec4D *p,const ATOOLS::Flavour *fl,const size_t n)
 {
+  std::vector<ATOOLS::Vec4D> moms = {p,p+n};
+  std::vector<ATOOLS::Flavour> flavs = {fl,fl+n};
   for(size_t i=0; i<m_obs.size(); i++) {
-    m_obsVals[i] = m_obs[i]->Value(p,fl,n,p_proc->NIn());
+    std::map<std::string, typename RESUM::Algorithm<double>::Ptr> algorithms;
+    if(m_obs[i]->VetoEvent(moms,flavs,algorithms,p_proc->NIn())) {
+      return 0;
+    }
+    else {
+      m_obsVals[i] = m_obs[i]->Value(moms,flavs,algorithms,p_proc->NIn());
+    }
   }
   return m_calc.Calculate()->Get<double>();
 }
