@@ -95,9 +95,10 @@ namespace RESUM {
         m_weight2s += other.m_weight2s;
         m_barWeights += other.m_barWeights;
         m_barWeight2s += other.m_barWeight2s;
-        for(auto& var: other.m_variants) {
-          if(m_variants[var.first]) *m_variants[var.first] += *var.second;
-          else m_variants[var.first] = std::make_shared<Cumulant>(*var.second);
+        for(const std::string& name: other.m_filledVariants) {
+          m_filledVariants.emplace(name);
+          if(m_variants[name]) *m_variants[name] += *(other.m_variants[name]);
+          else m_variants[name] = std::make_shared<Cumulant>(*(other.m_variants[name]));
         } 
         m_fills += other.m_fills;
         m_maxvalue = std::max(m_maxvalue,other.m_maxvalue);
@@ -194,6 +195,7 @@ namespace RESUM {
       for(const std::string& name: names) {
         if(!m_variants[name]) m_variants[name] = std::make_shared<Cumulant>(m_edges,m_name+"_"+name,p_varweights);
         *m_variants[name] += *p_fill;
+        m_filledVariants.emplace(name);
       }
     }
 
@@ -215,25 +217,25 @@ namespace RESUM {
       if(!p_varweights) THROW(fatal_error,"Internal error.");
       m_maxvalue = std::max(m_maxvalue,val);
       m_minvalue = std::min(m_minvalue,val);
+      const std::valarray<bool> fill = m_edges > val;
+      const std::valarray<bool> barFill = not fill;
+      const size_t nfills = std::count(std::begin(fill),std::end(fill),true);
       for(const auto& var: *p_varweights) {
         const double w = (*weights)[var.first];
-        const std::valarray<bool> fill = m_edges > val;
-        const std::valarray<bool> barFill = not fill;
-        const size_t nfills = std::count(std::begin(fill),std::end(fill),true);
-        std::valarray<double> wBarFill = std::valarray<double>(w,m_nEdges-nfills); 
+        // if(ncount > 0) {
         std::valarray<double> wFill = std::valarray<double>(w,nfills); 
-        if(ncount > 0) {
-          m_weights[var.second[fill]] += wFill;
-          m_barWeights[var.second[barFill]] += wBarFill;
-          wFill *= wFill;
-          wBarFill *= wBarFill;
-          m_weight2s[var.second[fill]] += std::move(wFill);
-          m_barWeight2s[var.second[barFill]] += std::move(wBarFill);
-        }
-        else {
-          m_weights[var.second[fill]] += std::move(wFill);
-          m_barWeights[var.second[barFill]] += std::move(wBarFill);
-        }
+        std::valarray<double> wBarFill = std::valarray<double>(w,m_nEdges-nfills);        
+        m_weights[var.second[fill]] += wFill;
+        m_barWeights[var.second[barFill]] += wBarFill;
+        wFill *= wFill;
+        wBarFill *= wBarFill;
+        m_weight2s[var.second[fill]] += std::move(wFill);
+        m_barWeight2s[var.second[barFill]] += std::move(wBarFill);
+        // }
+        // else {
+        //   m_weights[var.second[fill]] += std::move(wFill);
+        //   m_barWeights[var.second[barFill]] += std::move(wBarFill);
+        // }
       }
     }
 
@@ -272,20 +274,16 @@ namespace RESUM {
         // msg_Out()<<"\n";
         // for(auto w: p_tmp->m_weights) msg_Out()<<w<<" ";
         // msg_Out()<<"\n";
-        p_tmp->m_weight2s = p_tmp->m_weights*p_tmp->m_weights;
-        p_tmp->m_barWeight2s = p_tmp->m_barWeights*p_tmp->m_barWeights;
-        for(auto& v: p_tmp->m_variants) {
-          if(v.second) {
-            v.second->m_weight2s = v.second->m_weights*v.second->m_weights;
-            v.second->m_barWeight2s = v.second->m_barWeight2s*v.second->m_barWeight2s;
-          }
-        }
+
+        p_tmp->_SetWeight2sFromWeight();
+
         // for(auto w: p_tmp->m_weight2) msg_Out()<<w<<" ";
         // msg_Out()<<"\n";
         // for(auto w: p_tmp->m_weight2s) msg_Out()<<w<<" ";
         // msg_Out()<<"\n\n";
+
         *this += *p_tmp;
-        p_tmp->Reset();
+        p_tmp->_ResetWeight();
       }
     }
 
@@ -300,13 +298,28 @@ namespace RESUM {
       p_tmp->m_fills = ncount;
     }
 
-    void Reset() {
-      m_weights *= 0;
-      m_weight2s *= 0;
-      m_barWeights *= 0;
-      m_barWeight2s *= 0;
+    void _ResetWeight() {
+      std::fill(std::begin(m_weights),std::end(m_weights),0);
+      std::fill(std::begin(m_barWeights),std::end(m_barWeights),0);
       m_fills = 0;
-      for(auto& v: m_variants) v.second->Reset();
+      for(const std::string& name: m_filledVariants) m_variants[name]->_ResetWeight();
+      m_filledVariants.clear();
+    }
+
+    void _SetWeight2sFromWeight() {
+      m_weight2s = m_weights*m_weights;
+      m_barWeight2s = m_barWeights*m_barWeights;
+      for(const std::string& name: m_filledVariants) m_variants[name]->_SetWeight2sFromWeight();
+    } 
+
+    void Reset() {
+      std::fill(std::begin(m_weights),std::end(m_weights),0);
+      std::fill(std::begin(m_weight2s),std::end(m_weight2s),0);
+      std::fill(std::begin(m_barWeights),std::end(m_barWeights),0);
+      std::fill(std::begin(m_barWeight2s),std::end(m_barWeight2s),0);
+      m_fills = 0;
+      for(auto& name: m_filledVariants) m_variants[name]->_ResetWeight();
+      m_filledVariants.clear();
     }
 
     void Finalize() {
@@ -320,8 +333,8 @@ namespace RESUM {
         m_barErrors = sqrt((m_barWeight2s-m_barWeights*m_barWeights)/(m_fills-1));
       }
       else {
-        m_errors = 0.*m_weights;
-        m_barErrors = 0.*m_barWeights;
+        std::fill(std::begin(m_errors),std::end(m_errors),0);
+        std::fill(std::begin(m_barErrors),std::end(m_barErrors),0);
       }
       switch(m_oform) {
       case 1:
@@ -364,7 +377,7 @@ namespace RESUM {
 
     void Output(ATOOLS::Gzip_Stream& ofile, const std::string& title="", 
                 const std::string& vartitle="") {
-      DEBUG_FUNC(m_name);
+      // DEBUG_FUNC(m_name);
       if(!p_varweights) {
         msg_Debugging()<<"No varweights "<<m_name<<".\n";
         InitVarWeights(nullptr);
@@ -467,14 +480,15 @@ namespace RESUM {
     double m_minvalue = std::numeric_limits<double>::infinity();
 
     // output format, 
-    // 1 ... keep bins as is, 
-    // 11 .. convert to log10, 
-    // 21 ..convert to natural log
+    // 1  ... keep bins as is, 
+    // 11 ... convert to log10, 
+    // 21 ... convert to natural log
     int m_oform = 1;
   
     Cumulant::Ptr p_tmp = nullptr;
     Cumulant::Ptr p_fill = nullptr;
     std::vector<std::string> m_variantNames;
+    std::set<std::string> m_filledVariants;
     std::map<std::string,Cumulant::Ptr> m_variants;
   };
 }
