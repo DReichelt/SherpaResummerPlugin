@@ -32,11 +32,11 @@ NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
         names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
       }
       names.insert(name+"_PtLead_"+m_edges.back());
-      collapse(name,"EW");
-      for(size_t i=0; i<m_edges.size()-1; i++) {
-        names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
-      }
-      names.insert(name+"_PtLead_"+m_edges.back());
+      // collapse(name,"EW");
+      // for(size_t i=0; i<m_edges.size()-1; i++) {
+      //   names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
+      // }
+      // names.insert(name+"_PtLead_"+m_edges.back());
     }
     m_channelNames.assign(names.begin(), names.end());
     // m_channelNames.insert(m_channelNames.end(),
@@ -88,33 +88,33 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   // pt of leading (ungroomed) jet
   FJmaxPTjet fj(p,f,nin,ChKey);
   const double PT = fj.jetScales(0);
-  bool ew = false;
-  for(ATOOLS::Flavour flav: fj.apply(f,0)) {
-    if(not flav.Strong()) {
-      ew = true;
-      collapse(channel,"EW");
-      break;
-    }
-  }
+  // bool ew = false;
+  // for(ATOOLS::Flavour flav: fj.apply(f,0)) {
+  //   if(not flav.Strong()) {
+  //     ew = true;
+  //     collapse(channel,"EW");
+  //     break;
+  //   }
+  // }
   msg_Debugging()<<"Channel candidate: "<<channel<<".\n";
-  if(not ew) {
+  // if(not ew) {
 
-    std::string flname = "";
-    while(fj.pseudoJets().size() > 0 and fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
-      for(auto& pd: fj.pseudoJets()[0].constituents()) {
-        msg_Debugging()<<pd.e()<<" "<<pd.px()<<" "<<pd.py()<<" "<<pd.pz()<<"\n";
-      }
-      msg_Debugging()<<"Leading jet has "<<fj.pseudoJets()[0].constituents().size()<<" constituents, "<<p.size()-2<<" jets left to cluster.\n";
-      n--;
-      msg_Debugging()<<"Using cluster algorithm "<<n<<" of "<<m_resolvers.size()-1<<".\n";
-      channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p,&f);
-      // create dummy flavours
-      msg_Debugging()<<p<<" "<<f<<"\n";
-      msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
-      fj = FJmaxPTjet(p,f,nin,ChKey);
-      if(fj.numJets() != 2) break;
+  std::string flname = "";
+  while(fj.pseudoJets().size() > 0 and fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {
+    for(auto& pd: fj.pseudoJets()[0].constituents()) {
+      msg_Debugging()<<pd.e()<<" "<<pd.px()<<" "<<pd.py()<<" "<<pd.pz()<<"\n";
     }
+    msg_Debugging()<<"Leading jet has "<<fj.pseudoJets()[0].constituents().size()<<" constituents, "<<p.size()-2<<" jets left to cluster.\n";
+    n--;
+    msg_Debugging()<<"Using cluster algorithm "<<n<<" of "<<m_resolvers.size()-1<<".\n";
+    channel = m_resolvers.at(n-1)->Channel(ip,fl,nin,false,&p,&f);
+    // create dummy flavours
+    msg_Debugging()<<p<<" "<<f<<"\n";
+    msg_Debugging()<<"New channel candidate: "<<channel<<"\n";
+    fj = FJmaxPTjet(p,f,nin,ChKey);
+    if(fj.numJets() != 2) break;
   }
+  // }
   msg_Debugging()<<"Returning "<<channel<<".\n";
   if(pout) {
     *pout = p;
@@ -130,7 +130,8 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
       }
     }
   }
-  if(m_collapse and not ew){
+  // if(m_collapse and not ew){
+  if(m_collapse){
     std::string chname = "";
     if(fj.numJets() == 2) {
       if(fj.apply(f,0)[0].IsQuark()) chname = "Quark";
