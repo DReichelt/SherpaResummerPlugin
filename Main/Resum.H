@@ -60,6 +60,7 @@ namespace RESUM {
     std::vector<std::pair<size_t, size_t>> m_kij;
     std::vector<int> m_deltad;
     std::function<double(double, double&)> m_F;
+    std::function<double(double, double&)> m_Sngl;
     std::vector<int> signlabels;
     int n_g, n_q, n_aq, color_sings;
     double s_12, m_rn[2];
@@ -86,11 +87,11 @@ namespace RESUM {
                CKCOUL = 1     << 5,     // check effect of coulomb phases
                IGNCOLL = 1    << 6,     // ignore the collinear radiators
                IGNSOFT = 1    << 7,     // ignore the soft function
+               IGNSNGL = 1    << 7,     // ignore the soft non-global function
                IGNPDF = 1     << 8,     // ignore the pdf ratio
                IGNFFUNC = 1   << 9,     // ignore ffunction
                EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND, // conveninece def.
                HYPGEO = 1     << 10,    // include hypergeometric function for transition point
-               NGLEXPAND = 1  << 11     // include expansion of non-global logs 
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},
@@ -100,7 +101,6 @@ namespace RESUM {
                                                      {"LARGENC", MODE::LARGENC},
                                                      {"EXPAND", MODE::EXPAND},
                                                      {"HYPGEO", MODE::HYPGEO}, 
-                                                     {"NGLEXPAND", MODE::NGLEXPAND}, 
                                                      // from here on, modes are mostly usefull for debugging,
                                                      // should not appear in physics calculations
                                                      {"CKINV", MODE::CKINV},
@@ -112,6 +112,8 @@ namespace RESUM {
                                                      {"IGNORECOLLINEAR", MODE::IGNCOLL},
                                                      {"IGNSOFT", MODE::IGNSOFT},
                                                      {"IGNORESOFT", MODE::IGNSOFT},
+                                                     {"IGNSNGL", MODE::IGNSNGL},
+                                                     {"IGNORESOFTNONGLOBAL", MODE::IGNSNGL},
                                                      {"IGNPDF", MODE::IGNPDF},
                                                      {"IGNOREPDF",MODE::IGNPDF},
                                                      {"IGNFFUNC",MODE::IGNFFUNC},

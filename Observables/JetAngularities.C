@@ -9,6 +9,7 @@
 #include <algorithm>       
 
 #include "Observables/Algorithms/GetAlgorithm.H"
+#include "Tools/ReadInFunction.H"
 
 using namespace ATOOLS;
 
@@ -30,6 +31,12 @@ namespace RESUM {
       m_zcut = to_type<double>(args.KwArg("zcut","0.0")); DEBUG_VAR(m_zcut);
       m_beta = to_type<double>(args.KwArg("beta","0")); DEBUG_VAR(m_beta);
       m_R0 = m_R; DEBUG_VAR(m_R0);
+
+      std::string help = args.KwArg("SNGLgluon","NONE");
+      if(help != "NONE") p_SNGLgluon.reset(new ReadInFunction(help));
+      help = args.KwArg("SNGLquark","NONE");
+      if(help != "NONE") p_SNGLquark.reset(new ReadInFunction(help));
+
 
       m_algtag = m_algkey.Name();
       m_algtag += ":"+args.KwArg("R",std::to_string(m_R));
@@ -78,6 +85,34 @@ namespace RESUM {
                                                     const std::vector<ATOOLS::Flavour>& fl, 
                                                     const RESUM::Params& params) {
       return FFUNCTION::Additive;
+    }
+
+    std::function<double(double,double&)> SnglFunction(const std::vector<Vec4T>& p,
+                                                       const std::vector<ATOOLS::Flavour>& fl,
+                                                       const RESUM::Params& params) override {
+      for(size_t i=2; i<fl.size(); i++) {
+        if(fl[i].IsGluon()) {
+          if(p_SNGLgluon == nullptr) {
+            msg_Error()<<"Gluon Jet, but no NGL function provided.";
+            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?";              
+          }
+          else {
+            return *p_SNGLgluon;
+          }
+        }
+        if(fl[i].IsQuark()) {
+          if(p_SNGLquark == nullptr) {
+            msg_Error()<<"Quark Jet, but no NGL function provided.";
+            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?";              
+            
+          }
+          else {
+            return *p_SNGLquark;
+          }
+        }
+      }
+      THROW(fatal_error,"No NGL function found.");
+      return Observable_Base::SnglFunction(p,fl,params);
     }
 
     GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
@@ -359,6 +394,9 @@ namespace RESUM {
     bool m_WTA = false;
     Observable_Key m_algkey = {"AlgKey"};
     std::string m_algtag;
+
+    ReadInFunction::Ptr p_SNGLgluon = nullptr;
+    ReadInFunction::Ptr p_SNGLquark = nullptr;
   };// end of class Y1_II
 
 }// end of namespace RESUM

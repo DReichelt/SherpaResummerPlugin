@@ -139,6 +139,7 @@ int Resum::PerformShowers()
     }
     
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
+    m_Sngl = m_obss[m_n]->SnglFunction(moms, flavs, m_params);
 
     m_zcut = m_obss[m_n]->GroomZcut();
     m_beta = m_obss[m_n]->GroomBeta();
@@ -316,6 +317,8 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   double PDFexp=0.0;
   // coefficient F_2
   double FexpNLL_NLO = 0.0;
+  // coefficient for NGL S function
+  double SnglExpNLL_NLO = 0.0;
   // weight for cumulative distribution
   double weight = 1.;
 
@@ -421,6 +424,18 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     }
   }
   msg_Debugging()<<"Weight after F = "<<weight<<".\n";
+
+  if(!(m_amode&MODE::IGNSNGL)) {
+    const double as = m_params.alphaS(p_ampl->MuR2());
+    const double beta0 = m_params.beta0(p_ampl->MuR2());
+    const double lambda = as*beta0*L; 
+    const double t = T(lambda);
+    msg_Debugging()<<"Calculate Sngl at T = "<<t<<"\n";
+    if(!std::isnan(t)) weight *= m_Sngl(t/4.,SnglExpNLL_NLO);
+    else m_Sngl(0,SnglExpNLL_NLO);
+  }
+  msg_Debugging()<<"Weight after NGL = "<<weight<<"\n";
+
   // store resummed result
   msg_Debugging()<<"Final weight = "<<weight<<"\n";
   m_resNLL[m_n][i] = std::isnan(weight) ? 0 : weight;
@@ -488,7 +503,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,1)*(4./m_a[0]*SoftexpNLL_LO*(G(1,0)+L*G(1,1)+L*L*G(1,2)));
   }
   else{
-      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
+      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + SnglExpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
       m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
   }
 
@@ -897,9 +912,9 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
                             + 2.*Trace(Hard,real(conjGamma*ICmetric*Gamma_exp))
                             + Trace(Hard,real(Gamma_exp*ICmetric*Gamma_exp)))/traceH/8.;
     }
-    if(m_amode & MODE::NGLEXPAND) {
-      SoftexpNLL_NLO += m_params.CA()/16.*Trace(Hard,GammaNGL.real())/traceH;
-    }
+    // if(m_amode & MODE::NGLEXPAND) {
+    //   SoftexpNLL_NLO += m_params.CA()/16.*Trace(Hard,GammaNGL.real())/traceH;
+    // }
   }
   // Calculate Soft matrix
   const MatrixC& eGamma = exp(ICmetric*Gamma.transposeInPlace());

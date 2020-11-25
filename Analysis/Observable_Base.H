@@ -162,6 +162,12 @@ namespace RESUM {
                                                             const std::vector<ATOOLS::Flavour>& fl,
                                                             const RESUM::Params& params) = 0;
 
+    virtual std::function<double(double,double&)> SnglFunction(const std::vector<Vec4T>& p,
+                                                               const std::vector<ATOOLS::Flavour>& fl,
+                                                               const RESUM::Params& params) {
+      return [](double t,double& SnglExpNLL_NLO) {SnglExpNLL_NLO=0.; return 1.; };
+    }
+
 
     
     virtual double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) {

@@ -87,7 +87,8 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                   'Math/HypGeo.C',
                                   'Math/DiGamma.C',
                                   'Tools/StringTools.C',
-                                  'Tools/Key_Base.C'],
+                                  'Tools/Key_Base.C',
+                                  'Tools/ReadInFunction.C'],
 	                        LIBPATH=(['${sherpa}/lib/SHERPA-MC']
                                          + (['${fjcpath}/lib']
                                             if fjc else [])
