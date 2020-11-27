@@ -1,5 +1,6 @@
 #-*- mode: python-*-
 
+
  
 import yoda
 import math as m
@@ -18,21 +19,37 @@ class Sigma(object):
         nlo_file = ["NLO.yoda"] if self.args.nlo_file is None else args.nlo_file 
         nll_file = ["NLL.yoda"] if self.args.nll_file is None else args.nll_file 
 
+        self.has_nll = os.path.exists(nll_file[0])
+        self.has_lo = os.path.exists(lo_file)
+        self.has_nlo = os.path.exists(nlo_file)
+        
         obs = self.args.observable
 
-        if os.path.exists(nll_file[0]):
+        if self.has_nll:
             logging.debug("Found NLL file {}.".format(nll_file[0]))
-            self.has_nll = True
             f_nll = yoda.readYODA(nll_file[0])
         else:
-            logging.debug("Did not Find NLL file {}. Use {} as dummy.".format(nll_file[0],lo_file))
-            self.has_nll = False
-            f_nll = yoda.readYODA(lo_file)
-
+            logging.debug("Did not Find NLL file {}.".format(nll_file[0]))
+            if self.has_lo:
+                logging.debug("Use {} as dummy.".format(lo_file))
+                f_nll = yoda.readYODA(lo_file)
+            elif self.has_nlo:
+                logging.debug("Use {} as dummy.".format(nlo_file))
+                f_nll = yoda.readYODA(nlo_file)
+            else:
+                logging.critical("Neither NLL ({}), LO ({}) or NLO ({}) existing.".format(nll_file[0],lo_file,nlo_file))
+                logging.critical("Nothing to do for me.")
+                exit(1)
+                
         if self.has_nll:
             Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLL_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
-        else:
+        elif self.has_lo:
             Sigma_NLL = self.get_Sigma("/Resum/{OBS}_LO_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
+        elif self.has_nlo:
+            Sigma_NLL = self.get_Sigma("/Resum/{OBS}_NLO_{NAME}".format(OBS=obs,NAME=args.name),f_nll)
+        else:
+            logging.critical("Internal error.")
+            exit(1)
         self.xvals = np.array([p.x for p in Sigma_NLL.points])
         self.nll = np.array([p.y for p in Sigma_NLL.points])
         self.ch_nll = {}
@@ -41,14 +58,22 @@ class Sigma(object):
                 if self.has_nll:
                     Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLL_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                                CH=ch),f_nll)
-                else:
+                elif self.has_lo:
                     Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_LO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
                                                                                               CH=ch),f_nll)
+                elif self.has_nlo:
+                    Sigma_NLL_ch = self.get_Sigma("/Resum/{OBS}_NLO_Channel_{CH}_{NAME}".format(OBS=obs,NAME=args.name,
+                                                                                              CH=ch),f_nll)
+                else:
+                    logging.critical("Internal error.")
+                    exit(1)
+
             except KeyError:
                 logging.info("No channel {} in NLL file.".format(ch))
                 continue
-            self.match_bins(Sigma_NLL,Sigma_NLL_ch)
-            self.ch_nll[ch] = np.array([p.y for p in Sigma_NLL_ch.points])
+            if Sigma_NLL_ch.points[-1].y != 0.:
+                self.match_bins(Sigma_NLL,Sigma_NLL_ch)
+                self.ch_nll[ch] = np.array([p.y for p in Sigma_NLL_ch.points])
         if len(self.ch_nll) > 0:
             self.nll = sum(self.ch_nll.values())
 
@@ -154,15 +179,20 @@ class Sigma(object):
                 
         if not self.lo is None:
             self.aSC = (self.lo-self.expLO)/self.sigma_0
+            # self.ch_aSC = {ch : ((self.ch_lo[ch]
+            #                       -self.ch_expLO[ch])/self.ch_sigma_0[ch]
+            #                      if ch in self.ch_nll else np.zeros_like(self.aSC))
+            #                for ch in self.args.channels}
             self.ch_aSC = {ch : ((self.ch_lo[ch]
-                                  -self.ch_expLO[ch])/self.ch_sigma_0[ch]
-                                 if ch in self.ch_nll else np.zeros_like(self.aSC))
-                           for ch in self.args.channels}
+                                  -self.ch_expLO[ch])/self.ch_sigma_0[ch])
+                                 for ch in self.ch_nll}
 
         else:
             self.aSC = np.zeros_like(self.nll)
+            # self.ch_aSC = {ch : np.zeros_like(self.nll)
+            #                for ch in self.args.channels}
             self.ch_aSC = {ch : np.zeros_like(self.nll)
-                           for ch in self.args.channels}
+                           for ch in self.ch_nll}
 
         # Additive
         self._nll_add = self.match_add(self.nll,
@@ -196,9 +226,9 @@ class Sigma(object):
                                          nlo=self.nlo,
                                          expnlo=self.expNLO)
         self.ch_nll_mult = {ch : self.match_mult_ch(ch)
-                            for ch in self.args.channels}
+                            for ch in self.ch_nll}
         self.ch_nll_mult_2 = {ch : self.match_mult_ch_2(ch)
-                              for ch in self.args.channels}
+                              for ch in self.ch_nll}
 
         # LogR
         self._nll_logr = self.match_logr(self.nll,
@@ -208,9 +238,9 @@ class Sigma(object):
                                          nlo=self.nlo,
                                          expnlo=self.expNLO)
         self.ch_nll_logr = {ch : self.match_logr_ch(ch)
-                            for ch in self.args.channels}
+                            for ch in self.ch_nll}
         self.ch_nll_logr_2 = {ch : self.match_logr_ch_2(ch)
-                              for ch in self.args.channels}
+                              for ch in self.ch_nll}
 
         
         if self.lo is None:
@@ -496,7 +526,7 @@ if __name__=='__main__':
     if args.name == 'None': args.name = "Sigma"
     else: args.name = "{NAME}_Sigma".format(NAME=args.name)
     sigma = Sigma(args)
-    if args.scale is None: args.scale = 1./sigma.sigma_0
+    argscale = 1./sigma.sigma_0 if args.scale is None else args.scale
     variations = []
     for i in range(len(nll_file[0])):
         args.nll_file = nll_file[:,i]
@@ -537,27 +567,37 @@ if __name__=='__main__':
     yoda.writeYODA(sigma.toYODA(sigma.nll_add[1][::args.rebin], variations=[s.nll_mult[1][::args.rebin] for
                                                               s in variations]),
                    "{DIR}/{FILE_PREF}_add_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(sigma.nll[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(sigma.nll[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_NLL.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
     # print "{DIR}/{FILE_PREF}_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix)
-    # for p in sigma.toYODA((sigma.sigma_0+sigma.lo)[::args.rebin],normalize=False,scale=args.scale)[1].points: print p
+    # for p in sigma.toYODA((sigma.sigma_0+sigma.lo)[::args.rebin],normalize=False,scale=argscale)[1].points: print p
     # print ""
-    # for p in sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=args.scale)[1].points: print p
+    # for p in sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=argscale)[1].points: print p
 
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.lo)[::args.rebin],normalize=False,scale=args.scale),
+    Sigma_LO = (sigma.sigma_0+sigma.lo)[::args.rebin]
+    Sigma_NLO = (sigma.sigma_0+sigma.lo-sigma.nlo)[::args.rebin]
+    yoda.writeYODA(sigma.toYODA(Sigma_LO,normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.lo-sigma.nlo)[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(Sigma_NLO,normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=args.scale),
+
+    yoda.writeYODA(sigma.toYODA(Sigma_LO,normalize=True),
+                   "{DIR}/{FILE_PREF}_LO_Normalised.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(Sigma_NLO,normalize=True),
+                   "{DIR}/{FILE_PREF}_NLO_Normalised.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+    yoda.writeYODA(sigma.toYODA(sigma.nll[::args.rebin],normalize=False,scale=1./Sigma_LO[-1]),
+                   "{DIR}/{FILE_PREF}_NLL_Normalised.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+
+    
+    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO)[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_expLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_expNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC)*sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC)*sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_expNLO_Capprox.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC[0])*sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA((sigma.sigma_0+(1.+sigma.aSC[0])*sigma.expLO+sigma.expNLO)[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_expNLO_C.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
 
     expNLO = np.zeros_like(sigma.expLO)
@@ -566,56 +606,66 @@ if __name__=='__main__':
     rem3 = np.zeros_like(sigma.expLO)
     rem4 = np.zeros_like(sigma.expLO)
     for ch in args.channels:
-        expNLO += sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch]
-        mult_fac = c = np.divide(sigma.ch_nll_mult[ch][1], sigma.ch_nll[ch],
-                                 out=np.zeros_like(sigma.ch_nll_mult[ch][1]), where=sigma.ch_nll[ch]!=0)
-        rem1 += (sigma.ch_nll[ch]-sigma.ch_sigma_0[ch]-sigma.ch_expLO[ch]-sigma.ch_expNLO[ch])*mult_fac
-        rem2 += sigma.ch_expNLO[ch]*sigma.ch_aSC[ch]
-        rem3 += sigma.ch_expLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
-        rem4 += sigma.ch_expNLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
+        if sigma.ch_sigma_0[ch] > 0:
+            expNLO += sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch]
+            mult_fac = c = np.divide(sigma.ch_nll_mult[ch][1], sigma.ch_nll[ch],
+                                     out=np.zeros_like(sigma.ch_nll_mult[ch][1]), where=sigma.ch_nll[ch]!=0)
+            rem1 += (sigma.ch_nll[ch]-sigma.ch_sigma_0[ch]-sigma.ch_expLO[ch]-sigma.ch_expNLO[ch])*mult_fac
+            rem2 += sigma.ch_expNLO[ch]*sigma.ch_aSC[ch]
+            rem3 += sigma.ch_expLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
+            rem4 += sigma.ch_expNLO[ch]*(mult_fac - sigma.ch_aSC[ch] - 1.)
     nlo_check = sigma.nll_mult[1]-rem1-rem2-rem3-rem4
-    yoda.writeYODA(sigma.toYODA(expNLO[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(expNLO[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_expNLO_Channels.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(rem1[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(rem1[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_rem1.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(rem2[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(rem2[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_rem2.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(rem3[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(rem3[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_rem3.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(rem4[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(rem4[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_rem4.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-    yoda.writeYODA(sigma.toYODA(nlo_check[::args.rebin],normalize=False,scale=args.scale),
+    yoda.writeYODA(sigma.toYODA(nlo_check[::args.rebin],normalize=False,scale=argscale),
                    "{DIR}/{FILE_PREF}_CheckNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
     
 
     for ch in args.channels:
         dirName = args.output_dir+"-{CH}".format(CH=ch)
         if not os.path.exists(dirName): os.mkdir(dirName)
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_mult[ch][0][::args.rebin],variations=[s.ch_nll_mult[ch][0][::args.rebin]
-                                                                         for s in
-                                                                         variations]),
-                       "{DIR}/{FILE_PREF}_mult_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_logr[ch][0][::args.rebin],variations=[s.ch_nll_logr[ch][0][::args.rebin]
-                                                                         for s in
-                                                                         variations]),
-                       "{DIR}/{FILE_PREF}_LogR_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_add[ch][0][::args.rebin],variations=[s.ch_nll_add[ch][0][::args.rebin]
-                                                                        for s in
-                                                                        variations]),
-                       "{DIR}/{FILE_PREF}_add_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_mult[ch][1][::args.rebin],variations=[s.ch_nll_mult[ch][1][::args.rebin]
-                                                                         for s in
-                                                                         variations]),
-                       "{DIR}/{FILE_PREF}_mult_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_logr[ch][1][::args.rebin],variations=[s.ch_nll_logr[ch][1][::args.rebin]
-                                                                         for s in
-                                                                         variations]),
-                       "{DIR}/{FILE_PREF}_LogR_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA(sigma.ch_nll_add[ch][1][::args.rebin],variations=[s.ch_nll_add[ch][1][::args.rebin]
-                                                                        for s in
-                                                                        variations]),
-                       "{DIR}/{FILE_PREF}_add_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        scale = 1./sigma.ch_sigma_0[ch] if sigma.ch_sigma_0[ch] > 0 else 1.
+        if sigma.ch_sigma_0[ch] > 0:
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_mult[ch][0][::args.rebin],variations=[s.ch_nll_mult[ch][0][::args.rebin]
+                                                                                           for s in
+                                                                                           variations]),
+                           "{DIR}/{FILE_PREF}_mult_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_logr[ch][0][::args.rebin],variations=[s.ch_nll_logr[ch][0][::args.rebin]
+                                                                                           for s in
+                                                                                           variations]),
+                           "{DIR}/{FILE_PREF}_LogR_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_add[ch][0][::args.rebin],variations=[s.ch_nll_add[ch][0][::args.rebin]
+                                                                                          for s in
+                                                                                          variations]),
+                        "{DIR}/{FILE_PREF}_add_LO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_mult[ch][1][::args.rebin],variations=[s.ch_nll_mult[ch][1][::args.rebin]
+                                                                                           for s in
+                                                                                           variations]),
+                           "{DIR}/{FILE_PREF}_mult_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_logr[ch][1][::args.rebin],variations=[s.ch_nll_logr[ch][1][::args.rebin]
+                                                                                           for s in
+                                                                                           variations]),
+                           "{DIR}/{FILE_PREF}_LogR_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA(sigma.ch_nll_add[ch][1][::args.rebin],variations=[s.ch_nll_add[ch][1][::args.rebin]
+                                                                                          for s in
+                                                                                          variations]),
+                           "{DIR}/{FILE_PREF}_add_NLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            scale = 1./sigma.ch_sigma_0[ch] if args.scale is None else args.scale
+            yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
+                           "{DIR}/{FILE_PREF}_expNLO_Capprox.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch][0])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
+                           "{DIR}/{FILE_PREF}_expNLO_C.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+            yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
+                           "{DIR}/{FILE_PREF}_expNLO_Channels.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
+        else:
+            scale =  1.
         yoda.writeYODA(sigma.toYODA(sigma.ch_nll[ch][::args.rebin],normalize=False,scale=scale),
                        "{DIR}/{FILE_PREF}_NLL.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
         yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+sigma.ch_lo[ch])[::args.rebin],normalize=False,scale=scale),
@@ -625,11 +675,4 @@ if __name__=='__main__':
         yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+sigma.ch_expLO[ch])[::args.rebin],normalize=False,scale=scale),
                        "{DIR}/{FILE_PREF}_expLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
         yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
-                       "{DIR}/{FILE_PREF}_expNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
-                       "{DIR}/{FILE_PREF}_expNLO_Capprox.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch][0])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
-                       "{DIR}/{FILE_PREF}_expNLO_C.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-        yoda.writeYODA(sigma.toYODA((sigma.ch_sigma_0[ch]+(1.+sigma.ch_aSC[ch])*sigma.ch_expLO[ch]+sigma.ch_expNLO[ch])[::args.rebin],normalize=False,scale=scale),
-                       "{DIR}/{FILE_PREF}_expNLO_Channels.yoda".format(DIR=dirName,FILE_PREF=file_prefix))
-                    
+                       "{DIR}/{FILE_PREF}_expNLO.yoda".format(DIR=dirName,FILE_PREF=file_prefix))                    
