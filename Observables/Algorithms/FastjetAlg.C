@@ -56,7 +56,8 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   
   //cs = {fjs, jetDef};
 
-  m_pseudoJets = fastjet::sorted_by_pt((fastjet::SelectorAbsRapMax(m_maxRap)*fastjet::SelectorPtMin(m_minPT))(jetDef(strongfjs)));
+  // m_pseudoJets = fastjet::sorted_by_pt((fastjet::SelectorAbsRapMax(m_maxRap)*fastjet::SelectorPtMin(m_minPT))(jetDef(strongfjs)));
+  m_pseudoJets = fastjet::sorted_by_pt(fastjet::SelectorPtMin(m_minPT)(jetDef(strongfjs)));
   // m_pseudoJets.clear();
   // for(auto& fj: fastjet::sorted_by_pt( (fastjet::SelectorAbsRapMax(m_maxRap)*fastjet::SelectorPtMin(m_minPT))(jetDef(strongfjs)))) {
   //   bool add = true;
@@ -93,9 +94,10 @@ FJmaxPTjet::FJmaxPTjet(const std::vector<ATOOLS::Vec4D>& p,
   else {
     msg_Debugging()<<"Jets ok.\n\n";
     m_jet = pseudoJets()[0];
-    if (std::abs(Zfj.delta_phi_to(m_jet)) < minDPhi or 
+    if (std::abs(m_jet.rapidity()) > m_maxRap or
+        std::abs(Zfj.delta_phi_to(m_jet)) < minDPhi or 
         std::abs((m_jet.pt() - Zfj.pt()) / (m_jet.pt()+Zfj.pt())) > maxAsym) {
-      msg_Debugging()<<"Cut on Z failed.\n\n";
+      msg_Debugging()<<"Cut on Z or jet failed.\n\n";
       m_jets.clear();
       m_jetVectors.clear();
       m_jetAxes.clear();
