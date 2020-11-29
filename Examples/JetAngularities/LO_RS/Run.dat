@@ -62,6 +62,7 @@
   RapidityNLO 13 -2.4 2.4;
   RapidityNLO -13 -2.4 2.4;
   Mass 13 -13 70 110;
+  ResumObs JetAngularities CHECK_VETO GENVARS;
 }(selector)
 
 (analysis){
