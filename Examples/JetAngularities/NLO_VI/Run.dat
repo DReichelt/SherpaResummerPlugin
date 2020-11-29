@@ -5,22 +5,17 @@
   ERROR=.2
   FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
   BEAM_1 2212 6500; BEAM_2 2212 6500;
-  SHOWER_GENERATOR Resum;
+  SHOWER_GENERATOR None;
   RESPECT_MASSIVE_FLAG 1;
 
   # Parameters
-  JETRADIUS:=0.8;
-  GENVARS:=maxRap:1.7,minPT:50,minZPT:30,maxAsym:0.3,minDPhi:2,R:JETRADIUS,SNGLgluon:NGL/RJETRADIUS_g.dat,SNGLquark:NGL/RJETRADIUS_q.dat
-  CHALGVARS:=maxRap:-1,minPT:0,minZPT:0,maxAsym:-1,minDPhi:0,R::JETRADIUS,SNGLgluon:NGL/RJETRADIUS_g.dat,SNGLquark:NGL/RJETRADIUS_q.dat
+  R0:=0.8;
+  GENVARS:=maxRap:1.7,minPT:50,minZPT:30,maxAsym:0.3,minDPhi:2,R:R0
+  CHALGVARS:=maxRap:-1,minPT:0,minZPT:0,maxAsym:-1,minDPhi:0,R:R0
+  IRCUT:=1e-7;
 
-  power:=1;   
-  murfac:=1
-  muffac:=1
-  muqfac:=1
-  pdfvar:=260000
-  ANALYSIS_OUTPUT=NLL_ppower_MUQmuqfac/MURmurfac_MUFmuffac_PDFpdfvar;
-  # LOG_FILE = NLL_ppower_MUQmuqfac_MURmurfac_MUFmuffac_PDFpdfvar.log
-  SCALES VAR{sqr(muffac*PPerp(p[2]+p[3]))}{sqr(murfac*PPerp(p[2]+p[3]))}{sqr(muqfac*JETRADIUS*PPerp(p[2]+p[3]))};
+  SCALES VAR{PPerp2(p[2]+p[3])}{PPerp2(p[2]+p[3])}{sqr(R0*PPerp(p[2]+p[3]))};
+  SCALE_VARIATIONS 4,1 0.25,1 1,4 1,0.25 4,4 0.25,0.25
   MASS[6] = 15000;
   ME_SIGNAL_GENERATOR Comix;
   ANALYSIS Internal; SHERPA_LDADD ResumAnalysis;
@@ -29,14 +24,6 @@
   A05EP:= 0.684014;
   A1EP:=  0.71234;
   A2EP:=  0.380329;
-
-  RESUM::LOGPOW = power;
-  RESUM::UNITNORM = 1;
-  RESUM::MATCHING=LO|NLO|ADD;
-  RESUM::MODE RESUM|EXPAND|HYPGEO;
-  RESUM::LOGPOW=power
-  RESUM::FFUNCTION::VARIATION = fvar;
-  RESUM::pre_calc = pre_calc/trace_basis;
 
   PTEDGES:=50.0_65.0_88.0_120.0_150.0_186.0_254.0_326.0_408.0_1500.0
 
@@ -62,7 +49,9 @@
 
 
 (processes){
-  Process 93 93 -> 13 -13 93;
+  Process 93 93 -> 13 -13 93 93;
+  NLO_QCD_Mode Fixed_Order; NLO_QCD_Part VI;
+  Loop_Generator OpenLoops
   Order (*,2);
   End process;
 }(processes);
@@ -73,13 +62,13 @@
   RapidityNLO 13 -2.4 2.4;
   RapidityNLO -13 -2.4 2.4;
   Mass 13 -13 70 110;
-  ResumObs JetAngularities CHECK_VETO GENVARS;
+  ResumObs JetAngularities IRCUT 1 alpha:2 GENVARS;
 }(selector)
 
 (analysis){
   BEGIN_ANALYSIS {
     LEVEL MENLO;
-    NLLResum2 { FinalState;
+    NLOResum2 { FinalState;
       ChAlg NJet_pp_Resolved_KTBins NMIN:1 NMAX:3 EDGES:PTEDGES CHALGVARS MODE:BLAND COLLAPSE:1
       ChAlg NJet_pp_Resolved_KTBins NMIN:1 NMAX:3 EDGES:PTEDGES CHALGVARS MODE:BLAND COLLAPSE:1 SUMNEUTRAL:1 TAG:sumMu
       Options REUSE_ALGS:1 ONEFILE:1 FILENAME:Results
