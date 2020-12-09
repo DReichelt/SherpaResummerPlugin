@@ -1,0 +1,71 @@
+(run){
+  EVENTS 1M; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 6500; BEAM_2 2212 6500;
+  ERROR 0.08  
+  SHOWER_GENERATOR None;
+
+  SCALE_VARIATIONS 0.25,0.25 0.25,1 1,0.25 1,1 4,1 1,4 4,4
+
+  RESPECT_MASSIVE_FLAG 1;
+  SCALES VAR{H_T2/4.}
+ 
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+#  ANALYSIS_WRITEOUT_INTERVAL 10000;
+  ANALYSIS_OUTPUT=NLOVI_HTover2
+
+  DIPOLE_AMIN 1.E-10;
+  DIPOLE_ALPHA = 0.02;
+}(run);
+
+(processes){
+  Process 93 93 -> 93 93 93;
+  NLO_QCD_Mode Fixed_Order; NLO_QCD_Part VI;
+#  Enhance_Function Resum{sqr(log(Obs[SD_Thrust]))}
+  Loop_Generator OpenLoops;
+  Order (*,0);
+  End process;
+}(processes);
+
+(selector){
+  FastjetFinder antikt 1 200 0 0.4 0.75 1000. 1.0;
+  FastjetFinder antikt 2 100 0 0.4 0.75 1000. 1.0;
+  ResumObs SD_Thrust exp(-11) 1. zcut:0.0 beta:0 R0:1.0 yamx:2.6;
+}(selector);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO; PATH_PIECE NLO_VI/;
+    NLOResum2 { FinalState;
+      ChAlg KT2_pp 2 BLAND;
+      ChAlg KT2_pp 2;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.0 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc00_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.05 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc005_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.05 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc005_b1_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.05 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc005_b2_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc01_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc01_b1_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc01_b2_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc02_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc02_b1_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc02_b2_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc03_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc03_b1_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc03_b2_R1_ymax;
+#
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.0 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc00_b0_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.05 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc005_b0_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.05 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc005_b1_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.05 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc005_b2_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.1 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc01_b0_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.1 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc01_b1_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.1 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc01_b2_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.2 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc02_b0_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.2 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc02_b1_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.2 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc02_b2_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.3 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc03_b0_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.3 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc03_b1_R1_ymax_Lin;
+      SD_Thrust 0. 0.5 50 LinErr zcut:0.3 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc03_b2_R1_ymax_Lin;
+    }
+  } END_ANALYSIS;
+}(analysis);

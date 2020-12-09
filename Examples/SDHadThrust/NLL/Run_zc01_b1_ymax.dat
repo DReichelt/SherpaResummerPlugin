@@ -1,0 +1,71 @@
+(run){
+  EVENTS 500k; EVENT_GENERATION_MODE W;  
+  FRAGMENTATION Off; MI_HANDLER None; BEAM_REMNANTS 0;
+  BEAM_1 2212 6500; BEAM_2 2212 6500;
+  ERROR 0.05  
+  SHOWER_GENERATOR Resum;
+  
+  RESPECT_MASSIVE_FLAG 1;
+
+  power:=1;
+  murfac:=1
+  muffac:=1
+  muqfac:=1
+  pdfvar:=261000
+  ANALYSIS_OUTPUT=NLL_ppower_MUQmuqfac/MURmurfac_MUFmuffac_PDFpdfvar;
+  SCALES VAR{sqr(muffac)*H_T2/4.}{sqr(murfac)*H_T2/4.}{sqr(muqfac)*H_T2/4.};
+
+  RESUM::LOGPOW=power
+#  SCALES VAR{H_T2/4.};
+#  SCALES VAR{H_T2/4.}{H_T2/4.}{Abs2(p[0]+p[1])};
+
+#  RESUM::UNITNORM = 0;
+ 
+  ANALYSIS 1; SHERPA_LDADD ResumAnalysis;
+#  ANALYSIS_WRITEOUT_INTERVAL 10000;
+#  ANALYSIS_OUTPUT=NLL_HTover2_EndPoint;
+
+  RESUM::MODE RESUM|EXPAND;
+
+  RESUM::MATCHING=DERIV|LO|NLO;
+
+  RESUM::SD_Thrust::EP_MODE FIXED;
+  RESUM::SD_Thrust::ENDPOINT = 0.3406;
+#  RESUM::SD_Thrust::ENDPOINT = 1/3;
+#  RESUM::LOGPOW = 1;
+  RESUM::LOGFAC = 1;
+
+  RESUM::pre_calc = pre_calc/trace_basis;
+
+}(run);
+
+(processes){
+  Process 93 93 -> 93 93;
+  Order (*,0);
+  End process;
+}(processes);
+
+(selector){
+  FastjetFinder antikt 1 200 0 0.4 0.75 1000. 1.0;
+  FastjetFinder antikt 2 100 0 0.4 0.75 1000. 1.0;
+}(selector);
+
+(analysis){
+  BEGIN_ANALYSIS {
+    LEVEL MENLO; 
+    NLLResum { FinalState;
+      ChAlg KT2_pp 2 BLAND;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.0 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc00_b0_R1_ymax;
+#      Thrust exp(-11) 1 50 LnErr tag:SDT_zc00_b0_R1;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc01_b0_R1_ymax;
+      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc01_b1_R1_ymax;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.1 beta:2 R0:1.0 ymax:2.6 tag:SDT_zc01_b2_R1_ymax;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc02_b0_R1_ymax;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:1 R0:1.0 ymax:2.6 tag:SDT_zc02_b1_R1_ymax;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.2 beta:2 R0:1.0 tag:SDT_zc02_b2_R1;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:0 R0:1.0 ymax:2.6 tag:SDT_zc03_b0_R1_ymax;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:1 R0:1.0 tag:SDT_zc03_b1_R1;
+#      SD_Thrust exp(-11) 1 50 LnErr zcut:0.3 beta:2 R0:1.0 tag:SDT_zc03_b2_R1;
+    }
+  } END_ANALYSIS;
+}(analysis);
