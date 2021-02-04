@@ -87,11 +87,11 @@ namespace RESUM {
                CKCOUL = 1     << 5,     // check effect of coulomb phases
                IGNCOLL = 1    << 6,     // ignore the collinear radiators
                IGNSOFT = 1    << 7,     // ignore the soft function
-               IGNSNGL = 1    << 7,     // ignore the soft non-global function
-               IGNPDF = 1     << 8,     // ignore the pdf ratio
-               IGNFFUNC = 1   << 9,     // ignore ffunction
+               IGNSNGL = 1    << 8,     // ignore the soft non-global function
+               IGNPDF = 1     << 9,     // ignore the pdf ratio
+               IGNFFUNC = 1   << 10,     // ignore ffunction
                EXPAND = COLLEXPAND | SOFTEXPAND | PDFEXPAND, // conveninece def.
-               HYPGEO = 1     << 10,    // include hypergeometric function for transition point
+               HYPGEO = 1     << 11,    // include hypergeometric function for transition point
     };
 
     const std::map<std::string,MODE> m_ModeToEnum = {{"RESUM", MODE::RESUM},

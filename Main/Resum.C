@@ -296,6 +296,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(v > 1)     return;
   const double L = log(1./v);
   const double Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
+  const double Lsoft = m_softgmode & GROOM_MODE::SD_SOFT ? Lz : L;
   double Rp = 0.0;
   double Rp0 = 0.0;
   // expansion coefficients for collinear part
@@ -337,7 +338,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   if(!(m_amode&MODE::IGNSOFT)) {
     // some checks for colour calculation
     double dummy1, dummy2;
-    const double Lsoft = m_softgmode & GROOM_MODE::SD_SOFT ? Lz : L;
     if(m_softgmode & GROOM_MODE::SD_SOFT) {
         msg_Debugging()<<"Setting logarithm to log(1/transp) in soft function\n";
     }
@@ -404,7 +404,6 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
             Li2ratio = ATOOLS::DiLog(exp(L-Lz));
             
             Trans_F = exp(Rp*exp(L-Lz)*(Lz-L)*(Rpp-Rppzc)*HypGeo_3F2(1., 1., 1.-Rp, 2., 2., exp(L-Lz)));
-            
             weight*=Trans_F;
           }
           if(m_softgmode_end==GROOM_MODE::NONE and m_mmode & MATCH_MODE::DERIV){
@@ -426,12 +425,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
   msg_Debugging()<<"Weight after F = "<<weight<<".\n";
 
   if(!(m_amode&MODE::IGNSNGL)) {
-    const double as = m_params.alphaS(p_ampl->MuR2());
+    const double alphaS = m_params.alphaS(p_ampl->MuR2());
     const double beta0 = m_params.beta0(p_ampl->MuR2());
-    const double lambda = as*beta0*L; 
+    const double lambda = alphaS*beta0*Lsoft; 
     const double t = T(lambda);
     msg_Debugging()<<"Calculate Sngl at T = "<<t<<"\n";
-    if(!std::isnan(t)) weight *= m_Sngl(t/4.,SnglExpNLL_NLO);
+    if(!std::isnan(t)) weight *= m_Sngl(t,SnglExpNLL_NLO);
     else m_Sngl(0,SnglExpNLL_NLO);
   }
   msg_Debugging()<<"Weight after NGL = "<<weight<<"\n";
@@ -499,12 +498,12 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
 //   m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
   
   if(m_softgmode & GROOM_MODE::SD_SOFT){
-      m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(2.*M_PI*beta0/m_a[0]));
-      m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,1)*(4./m_a[0]*SoftexpNLL_LO*(G(1,0)+L*G(1,1)+L*L*G(1,2)));
+    m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,2)*(16./pow(m_a[0],2)*(SoftexpNLL_NLO + SnglExpNLL_NLO) + 4./m_a[0]*SoftexpNLL_LO*(2.*M_PI*beta0/m_a[0]));
+    m_resExpNLO[m_n][i] += pow(as,2)*pow(Lz,1)*(4./m_a[0]*SoftexpNLL_LO*(G(1,0)+L*G(1,1)+L*L*G(1,2)));
   }
   else{
-      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*SoftexpNLL_NLO + SnglExpNLL_NLO + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
-      m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
+    m_resExpNLO[m_n][i] += pow(as,2)*pow(L,2)*(16./pow(m_a[0],2)*(SoftexpNLL_NLO + SnglExpNLL_NLO) + 4./m_a[0]*SoftexpNLL_LO*(G(1,1)+L*G(1,2)+2.*M_PI*beta0/m_a[0]));
+    m_resExpNLO[m_n][i] += pow(as,2)*pow(L,1)*(4./m_a[0]*SoftexpNLL_LO*G(1,0));
   }
 
   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
@@ -519,7 +518,9 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1));
       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * 4.*FexpNLL_NLO*Rexp0(1,2)*Rexp0(1,1);
       
-      if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO and m_softgmode_end==GROOM_MODE::NONE) m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+      if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO and m_softgmode_end==GROOM_MODE::NONE) {
+        m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+      }
     }
   }
   // store next-to-leading order expansion
@@ -865,10 +866,10 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   //Build Gamma
   MatrixD ReGamma(dim, dim, 0);
   MatrixC Gamma(dim, dim, 0);
-  MatrixC GammaNGL(dim,dim,0);
+  // MatrixC GammaNGL(dim,dim,0);
   for(size_t k=0; k<Tprods.size(); k++) {
     ReGamma += m_obss[m_n]->SoftGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
-    GammaNGL += m_obss[m_n]->SoftNonGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
+    // GammaNGL += m_obss[m_n]->SoftNonGlobal(p_ampl,m_kij[k].first, m_kij[k].second, s_12)*Tprods[k];
     if(signlabels[2*k]*signlabels[2*k+1] == 1) {
       Gamma += MatrixC(Tprods[k]);
     }

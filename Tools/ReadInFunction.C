@@ -17,17 +17,38 @@ using namespace RESUM;
 
 
 ReadInFunction::ReadInFunction(const std::string& filename, int inc, double yvar) {
-  m_mode = MODE::HERMITE;
-  _read(filename,inc,yvar);
-  if(m_mode != MODE::DEFAULT) _calc();
+  _init(MODE::HERMITE,filename,inc,yvar);
 }
 
 
 ReadInFunction::ReadInFunction(const std::string& filename, double expNLL_LO, 
-                     double expNLL_NLO, int inc, double yvar) 
-  : ReadInFunction(filename, inc) { 
+                     double expNLL_NLO, int inc, double yvar) { 
   m_expNLL_LO = expNLL_LO;
   m_expNLL_NLO = expNLL_NLO;
+  _init(MODE::HERMITE,filename,inc,yvar);
+}
+
+ReadInFunction::ReadInFunction(const std::string& filename, const std::string& expNLL_LO, 
+                               const std::string& expNLL_NLO, int inc, double yvar) {
+  m_ID_expNLL_LO = expNLL_LO;
+  m_ID_expNLL_NLO = expNLL_NLO;
+  _init(MODE::HERMITE,filename,inc,yvar);
+}
+
+ReadInFunction::ReadInFunction(const std::string& filename, const std::string& expNLL_LO, 
+                               const std::string& expNLL_NLO, const std::string& argFac,
+                               int inc, double yvar) {
+  m_ID_expNLL_LO = expNLL_LO;
+  m_ID_expNLL_NLO = expNLL_NLO;
+  m_ID_argFac = argFac;
+  _init(MODE::HERMITE,filename,inc,yvar);
+}
+
+void ReadInFunction::_init(MODE mode, const std::string& filename, int inc, double yvar) {
+  m_mode = mode;
+  _read(filename,inc,yvar);
+  if(m_mode != MODE::DEFAULT) _calc();
+  
 }
 
 void ReadInFunction::_read(const std::string& filename, int inc, double yvar) {
@@ -45,18 +66,32 @@ void ReadInFunction::_read(const std::string& filename, int inc, double yvar) {
     const size_t start = row.find_first_not_of(" \t");
     const size_t end = std::min(row.find_first_of("#"), row.find_last_not_of(" \t"));
     if(end <= start) continue;
-    const std::vector<std::string>& splitrow = split(row.substr(start,end+1),"[ \t]+");
-    if(splitrow.size() < 2) THROW(fatal_error,"The file " + filename + " has the wrong format.");
-    x = stod(splitrow[0]);
-    y = stod(splitrow[1]);
-    yerr = splitrow.size() > 2 ? stod(splitrow[2]) : 0;
+    if(row.find_first_of("=") == std::string::npos) {
+      const std::vector<std::string>& splitrow = split(row.substr(start,end+1),"[ \t]+");
+      if(splitrow.size() < 2) THROW(fatal_error,"The file " + filename + " has the wrong format.");
+      x = stod(splitrow[0]);
+      y = stod(splitrow[1]);
+      yerr = splitrow.size() > 2 ? stod(splitrow[2]) : 0;
       
-    if(count % inc == 0) {
-      m_xvals.push_back(x);
-      m_yvals.push_back(y+yvar*yerr);
-      m_yerrs.push_back(yerr);
+      if(count % inc == 0) {
+        m_xvals.push_back(x);
+        m_yvals.push_back(y+yvar*yerr);
+        m_yerrs.push_back(yerr);
+      }
+      count++;
     }
-    count++;
+    else {
+      const std::vector<std::string>& splitrow = split(row.substr(start,end+1),"[ = \t]+");
+      if(splitrow[0]==m_ID_expNLL_LO) {
+        m_expNLL_LO = to_type<double>(split(splitrow[1]," \t")[0]);
+      }
+      else if(splitrow[0]==m_ID_expNLL_NLO) {
+        m_expNLL_NLO = to_type<double>(split(splitrow[1]," \t")[0]);
+      }
+      else if(splitrow[0]==m_ID_argFac) {
+        m_argFac = to_type<double>(split(splitrow[1]," \t")[0]);
+      }
+    }
   }
   if(m_xvals.back() != x) {
       m_xvals.push_back(x);
@@ -72,12 +107,12 @@ double ReadInFunction::operator()(const double x, double& expNLL_NLO) {
 double ReadInFunction::operator()(const double x, double& expNLL_LO, 
                              double& expNLL_NLO) {
   DEBUG_FUNC(x);
-  expNLL_LO = m_expNLL_LO;
-  expNLL_NLO = m_expNLL_NLO;
+  expNLL_LO = m_expNLL_LO*m_argFac;
+  expNLL_NLO = m_expNLL_NLO*m_argFac*m_argFac;
   if (m_mode == MODE::DEFAULT) {
     size_t i = 0;
     for(; i<m_xvals.size(); i++) {
-      if(m_xvals[i] > x) {
+      if(m_xvals[i] > x*m_argFac) {
         break;
       }
     }
@@ -90,7 +125,7 @@ double ReadInFunction::operator()(const double x, double& expNLL_LO,
     return y_l+(y_u-y_l)/(x_u-x_l)*(x-x_l);
   }
   else {
-    return Interpolate(x); 
+    return Interpolate(x*m_argFac); 
   }
 }
 

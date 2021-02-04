@@ -33,9 +33,17 @@ namespace RESUM {
       m_R0 = m_R; DEBUG_VAR(m_R0);
 
       std::string help = args.KwArg("SNGLgluon","NONE");
-      if(help != "NONE") p_SNGLgluon.reset(new ReadInFunction(help));
+      if(help != "NONE") p_SNGLgluon.reset(new ReadInFunction(help, 
+                                                              args.KwArg("expNLL_LO","expNLL_LO"),
+                                                              args.KwArg("expNLL_NLO","expNLL_NLO"),
+                                                              args.KwArg("argFac","argFac"),
+                                                              1, 0));
       help = args.KwArg("SNGLquark","NONE");
-      if(help != "NONE") p_SNGLquark.reset(new ReadInFunction(help));
+      if(help != "NONE") p_SNGLquark.reset(new ReadInFunction(help, 
+                                                              args.KwArg("expNLL_LO","expNLL_LO"),
+                                                              args.KwArg("expNLL_NLO","expNLL_NLO"),
+                                                              args.KwArg("argFac","argFac"),
+                                                              1, 0));
 
 
       m_algtag = m_algkey.Name();
