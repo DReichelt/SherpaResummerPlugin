@@ -774,6 +774,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     return 1.;
   }
   
+
   const size_t numlegs = n_g + n_q + n_aq;
   //Exception for n_colored = 2
   if(numlegs == 2) {
@@ -796,8 +797,8 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   }
   
   const size_t dim = met.numCols();
-  
- 
+   
+
   //get the t products & calc Gamma
   const std::vector<MatrixD>& Tprods = p_cmetric->Tprods();
 
@@ -862,7 +863,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     
   }
     
-  
+
   //Build Gamma
   MatrixD ReGamma(dim, dim, 0);
   MatrixC Gamma(dim, dim, 0);
@@ -885,6 +886,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
     Gamma_exp = MatrixC(Gamma_exp.real());
     Gamma = MatrixC(Gamma.real());
   }
+
     
   //Hard Matrix in T-basis
   MatrixD Hard = MatrixC(m_comix.ComputeHardMatrix(p_ampl,
@@ -898,6 +900,7 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
   if(msg_LevelIsDebugging()) {
     msg_Debugging()<<"Hard Matrix =\n"<<Hard.setFuzzyZeroToZero()<<"\n";
   }
+
   
   //Trace of hard matrix (Hard Matrix Element)
   //Note that normalization of H drops out in S
@@ -971,7 +974,6 @@ double Resum::CalcS(const double L, const double LResum, double& SoftexpNLL_LO, 
    msg_Debugging()<<"==============================================" << std::endl;
    msg_Debugging()<< std::endl;
  }
- m_comix.Reset();
  return traceHS/traceH;
 }
 
