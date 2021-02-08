@@ -563,6 +563,24 @@ namespace RESUM {
         return Trace(a*b);
       }
     }
+
+    /// Calculate the trace of the product of \p a and \p b.
+    template<template <class X> class ItAble>
+    friend inline ItAble<T> Trace(const ItAble<Matrix<T>>& a, Matrix<T> b) {
+      ItAble<T> ret(a.size());
+      b.transposeInPlace();
+      for(size_t i=0; i<a.size(); i++) {
+        if(a[i].isSquare() && b.isSquare() && a[i].sameDim(b)) {
+          ret[i] = (a[i].m_data*b.m_data).sum();
+        }
+        else{
+          ret[i] = Trace(a[i]*Transpose(b));
+        }
+      }
+      return ret;
+    }
+
+    
     
     /// Calculate the conjugate of \p matrix.
     friend inline Matrix<T> Conjugate(Matrix<T> matrix) {

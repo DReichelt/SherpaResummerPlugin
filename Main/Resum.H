@@ -142,19 +142,23 @@ namespace RESUM {
     // groom modes for legs, only used if m_gmode not NONE
     std::vector<RESUM::GROOM_MODE> m_collgmodes;
     RESUM::GROOM_MODE m_softgmode = GROOM_MODE::SD;
+
+    std::valarray<std::vector<RESUM::GROOM_MODE>> m_allCollgmodes;
+    std::valarray<RESUM::GROOM_MODE> m_allSoftgmodes;
+
+
     std::vector<RESUM::GROOM_MODE> m_collgmodes_end;
     RESUM::GROOM_MODE m_softgmode_end = GROOM_MODE::SD;
 
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 
-    bool m_cacheMatrices = false;
-    MatrixC m_Gamma;
-    MatrixD m_Hard;
-
-    const MatrixC& Gamma();
-    const MatrixD& Hard();
     
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
+
+    std::valarray<double> CalcS(std::valarray<double>& SoftexpNLL_LO, 
+                                std::valarray<double>& SoftexpNLL_NLO, 
+                                MODE Check=MODE::RESUM);
+
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1) {
       double dummy1;
@@ -178,7 +182,8 @@ namespace RESUM {
                                   const double &z,
                                   const double muF2) const;
 
-    double T(const double x);
+    double T(const double& x);
+    std::valarray<double> T(const std::valarray<double>& x);
 
     double Value(const double v, const double LResum, double epRatio);
     void FillValue(size_t i, const double v, const double LResum, double epRatio);
@@ -211,9 +216,10 @@ namespace RESUM {
                                  ATOOLS::Histogram *const h);
 
     virtual std::string AddObservable(const RESUM::Observable_Key& key,
-                                      const std::vector<double>& xvals);
+                                      const std::valarray<double>& xvals);
    
     size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}
+    size_t nColoredLegs() const {return n_g+n_q+n_aq;}
     std::pair<int, double> Result(int n) const { return m_ress.at(n); }
     bool Initialized() const { return m_init; } 
     virtual void ResetObservables();
@@ -225,8 +231,29 @@ namespace RESUM {
     std::vector<std::valarray<double>> m_resExpNLO;
     std::vector<double> resExpNLO(size_t i) { return {std::begin(m_resExpNLO[i]),std::end(m_resExpNLO[i])};}
 
-    std::vector<std::vector<double>> m_xvals;
+    std::vector<std::valarray<double>> m_xvals;
     
+    size_t m_nx;
+    double m_ep;
+    double m_p;
+    double m_logFac;
+
+    std::valarray<double> m_logArg;
+    std::valarray<double> m_L;
+    double m_Lz;
+    std::valarray<double> m_Lsoft;
+    std::valarray<double> m_epRatio;
+    std::valarray<double> m_lambda;
+    std::valarray<double> m_TofLoverA;
+
+
+    double m_alphaS;
+    double m_beta0;
+    
+
+
+
+
   };// end of class Resum
   
 }// end of namespace RESUM

@@ -129,8 +129,7 @@ NLL_Analysis_2::NLL_Analysis_2(const Argument_Matrix& params):
       edges = Cumulant::Edges(htype,xmin,xmax,nbin);
     }
     // returns index of observable
-    const string& obsName = p_resum->AddObservable({params[i][0],ps},
-                                                   {std::begin(edges),std::end(edges)});
+    const string& obsName = p_resum->AddObservable({params[i][0],ps}, edges);
     m_nObs++;
     m_ObsNames.push_back(obsName);
     msg_Debugging()<<"Add "<<params[i][0]<<" as "<<obsName<<"\n";
