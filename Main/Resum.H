@@ -143,7 +143,7 @@ namespace RESUM {
     std::vector<RESUM::GROOM_MODE> m_collgmodes;
     RESUM::GROOM_MODE m_softgmode = GROOM_MODE::SD;
 
-    std::valarray<std::vector<RESUM::GROOM_MODE>> m_allCollgmodes;
+    std::vector<std::valarray<RESUM::GROOM_MODE>> m_allCollgmodes;
     std::valarray<RESUM::GROOM_MODE> m_allSoftgmodes;
 
 
@@ -155,8 +155,8 @@ namespace RESUM {
     
     double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
 
-    std::valarray<double> CalcS(std::valarray<double>& SoftexpNLL_LO, 
-                                std::valarray<double>& SoftexpNLL_NLO, 
+    std::valarray<double> CalcS(double& SoftexpNLL_LO, 
+                                double& SoftexpNLL_NLO, 
                                 MODE Check=MODE::RESUM);
 
     double CalcColl(const double L, const double LResum, const int order,
@@ -172,6 +172,10 @@ namespace RESUM {
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd);
     
+    std::valarray<double> CalcColl(std::valarray<double>& Rp, std::valarray<MatrixD>& G, 
+                                   std::valarray<MatrixD>& Rexp, double& S1, 
+                                   std::valarray<double>& RAtEnd);
+
     double CalcRpp(const double L, GROOM_MODE gmode, double &exp12);
 
     double CalcPDF(const double L, const double LResum, double &PDFexp);
@@ -182,8 +186,8 @@ namespace RESUM {
                                   const double &z,
                                   const double muF2) const;
 
-    double T(const double& x);
-    std::valarray<double> T(const std::valarray<double>& x);
+    double T(const double& x) const;
+    std::valarray<double> T(const std::valarray<double>& x) const;
 
     double Value(const double v, const double LResum, double epRatio);
     void FillValue(size_t i, const double v, const double LResum, double epRatio);
@@ -244,15 +248,45 @@ namespace RESUM {
     std::valarray<double> m_Lsoft;
     std::valarray<double> m_epRatio;
     std::valarray<double> m_lambda;
+    std::valarray<double> m_lambdaSoft;
     std::valarray<double> m_TofLoverA;
 
+    double NC() const {return m_params.NC();}
+    double CA() const {return m_params.CA();}
+    double CF() const {return m_params.CF();}
+    double TR() const {return m_params.TR();}
+    bool largeNC() const {return m_params.largeNC();}
+    double beta0() const {return m_params.beta0(muR2());}
+    double beta1() const {return m_params.beta1(muR2());}
+    double K_CMW() const {return m_params.K_CMW(muR2());}
+    double CollDimGlue() const {return m_params.CollDimGlue(muR2());}
+    double CollDimQuark() const {return m_params.CollDimQuark(muR2());}
+    double alphaS() const {return m_params.alphaS(muR2());}
+    double muR2() const {return p_ampl->MuR2();}
+    double muF2() const {return p_ampl->MuF2();}
+    double muQ2() const {return p_ampl->MuQ2();}
+    double muR() const {return sqrt(muR2());}
+    double muF() const {return sqrt(muF2());}
+    double muQ() const {return sqrt(muQ2());}
 
-    double m_alphaS;
-    double m_beta0;
-    
-
-
-
+    std::valarray<double> r1(std::valarray<double> lambda, double a, double b) const;
+    std::valarray<double> r1_b0(std::valarray<double> lambda, double a) const;
+    std::valarray<double> SD_r1(std::valarray<double> lambda, double lambdaZ, double a, double b) const;
+    std::valarray<double> SD_r1_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
+    std::valarray<double> r2_cmw(std::valarray<double> lambda, double a, double b) const;
+    std::valarray<double> r2_beta1(std::valarray<double> lambda, double a, double b) const;
+    std::valarray<double> r2_cmw_b0(std::valarray<double> lambda, double a) const;
+    std::valarray<double> r2_beta1_b0(std::valarray<double> lambda, double a) const;
+    std::valarray<double> r1p_b0(std::valarray<double> lambda, double a) const;
+    std::valarray<double> r1p(std::valarray<double> lambda, double a, double b) const;
+    std::valarray<double> SD_r2_cmw(std::valarray<double> lambda, double lambdaZ, double a, double b) const;
+    std::valarray<double> SD_r2_beta1(std::valarray<double> lambda, double lambdaZ, double a, double b) const;
+    std::valarray<double> SD_r1p(std::valarray<double> lambda, double lambdaZ, double a, double b) const;
+    std::valarray<double> SD_r1d(std::valarray<double> lambda, double lambdaZ, double a, double b) const;
+    std::valarray<double> SD_r2_cmw_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
+    std::valarray<double> SD_r2_beta1_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
+    std::valarray<double> SD_r1p_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
+    std::valarray<double> SD_r1d_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
 
   };// end of class Resum
   
