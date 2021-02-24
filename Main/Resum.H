@@ -159,6 +159,12 @@ namespace RESUM {
                                 double& SoftexpNLL_NLO, 
                                 MODE Check=MODE::RESUM);
 
+    std::valarray<double> CalcSNGL(double& SnglExpNLL_NLO);
+    std::valarray<double> CalcF(double& FexpNLL_NLO);
+
+    std::valarray<double> CalcEP(double& EPexpNLL_LO);
+
+
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1) {
       double dummy1;
@@ -179,6 +185,7 @@ namespace RESUM {
     double CalcRpp(const double L, GROOM_MODE gmode, double &exp12);
 
     double CalcPDF(const double L, const double LResum, double &PDFexp);
+    std::valarray<double> CalcPDF(double &PDFexp);
 
     double CollinearCounterTerms( const int i,
                                   const ATOOLS::Flavour &fl,
@@ -220,7 +227,7 @@ namespace RESUM {
                                  ATOOLS::Histogram *const h);
 
     virtual std::string AddObservable(const RESUM::Observable_Key& key,
-                                      const std::valarray<double>& xvals);
+                                      std::valarray<double>& xvals);
    
     size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}
     size_t nColoredLegs() const {return n_g+n_q+n_aq;}
@@ -250,6 +257,25 @@ namespace RESUM {
     std::valarray<double> m_lambda;
     std::valarray<double> m_lambdaSoft;
     std::valarray<double> m_TofLoverA;
+    std::valarray<double> m_Rp;
+
+    std::valarray<MatrixD> m_G;
+    std::valarray<MatrixD> m_Rexp;
+    double m_S1; 
+    double m_S2;
+    double m_P1;
+    double m_F2;
+    double m_SNGL2;
+    double m_Ep1;
+    double m_Ep2;
+    std::valarray<double> m_RAtEnd;
+      
+    std::valarray<double> m_Coll;
+    std::valarray<double> m_Soft;
+    std::valarray<double> m_PDF;
+    std::valarray<double> m_Ffunc;
+    std::valarray<double> m_Sngl;
+    std::valarray<double> m_Ep;
 
     double NC() const {return m_params.NC();}
     double CA() const {return m_params.CA();}
@@ -262,6 +288,7 @@ namespace RESUM {
     double CollDimGlue() const {return m_params.CollDimGlue(muR2());}
     double CollDimQuark() const {return m_params.CollDimQuark(muR2());}
     double alphaS() const {return m_params.alphaS(muR2());}
+    double alphaSBar() const {return alphaS()/2./M_PI;}
     double muR2() const {return p_ampl->MuR2();}
     double muF2() const {return p_ampl->MuF2();}
     double muQ2() const {return p_ampl->MuQ2();}

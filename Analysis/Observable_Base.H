@@ -222,6 +222,13 @@ namespace RESUM {
       return m_endpoint;
     }
 
+    double MaxEndpoint() {
+      if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
+        return _MaxEndpoint_Dynamic();
+      }
+      return m_endpoint;
+    }
+
 
     double LogFac() {return m_logfac;}
     double LogPow() {return m_logpow;}
@@ -329,6 +336,12 @@ namespace RESUM {
     virtual double _Endpoint_Dynamic(ATOOLS::Cluster_Amplitude* ampl) {
       THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
     }
+
+    virtual double _MaxEndpoint_Dynamic() {
+      const double dyn = _Endpoint_Dynamic(nullptr);
+      return dyn>m_endpoint ? dyn:m_endpoint;
+    }
+
     
     // deprecated
     T Value

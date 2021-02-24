@@ -139,6 +139,7 @@ int Resum::PerformShowers()
     }
     
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
+
     m_Sngl = m_obss[m_n]->SnglFunction(moms, flavs, m_params);
 
     m_zcut = m_obss[m_n]->GroomZcut();
@@ -192,26 +193,73 @@ int Resum::PerformShowers()
     m_Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
     m_Lsoft = m_L;
     m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD_SOFT] = m_Lz;
+    m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD] = 0.;
     m_lambdaSoft = alphaS()*beta0()*m_Lsoft;
     m_TofLoverA = T(m_lambdaSoft/m_a[0]);
 
-    std::valarray<double> Rp;
-    std::valarray<MatrixD> G; 
-    std::valarray<MatrixD> Rexp; 
-    double S1; 
-    double S2;
-    std::valarray<double> RAtEnd    ;
+    m_Rp = std::valarray<double>(0., m_nx);
+    m_G = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
+    m_Rexp = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
+    m_S1 = 0; 
+    m_S2 = 0;
+    m_P1 = 0;
+    m_F2 = 0;
+    m_SNGL2 = 0;
+    m_EP1 = 0;
+    m_RAtEnd std::valarray<double> (0., m_nx);
       
-    std::valarray<double> Coll = CalcColl(Rp,G,Rexp,S1,RAtEnd);
-    std::valarray<double> Soft = CalcS(S1,S2);
+    m_Coll  =  (m_amode&MODE::IGNCOLL)  ? std::valarray<double>(1.,m_nx) : CalcColl(m_Rp,m_G,m_Rexp,m_S1,m_RAtEnd);
+    m_Soft  =  (m_amode&MODE::IGNSOFT)  ? std::valarray<double>(1.,m_nx) : CalcS(m_S1,m_S2);
+    m_PDF   =  (m_amode&MODE::IGNPDF)   ? std::valarray<double>(1.,m_nx) : CalcPDF(m_P1);
+    m_Ffunc =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcF(m_F2);
+    m_Sngl  =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
+    m_Ep    =  CalcEP(m_EP1);
+
+    m_resNLL = m_Coll*m_Soft*m_Sngl*m_PDF*m_Ffunc*m_Ep;
+
+    // some legacy options
+    if(!(m_amode & MODE::COLLEXPAND)) {
+      msg_Debugging()<<"Ignore coll. expansion.\n";
+      G = MatrixD(4,4,0);
+      FexpNLL_NLO = 0;
+    }
+    if(!(m_amode & MODE::SOFTEXPAND)) {
+      msg_Debugging()<<"Ignore soft expansion.\n";
+      SoftexpNLL_LO = 0;
+      SoftexpNLL_NLO = 0;
+    }
+    if(!(m_amode & MODE::PDFEXPAND)) {
+      msg_Debugging()<<"Ignore pdf expansion.\n";
+      PDFexp = 0;
+    }
 
 
-
-    // for(size_t i=0; i<m_xvals.size(); i++) {
-    //   m_collgmodes = m_allCollgmodes[i];
-    //   m_softgmode = m_allSoftgmodes[i];
-    //   FillValue(i,m_logArg[i],m_logFac,std::min(m_epRatio[i],1.));
+    // MatrixD H(4,4,0);
+    // H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
+    // H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
+    // H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
+    // double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
+  
+    // if(m_softgmode & GROOM_MODE::SD_SOFT){
+    //   H(1,1) -= pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO);
+    //   H(1,0) += pow(as,1)*pow(Lz,1) * (4./m_a[0]*SoftexpNLL_LO);
     // }
+  
+    // m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2)-H10;
+  
+    // if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
+    //   m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
+    //   if(m_mmode & MATCH_MODE::ADD) {
+    //     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G0(1,1);
+    //   }
+    //   if(m_mmode & MATCH_MODE::DERIV) {
+    //     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G0(1,1);
+    //   }
+    // }  
+    // // store leading order expansion
+    // m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+    
+
   }
   CleanUp();
   return 1;
@@ -322,7 +370,7 @@ void Resum::FillValue(size_t i, const double v, const double LResum, const doubl
     if(m_mmode & MATCH_MODE::DERIV) {
       weight *= exp(-epRatio*pow(L,1)*RAtEnd0);
     }
-  }
+  }// done
   msg_Debugging()<<"Weight after ep subtract = "<<weight<<".\n";
 
   if(!(m_amode&MODE::IGNFFUNC)) {
@@ -643,16 +691,25 @@ size_t Resum::AddObservable(Observable_Base *const obs,
 }
 
 std::string Resum::AddObservable(const RESUM::Observable_Key& key,
-                                 const std::valarray<double>& xvals)
+                                 std::valarray<double>& xvals)
 {
   DEBUG_FUNC(key.Name());
   Observable_Base* obs = RESUM::Observable_Getter::GetObject(key.Name(),key);
   if(obs != nullptr) {
     m_obss.push_back(obs);
-    m_xvals.push_back(xvals);
-    m_resNLL.push_back(valarray<double>(xvals.size()));
-    m_resExpLO.push_back(valarray<double>(xvals.size()));
-    m_resExpNLO.push_back(valarray<double>(xvals.size()));
+    // by convention, xvals are always ordred and there is always an xvalue above or at the max endpoint
+    const double ep = obs->MaxEndpoint();
+    std::sort(std::begin(xvals),std::end(xvals));
+    const size_t nx = xvals.max() > ep ? xvals.size() : xvals.size()+1;
+    m_xvals.emplace_back(nx);
+    std::valarray<double>& xv = m_xvals.back(); 
+    for(size_t i=0; i<nx; i++) {
+      if(i<xvals.size()) xv[i] = xvals[i];
+      else xv[i] = ep;
+    }
+    m_resNLL.push_back(valarray<double>(nx));
+    m_resExpLO.push_back(valarray<double>(nx));
+    m_resExpNLO.push_back(valarray<double>(nx));
     m_ress.push_back({-1,-1});
     msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
   }
@@ -1513,7 +1570,7 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
       flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
   }
 
-  std::valarray<double> R(m_nx,0.);
+  std::valarray<double> R(0., m_nx);
 
   if(m_collgmodes[0] & GROOM_MODE::SD_COLL or
      m_collgmodes[1] & GROOM_MODE::SD_COLL) {
@@ -1565,9 +1622,9 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
     } // end LL
     if (order>=1) {
       //NLL part
-      std::valarray<double> r2(m_nx,0.);
+      std::valarray<double> r2(0.,m_nx);
       std::valarray<double> r1prime(m_nx);
-      std::valarray<double> r1dot(m_nx,0.);
+      std::valarray<double> r1dot(0.,m_nx);
       
       
       r2[groomed] += SD_r2_cmw(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
@@ -1596,6 +1653,7 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
       r1dot *= colfac*r1d_coeff;
       R[groomed] -= r1dot[groomed];
 
+      // this is almost but not quite the same being based on lambda_soft, since the collinear transition point might be different
       std::valarray<double> Targ = m_lambda/m_a[i];
       Targ[groomed] = lambdaZ;
 
@@ -1753,6 +1811,58 @@ double Resum::CollinearCounterTerms(const int i,
 
 
 
+std::valarray<double> Resum::CalcPDF(double &PDFexp) {
+  if(m_gmode & GROOM_MODE::SD) {
+    PDFexp = 0;
+    if(m_gmode & GROOM_MODE::SD_PDF or
+       m_collgmodes[0] & GROOM_MODE::SD_PDF or
+       m_collgmodes[1] & GROOM_MODE::SD_PDF) {
+      THROW(not_implemented, "No non-trivial pdf contribution for grooming implemented.");
+    }
+    msg_Debugging()<<"Ignoring pdf function for groomed observables.\n";
+    return std::valarray<double>(1.,m_nx);
+  }
+  msg_Debugging()<<"Calculate pdf contribution, no grooming assumed.\n";
+
+  double old_pdffac = 1.;
+  std::valarray<double> new_pdffac(1., m_nx);
+
+  const double scale= muF2();
+  msg_Debugging() << "scale before: " << scale << "\n";
+
+  for (size_t i=0; i<2; i++) {
+    if(m_deltad[i] == 0) continue;
+    if(p_ampl->Leg(i)->Flav().IsLepton()) continue;
+
+    const double x = i==0 ? (-p_ampl->Leg(i)->Mom()).PPlus()/rpa->gen.PBeam(0).PPlus() : (-p_ampl->Leg(i)->Mom().PMinus())/rpa->gen.PBeam(1).PMinus();
+
+    //original PDF
+    p_pdf[i]->Calculate(x,scale);
+
+    const double z = x+(1.0-x)*m_rn[i];
+
+    msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
+    PDFexp += -2.0/(m_a[i]+m_b[i])*CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale);
+
+    const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+    old_pdffac *= fb;
+
+    //new PDF scale
+    const std::valarray<double> newscale = pow(exp(-m_L),2./(m_a[i]+m_b[i]))*scale;
+    for(size_t j=0; j<m_nx; j++) {
+      if (newscale[j]<p_pdf[i]->Q2Min()) {
+        //freeze PDF at Q2Min 
+        p_pdf[i]->Calculate(x,p_pdf[i]->Q2Min());
+      }
+      else {
+        p_pdf[i]->Calculate(x,newscale[j]);
+      }
+      new_pdffac[j] *= p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
+    }
+  }
+  return new_pdffac/old_pdffac;
+}
+
 double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   DEBUG_FUNC(L);
   if(m_gmode & GROOM_MODE::SD) {
@@ -1824,6 +1934,35 @@ double Resum::CalcPDF(const double L, const double LResum, double &PDFexp) {
   return new_pdffac/old_pdffac;
 }
 
+std::valarray<double> Resum::CalcF(double& FexpNLL_NLO) {
+  std::valarray<double> ret(m_nx);
+  for(size_t i=0; i<m_nx; i++) {
+    ret[i] = !std::isnan(m_Rp[i]) ? m_F(m_Rp[i],FexpNLL_NLO) : m_F(0.,FexpNLL_NLO);
+  }
+  return ret;
+}
+
+std::valarray<double> Resum::CalcSNGL(double& SnglExpNLL_NLO) {
+  std::valarray<double> ret(m_nx);
+  for(size_t i=0; i<m_nx; i++)  {
+    ret[i] = !std::isnan(m_TofLoverA[i]) ?  m_Sngl(m_TofLoverA[i],SnglExpNLL_NLO) : m_Sngl(0.,SnglExpNLL_NLO);
+  }
+  return ret;
+}
+
+std::valarray<double> Resum::CalcEP(double&  EPexpNLL_LO) {
+  std::valarray<double> ret(1.,m_nx);
+  if(m_mmode & MATCH_MODE::ADD) {
+    EPexpNLL_LO =  -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_G[m_nx-1](1,1));
+    ret *= exp(EPexpNLL_LO*alphaSBar()*m_L);
+  }
+  if(m_mmode & MATCH_MODE::DERIV) {
+    const double coeff = -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_RAtEnd[m_nx-1](1,1));
+    EPexpNLL_LO =  -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_G[m_nx-1](1,1));
+    ret *= exp(coeff*alphaSBar()*m_L);
+  }
+  return ret;
+}
 
 DECLARE_GETTER(Resum,"Resum",Shower_Base,Shower_Key);
 
