@@ -162,7 +162,7 @@ namespace RESUM {
     std::valarray<double> CalcSNGL(double& SnglExpNLL_NLO);
     std::valarray<double> CalcF(double& FexpNLL_NLO);
 
-    std::valarray<double> CalcEP(double& EPexpNLL_LO);
+    std::valarray<double> CalcEP(double& EPexpNLL_LO, double& EPexpNLL_NLO);
 
 
     double CalcColl(const double L, const double LResum, const int order,
@@ -178,8 +178,8 @@ namespace RESUM {
     double CalcColl(const double L, const double LResum, const int order,
                     double &Rp, MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd);
     
-    std::valarray<double> CalcColl(std::valarray<double>& Rp, std::valarray<MatrixD>& G, 
-                                   std::valarray<MatrixD>& Rexp, double& S1, 
+    std::valarray<double> CalcColl(std::valarray<double>& Rp, Matrix<std::valarray<double>>& G, 
+                                   Matrix<std::valarray<double>>& Rexp, double& S1, 
                                    std::valarray<double>& RAtEnd);
 
     double CalcRpp(const double L, GROOM_MODE gmode, double &exp12);
@@ -259,22 +259,23 @@ namespace RESUM {
     std::valarray<double> m_TofLoverA;
     std::valarray<double> m_Rp;
 
-    std::valarray<MatrixD> m_G;
-    std::valarray<MatrixD> m_Rexp;
+    // std::valarray<MatrixD> m_G;
+    Matrix<std::valarray<double>> m_G;
+    Matrix<std::valarray<double>> m_Rexp;
     double m_S1; 
     double m_S2;
     double m_P1;
     double m_F2;
     double m_SNGL2;
-    double m_Ep1;
-    double m_Ep2;
+    double m_EP1;
+    double m_EP2;
     std::valarray<double> m_RAtEnd;
       
     std::valarray<double> m_Coll;
     std::valarray<double> m_Soft;
     std::valarray<double> m_PDF;
     std::valarray<double> m_Ffunc;
-    std::valarray<double> m_Sngl;
+    std::valarray<double> m_SNGL;
     std::valarray<double> m_Ep;
 
     double NC() const {return m_params.NC();}

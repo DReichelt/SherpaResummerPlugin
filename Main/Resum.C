@@ -198,66 +198,107 @@ int Resum::PerformShowers()
     m_TofLoverA = T(m_lambdaSoft/m_a[0]);
 
     m_Rp = std::valarray<double>(0., m_nx);
-    m_G = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
-    m_Rexp = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
+    // m_G = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
+
+    m_G = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
+    m_Rexp = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
     m_S1 = 0; 
     m_S2 = 0;
     m_P1 = 0;
     m_F2 = 0;
     m_SNGL2 = 0;
     m_EP1 = 0;
-    m_RAtEnd std::valarray<double> (0., m_nx);
+    m_EP2 = 0;
+    m_RAtEnd = std::valarray<double> (0., m_nx);
       
     m_Coll  =  (m_amode&MODE::IGNCOLL)  ? std::valarray<double>(1.,m_nx) : CalcColl(m_Rp,m_G,m_Rexp,m_S1,m_RAtEnd);
     m_Soft  =  (m_amode&MODE::IGNSOFT)  ? std::valarray<double>(1.,m_nx) : CalcS(m_S1,m_S2);
     m_PDF   =  (m_amode&MODE::IGNPDF)   ? std::valarray<double>(1.,m_nx) : CalcPDF(m_P1);
     m_Ffunc =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcF(m_F2);
-    m_Sngl  =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
-    m_Ep    =  CalcEP(m_EP1);
+    m_SNGL  =  (m_amode&MODE::IGNSNGL) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
+    m_Ep    =  CalcEP(m_EP1, m_EP2);
 
-    m_resNLL = m_Coll*m_Soft*m_Sngl*m_PDF*m_Ffunc*m_Ep;
+    m_resNLL[m_n] = m_Coll*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep;
 
     // some legacy options
     if(!(m_amode & MODE::COLLEXPAND)) {
       msg_Debugging()<<"Ignore coll. expansion.\n";
-      G = MatrixD(4,4,0);
-      FexpNLL_NLO = 0;
+      m_G = MatrixD(4,4,0);
+      m_F2 = 0;
     }
     if(!(m_amode & MODE::SOFTEXPAND)) {
       msg_Debugging()<<"Ignore soft expansion.\n";
-      SoftexpNLL_LO = 0;
-      SoftexpNLL_NLO = 0;
+      m_S1 = 0;
+      m_S2 = 0;
     }
     if(!(m_amode & MODE::PDFEXPAND)) {
       msg_Debugging()<<"Ignore pdf expansion.\n";
-      PDFexp = 0;
+      m_P1 = 0;
     }
 
 
-    // MatrixD H(4,4,0);
-    // H(1,2) = pow(as,1)*pow(L,2) * ( G(1,2) );
-    // H(1,1) = pow(as,1)*pow(L,1) * ( G(1,1) + 4./m_a[0]*SoftexpNLL_LO + PDFexp);
-    // H(1,0) = pow(as,1)*pow(L,0) * ( G(1,0) );
-    // double H10 = pow(as,1)*pow(L,0) * ( G0(1,0) );
-  
-    // if(m_softgmode & GROOM_MODE::SD_SOFT){
-    //   H(1,1) -= pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO);
-    //   H(1,0) += pow(as,1)*pow(Lz,1) * (4./m_a[0]*SoftexpNLL_LO);
-    // }
-  
-    // m_resExpLO[m_n][i] = H(1,0)+H(1,1)+H(1,2)-H10;
-  
-    // if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
-    //   m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO + PDFexp);
-    //   if(m_mmode & MATCH_MODE::ADD) {
-    //     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G0(1,1);
-    //   }
-    //   if(m_mmode & MATCH_MODE::DERIV) {
-    //     m_resExpLO[m_n][i] -= epRatio*pow(as,1)*pow(L,1) * G0(1,1);
-    //   }
-    // }  
+    m_resExpLO[m_n] = alphaSBar() * ( pow(m_L,2.) * m_G(1,2) + m_L * m_G(1,1) + m_G(1,0) +
+                                      m_Lsoft * m_S1 +
+                                      m_L * m_P1 +
+                                      m_L*m_epRatio * m_EP1
+                                      );
+
     // // store leading order expansion
     // m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
+
+
+    // H(2,4) = pow(as,2)*pow(m_L,4) * ( 0.5*pow(G(1,2),2) );
+    // H(2,3) = pow(as,2)*pow(m_L,3) * ( G(2,3) + G(1,2)*(G(1,1) ) );
+    // H(2,2) = pow(as,2)*pow(m_L,2) * ( 0.5*pow(G(1,1),2) + G(2,2) +
+    //                                 G(1,2)*G(1,0) +
+    //                                 4.*m_F2*pow(Rexp(1,2),2) );
+    // H(2,1) = pow(as,2)*pow(m_L,1) * ( G(2,1) + G(1,1)*G(1,0) +  4.*FexpNLL_NLO*Rexp(1,2)*Rexp(1,1) );
+    // //   if(m_gmode & GROOM_MODE::SD) {
+    // //     H(2,2) += pow(as,2)*pow(L,2) * (4.*exp12*(exp12-exp12zc)*Li2ratio);
+    // //     H(2,1) += pow(as,2)*pow(L,1) * (-4.*Lz*exp12*(exp12-exp12zc)*Li2ratio );
+    // //   }
+    // H(2,0) = pow(as,2)*pow(m_L,0) * ( G(2,0) + 0.5*pow(G(1,0),2) + m_F2*pow(Rexp(1,1),2) );
+    // double H20 = pow(as,2)*pow(L,0) * ( G0(2,0) - 0.5*pow(G0(1,0),2) + FexpNLL_NLO*pow(Rexp0(1,1),2) );
+
+  
+    m_resExpNLO[m_n] = pow(alphaSBar(),2)*pow(m_L,4.) * ( 0.5*pow(m_G(1,2),2.) ); // H24
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,3.) * ( m_G(2,3) + m_G(1,2)*(m_G(1,1) ) ); // H23
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,2.) * ( 0.5*pow(m_G(1,1),2.) + m_G(2,2) +
+                                                           m_G(1,2)*m_G(1,0) +
+                                                           4.*m_F2*pow(m_Rexp(1,2),2.) ); // H22
+
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,1.) * ( m_G(2,1) + m_G(1,1)*m_G(1,0) +  4.*m_F2*m_Rexp(1,2)*m_Rexp(1,1) ); // H21
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,0.) * ( m_G(2,0) + 0.5*pow(m_G(1,0),2.) + m_F2*pow(m_Rexp(1,1),2.) ); // H20
+    
+
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_Lsoft,2.) * (16./pow(m_a[0],2)*(m_S2 + m_SNGL2) + 4./m_a[0]*m_S1*(2.*M_PI*beta0()/m_a[0]));
+    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_Lsoft,1.)*(4./m_a[0]*m_S1*(m_G(1,0)+m_L*m_G(1,1)+pow(m_L,2.)*m_G(1,2)));
+
+    m_resExpNLO[m_n] += pow(alphaSBar(),2) * ( pow(m_L,2.) * m_G(1,2) + m_L * m_G(1,1) + m_G(1,0) +
+                                               m_Lsoft * m_S1 +
+                                               m_L * m_P1 ) * m_L*m_epRatio * m_EP1;
+    m_resExpNLO[m_n] += pow(alphaSBar()*m_L*m_epRatio * m_EP1, 2)/2.;
+    m_resExpNLO[m_n] += pow(alphaSBar(),2) * pow(m_L,1.) * m_EP2;
+
+//   if(m_mmode & MATCH_MODE::ADD or m_mmode & MATCH_MODE::DERIV) {
+//     m_resExpNLO[m_n][i] += pow(epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+ G0(1,1) +PDFexp)),2)/2.;
+//     if(m_mmode & MATCH_MODE::ADD) {
+//       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
+//       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
+//     }
+//     if(m_mmode & MATCH_MODE::DERIV) {
+//       if(!(m_softgmode & GROOM_MODE::SD_SOFT)) m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (4./m_a[0]*SoftexpNLL_LO+PDFexp)));
+//       m_resExpNLO[m_n][i] += (H(1,0)+H(1,1)+H(1,2)-H10)*(-epRatio*(pow(as,1)*pow(L,1) * (G0(1,1))));
+//       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (G0(2,1));
+//       m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * 4.*FexpNLL_NLO*Rexp0(1,2)*Rexp0(1,1);
+      
+//       if(m_gmode & GROOM_MODE::SD and m_amode & MODE::HYPGEO and m_softgmode_end==GROOM_MODE::NONE) {
+//         m_resExpNLO[m_n][i] -= epRatio*pow(as,2)*pow(L,1) * (- 4.*Lz*exp12*(exp12-exp12zc)*Li2zc);
+//       }
+//     }
+//   }
+//   // store next-to-leading order expansion
+//   m_resExpNLO[m_n][i] = std::isnan(m_resExpNLO[m_n][i]) ? 0. : m_resExpNLO[m_n][i];
     
 
   }
@@ -1558,8 +1599,8 @@ std::valarray<double> Resum::SD_r1d_b0(std::valarray<double> lambda, double lamb
 }
 
 
-std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<MatrixD>& G, 
-                                      std::valarray<MatrixD>& Rexp, double& S1, 
+std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::valarray<double>>& G, 
+                                      Matrix<std::valarray<double>>& Rexp, double& S1, 
                                       std::valarray<double>& RAtEnd) {
   Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
   
@@ -1605,7 +1646,10 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
 
 
     std::valarray<bool> groomed(m_gmode & GROOM_MODE::SD,m_nx);
-      
+    
+    std::valarray<double> deltaGroomed(m_gmode & GROOM_MODE::SD,m_nx);
+    std::valarray<double> deltaUnGroomed(not (m_gmode & GROOM_MODE::SD),m_nx);
+
     // needed for SD grooming
     const double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
     msg_Debugging() << "Transition point = " << transp << " zcut = " << m_zcut << "\n";
@@ -1662,45 +1706,44 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
 
       Rp += r1prime*colfac;        
     }
-    MatrixD SD_G(4,4,0); 
-    MatrixD SD_Rexp(4,4,0); 
+
     double SD_RAtEnd;
-    SD_G(1,2) += -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
-    SD_G(1,1) += -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)+(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
-    SD_G(1,0) += 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)-(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp) );
+    G(1,2) += deltaGroomed * ( -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]));
+    G(1,1) += deltaGroomed * ( -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)+(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])) );
+    G(1,0) += deltaGroomed * ( 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)-(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp)) );
         
-    SD_Rexp(1,2) += -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]);
-    SD_Rexp(1,1) += -4.*colfac*log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]);
+    Rexp(1,2) += deltaGroomed * ( -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]) );
+    Rexp(1,1) += deltaGroomed * ( -4.*colfac*log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
         
         
-    SD_G(2,3) += -8.*M_PI*beta0()*colfac/3.*m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i]));
-    SD_G(2,2) += -8.*M_PI*beta0()*colfac*((m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp)
+    G(2,3) += deltaGroomed * (-8.*M_PI*beta0()*colfac/3.*m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i])));
+    G(2,2) += deltaGroomed * (-8.*M_PI*beta0()*colfac*((m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp)
                                           +m_beta*(K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/2./(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])
                                           +m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
                                           +(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))
-                                        +hardcoll/sqr(m_a[i]+m_b[i]));
-    SD_G(2,1) += -8.*M_PI*beta0()*colfac*(m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*sqr(log(1./transp)) 
+                                                       +hardcoll/sqr(m_a[i]+m_b[i])) );
+    G(2,1) += deltaGroomed * (-8.*M_PI*beta0()*colfac*(m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*sqr(log(1./transp)) 
                                           +( (K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])
                                            +2.*(m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
-                                           +2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))* (m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*log(1./transp));
-    SD_G(2,0) += -8.*M_PI*beta0()*colfac*(-(m_a[i]*(1.+m_beta)+2.*m_b[i])/3./sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*pow(log(1./transp),3)
+                                             +2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))* (m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*log(1./transp)) );
+    G(2,0) += deltaGroomed * (-8.*M_PI*beta0()*colfac*(-(m_a[i]*(1.+m_beta)+2.*m_b[i])/3./sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*pow(log(1./transp),3)
                                           +( -(K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/2./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])
                                            +m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
-                                           -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*sqr(log(1./transp)));
+                                             -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*sqr(log(1./transp))) );
 
     if(!IsZero(m_etamin[i])) {
-      SD_G(1,1) += 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]);
-      SD_G(1,0) += -4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp);
-      SD_G(2,2) += 8.*M_PI*beta0()*colfac*(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12));
-      SD_G(2,1) += 8.*M_PI*beta0()*colfac*2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*log(1./transp);
-      SD_G(2,0) += -8.*M_PI*beta0()*colfac*(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*sqr(log(1./transp));
+      G(1,1) += deltaGroomed * ( 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
+      G(1,0) += deltaGroomed * ( -4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp) );
+      G(2,2) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12)) );
+      G(2,1) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*log(1./transp) );
+      G(2,0) += deltaGroomed * ( -8.*M_PI*beta0()*colfac*(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*sqr(log(1./transp)) );
           
-      SD_G(1,0) += 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] * log(1./transp);
-      SD_G(2,0) += 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) * sqr(log(1./transp));
+      G(1,0) += deltaGroomed * ( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] * log(1./transp) );
+      G(2,0) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) * sqr(log(1./transp)) );
     }
 
         
-    SD_RAtEnd += colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0();
+    RAtEnd += deltaGroomed * ( colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0() );
 
     const double r2_beta1AtEnd = -alphaS()*beta1()/M_PI/beta0()/beta0()*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
     const double r2_cmwAtEnd = 2.*alphaS()*beta0()*(K_CMW()/pow(2.*M_PI*beta0(),2.)+log(muR2()/muQ2())/M_PI/beta0()/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
@@ -1710,47 +1753,30 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, std::valarray<M
         
     const double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+m_logFac*r1pAtEnd;
         
-    SD_RAtEnd += (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ()))+r1dAtEnd*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))+hardcoll*r2_hardcollAtEnd);        
+    RAtEnd += deltaGroomed * ( (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ()))+r1dAtEnd*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))+hardcoll*r2_hardcollAtEnd) );        
     // end expansion for grooming
 
-    MatrixD NOSD_G(4,4,0); 
-    MatrixD NOSD_Rexp(4,4,0); 
-    double NOSD_RAtEnd = 0;
 
-
-
-    NOSD_RAtEnd += -2./M_PI*alphaS()*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac));
+    RAtEnd += deltaUnGroomed * (-2./M_PI*alphaS()*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)));
         
         
-    NOSD_G(1,2) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
-    NOSD_G(1,1) += -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac));
+    G(1,2) += deltaUnGroomed * ( -2./m_a[i] * colfac/(m_a[i]+m_b[i]) );
+    G(1,1) += deltaUnGroomed * ( -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)) );
+  
+    Rexp(1,2) += deltaGroomed * ( -2./m_a[i] * colfac/(m_a[i]+m_b[i]) );
         
-    NOSD_Rexp(1,2) += -2./m_a[i] * colfac/(m_a[i]+m_b[i]);
-        
-    NOSD_G(2,3) += -8.*M_PI*beta0()/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2);
-    NOSD_G(2,2) += -colfac*(8.*M_PI*beta0() * (hardcoll/pow(m_a[i]+m_b[i],2) + (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)) \
-                            +2.*(K_CMW()+M_PI*beta0()*2.*log(muR2()/muQ2()))/m_a[i]/(m_a[i]+m_b[i]));
+    G(2,3) += deltaUnGroomed * ( -8.*M_PI*beta0()/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2) );
+    G(2,2) += deltaUnGroomed * ( -colfac*(8.*M_PI*beta0() * (hardcoll/pow(m_a[i]+m_b[i],2) + 
+                                                             (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)) \
+                                          +2.*(K_CMW()+M_PI*beta0()*2.*log(muR2()/muQ2()))/m_a[i]/(m_a[i]+m_b[i])) );
 
     if(!IsZero(m_etamin[i])) {
-      NOSD_RAtEnd += 2./M_PI*alphaS()*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i];
+      RAtEnd += deltaUnGroomed * ( 2./M_PI*alphaS()*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] );
             
-      NOSD_G(1,1) += 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i];
-      NOSD_G(2,2) += 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]);
+      G(1,1) += deltaUnGroomed * ( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] );
+      G(2,2) += deltaUnGroomed * ( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) );
     } 
     // end expansion without grooming
-
-    for(size_t j=0; j<m_nx; j++) {
-      if(groomed[j]) {
-        G[j] += SD_G;
-        RAtEnd[j] += SD_RAtEnd;
-        Rexp[j] += SD_Rexp;
-      }
-      else {
-        G[j] += NOSD_G;
-        RAtEnd[j] += NOSD_RAtEnd;
-        Rexp[j] += NOSD_Rexp;
-      }
-    }
 
     S1 += -colfac*log(s_12/muQ());
   } // end loop over legs
@@ -1950,16 +1976,16 @@ std::valarray<double> Resum::CalcSNGL(double& SnglExpNLL_NLO) {
   return ret;
 }
 
-std::valarray<double> Resum::CalcEP(double&  EPexpNLL_LO) {
+std::valarray<double> Resum::CalcEP(double&  EPexpNLL_LO, double&  EPexpNLL_NLO) {
   std::valarray<double> ret(1.,m_nx);
   if(m_mmode & MATCH_MODE::ADD) {
-    EPexpNLL_LO =  -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_G[m_nx-1](1,1));
-    ret *= exp(EPexpNLL_LO*alphaSBar()*m_L);
+    EPexpNLL_LO =  -(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[m_nx-1]); //m_epRatio
+    ret *= exp(EPexpNLL_LO*alphaSBar()*m_epRatio*m_L);
   }
   if(m_mmode & MATCH_MODE::DERIV) {
-    const double coeff = -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_RAtEnd[m_nx-1](1,1));
-    EPexpNLL_LO =  -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_G[m_nx-1](1,1));
-    ret *= exp(coeff*alphaSBar()*m_L);
+    const double coeff = -(4./m_a[0]*m_S1 + m_P1 + m_RAtEnd[m_nx-1]);
+    EPexpNLL_LO =  -(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[m_nx-1]);
+    ret *= exp(coeff*alphaSBar()*m_epRatio*m_L);
   }
   return ret;
 }
