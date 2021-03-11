@@ -118,7 +118,7 @@ int Resum::PerformShowers()
   m_rn[1]=ran->Get();
   // loop over observables
   for (m_n = 0; m_n<m_obss.size(); m_n++) {
-    DEBUG_FUNC(m_obss[m_n]->Name());
+    msg_Debugging()<<"Setting observable to "<<m_obss[m_n]->Name()<<".\n";
     if(!m_init) m_init = true;
     m_a.clear();
     m_b.clear();
@@ -137,11 +137,15 @@ int Resum::PerformShowers()
       m_etamin.push_back(ps.m_etamin);
       m_deltad.push_back(ps.m_deltad);
     }
-    
+    msg_Debugging()<<"Setting F function.\n";
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
 
+    msg_Debugging()<<"Setting Sngl function.\n";
     m_Sngl = m_obss[m_n]->SnglFunction(moms, flavs, m_params);
 
+    m_nx = m_xvals[m_n].size();
+
+    msg_Debugging()<<"Setting grooming parameters.\n";
     m_zcut = m_obss[m_n]->GroomZcut();
     m_beta = m_obss[m_n]->GroomBeta();
 
@@ -158,18 +162,19 @@ int Resum::PerformShowers()
             if(m_collgmodes_end[j] & GROOM_MODE::SD_COLL) m_softgmode_end = GROOM_MODE::SD_SOFT;
         }
     }
-
-    const size_t m_nx = m_xvals[m_n].size();
     
-    m_allCollgmodes = std::vector<std::valarray<GROOM_MODE>>(m_n,std::valarray<GROOM_MODE>(m_gmode,moms.size()));
-    m_allSoftgmodes = std::valarray<GROOM_MODE>(m_gmode,m_n);
+    m_allCollgmodes = std::vector<std::valarray<GROOM_MODE>>(moms.size(),std::valarray<GROOM_MODE>(m_gmode,m_nx));
+    m_collGroomed = std::vector<std::valarray<bool>>(moms.size(),std::valarray<bool>(m_nx));
+    m_allSoftgmodes = std::valarray<GROOM_MODE>(m_gmode,m_nx);
 
+    msg_Debugging()<<"Log rescaling etc.\n";
     m_ep = m_obss[m_n]->Endpoint(p_ampl);
     m_p = m_obss[m_n]->LogPow(p_ampl);
     m_logFac = -log(m_obss[m_n]->LogFac(p_ampl));
     m_epRatio = pow(m_xvals[m_n]/m_ep,m_p);
 
     m_logArg.resize(m_nx);
+
 
     for(size_t i=0; i<m_nx; i++) {
       const double x = m_xvals[m_n][i];
@@ -178,6 +183,7 @@ int Resum::PerformShowers()
         m_allSoftgmodes[i] = GROOM_MODE::NONE;
         for(size_t j=0; j<moms.size(); j++) {
           m_allCollgmodes[j][i] = m_obss[m_n]->GroomMode(m_logArg[i], p_ampl, j);
+          m_collGroomed[j][i] = m_obss[m_n]->GroomMode(m_logArg[i], p_ampl, j) & GROOM_MODE::SD_COLL;
           //        Transition for soft function if any coll-mode is groomed
           if(m_allCollgmodes[j][i] & GROOM_MODE::SD_COLL){
               if(!(m_softgmode_end & GROOM_MODE::SD_SOFT)) m_allSoftgmodes[i] = GROOM_MODE::SD_SOFT;
@@ -187,10 +193,10 @@ int Resum::PerformShowers()
       }
     }
 
-    m_L = std::log(m_logArg);
+    m_L = -std::log(m_logArg);
     m_lambda = alphaS()*beta0()*m_L;
 
-    m_Lz = log(1./m_obss[m_n]->GroomTransitionPoint(p_ampl));
+    m_Lz = -log(m_obss[m_n]->GroomTransitionPoint(p_ampl));
     m_Lsoft = m_L;
     m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD_SOFT] = m_Lz;
     m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD] = 0.;
@@ -198,7 +204,6 @@ int Resum::PerformShowers()
     m_TofLoverA = T(m_lambdaSoft/m_a[0]);
 
     m_Rp = std::valarray<double>(0., m_nx);
-    // m_G = std::valarray<MatrixD>(MatrixD(4,4,0), m_nx); 
 
     m_G = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
     m_Rexp = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
@@ -207,9 +212,11 @@ int Resum::PerformShowers()
     m_P1 = 0;
     m_F2 = 0;
     m_SNGL2 = 0;
-    m_EP1 = 0;
-    m_EP2 = 0;
+    m_EP1 = std::valarray<double> (0., m_nx);
+    m_EP2 = std::valarray<double> (0., m_nx);
     m_RAtEnd = std::valarray<double> (0., m_nx);
+
+
       
     m_Coll  =  (m_amode&MODE::IGNCOLL)  ? std::valarray<double>(1.,m_nx) : CalcColl(m_Rp,m_G,m_Rexp,m_S1,m_RAtEnd);
     m_Soft  =  (m_amode&MODE::IGNSOFT)  ? std::valarray<double>(1.,m_nx) : CalcS(m_S1,m_S2);
@@ -218,7 +225,11 @@ int Resum::PerformShowers()
     m_SNGL  =  (m_amode&MODE::IGNSNGL) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
     m_Ep    =  CalcEP(m_EP1, m_EP2);
 
-    m_resNLL[m_n] = m_Coll*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep;
+
+
+    m_resNLL[m_n] = ( exp(m_Coll)*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep ).apply([](double x)->double {return std::isnan(x)?0.:x;});
+
+    // printLists(msg_Out(),{m_L,m_resNLL[m_n],exp(m_Coll)});
 
     // some legacy options
     if(!(m_amode & MODE::COLLEXPAND)) {
@@ -237,11 +248,12 @@ int Resum::PerformShowers()
     }
 
 
-    m_resExpLO[m_n] = alphaSBar() * ( pow(m_L,2.) * m_G(1,2) + m_L * m_G(1,1) + m_G(1,0) +
-                                      m_Lsoft * m_S1 +
-                                      m_L * m_P1 +
-                                      m_L*m_epRatio * m_EP1
+    m_resExpLO[m_n] = alphaSBar() * ( pow(m_L,2.) * m_G(1,2)  + m_L  * m_G(1,1)  + m_G(1,0)
+                                      + m_Lsoft * 4./m_a[0] * m_S1
+                                      + m_L * m_P1
+                                      + m_EP1
                                       );
+    m_resExpLO[m_n].apply([](double x)->double {return std::isnan(x)?0.:x;});
 
     // // store leading order expansion
     // m_resExpLO[m_n][i] = std::isnan(m_resExpLO[m_n][i]) ? 0. : m_resExpLO[m_n][i];
@@ -741,7 +753,7 @@ std::string Resum::AddObservable(const RESUM::Observable_Key& key,
     // by convention, xvals are always ordred and there is always an xvalue above or at the max endpoint
     const double ep = obs->MaxEndpoint();
     std::sort(std::begin(xvals),std::end(xvals));
-    const size_t nx = xvals.max() > ep ? xvals.size() : xvals.size()+1;
+    const size_t nx = xvals.max() < ep ? xvals.size()+1 : xvals.size();
     m_xvals.emplace_back(nx);
     std::valarray<double>& xv = m_xvals.back(); 
     for(size_t i=0; i<nx; i++) {
@@ -1565,21 +1577,25 @@ std::valarray<double> Resum::r1p(std::valarray<double> lambda, double a, double 
 }
 
 std::valarray<double> Resum::SD_r2_cmw(std::valarray<double> lambda, double lambdaZ, double a, double b) const {
+  if(IsZero(b)) return SD_r2_cmw_b0(lambda,lambdaZ,a);
   return (K_CMW()/pow(2.*M_PI*beta0(),2.)+log(muR2()/muQ2())/M_PI/beta0()/2.) * (b/(1.+m_beta) * log(1.-2.*lambdaZ) \
                                                                    - (a*(1.+m_beta)+b)/(1.+m_beta) * log(1.-(2.*(1.+m_beta))/(a*(1.+m_beta)+b)*lambda - 2.*b/(a*(1.+m_beta)+b)*lambdaZ) + (a+b)*log(1.-2./(a+b)*lambda))/b;
 }
 
 std::valarray<double> Resum::SD_r2_beta1(std::valarray<double> lambda, double lambdaZ, double a, double b) const {
-  -(beta1()/4./M_PI/pow(beta0(),3.)) * (b/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
+  if(IsZero(b)) return SD_r2_beta1_b0(lambda,lambdaZ,a);
+  return -(beta1()/4./M_PI/pow(beta0(),3.)) * (b/(1.+m_beta) * (pow(log(1.-2.*lambdaZ),2)+2.*log(1.-2.*lambdaZ)) \
                                     -(a*(1.+m_beta)+b)/(1.+m_beta) * (pow(log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda - 2.*b/(a*(1.+m_beta)+b)*lambdaZ),2)+2.*log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda - 2.*b/(a*(1.+m_beta)+b)*lambdaZ)) + (a+b)*(pow(log(1.-2./(a+b)*lambda),2)+2.*log(1.-2./(a+b)*lambda)) )/b;
 }
 
 std::valarray<double> Resum::SD_r1p(std::valarray<double> lambda, double lambdaZ, double a, double b) const {
-  -1./(M_PI*b*beta0())*(log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda-2.*b/(a*(1.+m_beta)+b)*lambdaZ)-log(1.-2./(a+b)*lambda));
+  if(IsZero(b)) return SD_r1p_b0(lambda,lambdaZ,a);
+  return -1./(M_PI*b*beta0())*(log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda-2.*b/(a*(1.+m_beta)+b)*lambdaZ)-log(1.-2./(a+b)*lambda));
 }  
       
 std::valarray<double> Resum::SD_r1d(std::valarray<double> lambda, double lambdaZ, double a, double b) const {
-  -1./(M_PI*a*beta0())/(m_beta+1.)*(log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda-2.*b/(a*(1.+m_beta)+b)*lambdaZ)-log(1.-2.*lambdaZ));
+  if(IsZero(b)) return SD_r1d_b0(lambda,lambdaZ,a);
+  return -1./(M_PI*a*beta0())/(m_beta+1.)*(log(1.-2.*(1.+m_beta)/(a*(1.+m_beta)+b)*lambda-2.*b/(a*(1.+m_beta)+b)*lambdaZ)-log(1.-2.*lambdaZ));
 }
 
 std::valarray<double> Resum::SD_r2_cmw_b0(std::valarray<double> lambda, double lambdaZ, double a) const {
@@ -1613,10 +1629,10 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
 
   std::valarray<double> R(0., m_nx);
 
-  if(m_collgmodes[0] & GROOM_MODE::SD_COLL or
-     m_collgmodes[1] & GROOM_MODE::SD_COLL) {
-    THROW(not_implemented, "No non-trivial coll. function for groomed initial states implementd");
-  }
+  // if(m_collgmodes[0] & GROOM_MODE::SD_COLL or
+  //    m_collgmodes[1] & GROOM_MODE::SD_COLL) {
+  //   THROW(not_implemented, "No non-trivial coll. function for groomed initial states implementd");
+  // }
   for(size_t i = (m_gmode & GROOM_MODE::SD) ? 2 : 0;
       i<p_ampl->Legs().size(); i++) {
     if(m_deltad[i] == 0) continue;
@@ -1645,49 +1661,48 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
     }
 
 
-    std::valarray<bool> groomed(m_gmode & GROOM_MODE::SD,m_nx);
-    
-    std::valarray<double> deltaGroomed(m_gmode & GROOM_MODE::SD,m_nx);
-    std::valarray<double> deltaUnGroomed(not (m_gmode & GROOM_MODE::SD),m_nx);
+    const std::valarray<bool>& groomed =  m_collGroomed.at(i);
+    const std::valarray<bool>& unGroomed = not groomed;
+    const size_t nGroomed = std::count(std::begin(groomed),std::end(groomed),true);
+    const size_t nUnGroomed = m_nx - nGroomed;
+
 
     // needed for SD grooming
     const double transp = m_obss[m_n]->GroomTransitionPoint(p_ampl, i);
     msg_Debugging() << "Transition point = " << transp << " zcut = " << m_zcut << "\n";
     const double lambdaZ = alphaS()*beta0()*log(1./transp)/m_a[i];
    
-
-
     int order = 1;
+
 
     if (order>=0) {    
       //LL part
       R[groomed] -= colfac*SD_r1(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
-      R[not groomed] -= colfac*r1(m_lambda[not groomed],m_a[i],m_b[i]);
+      R[unGroomed] -= colfac*r1(m_lambda[unGroomed],m_a[i],m_b[i]);
     } // end LL
     if (order>=1) {
       //NLL part
       std::valarray<double> r2(0.,m_nx);
       std::valarray<double> r1prime(m_nx);
-      std::valarray<double> r1dot(0.,m_nx);
-      
+      std::valarray<double> r1dot(m_nx);
       
       r2[groomed] += SD_r2_cmw(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
-      r2[not groomed] += r2_cmw(m_lambda[not groomed],m_a[i],m_b[i]);
+      r2[unGroomed] += r2_cmw(m_lambda[unGroomed],m_a[i],m_b[i]);
       
       r2[groomed] += SD_r2_beta1(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
-      r2[not groomed] = r2_beta1(m_lambda[not groomed],m_a[i],m_b[i]);
+      r2[unGroomed] += r2_beta1(m_lambda[unGroomed],m_a[i],m_b[i]);
 
 
       r1prime[groomed] = SD_r1p(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
       r1dot[groomed] = SD_r1d(m_lambda[groomed],lambdaZ,m_a[i],m_b[i]);
       
-      r1prime[not groomed] = r1p(m_lambda[not groomed],m_a[i],m_b[i]);
+      r1prime[unGroomed] = r1p(m_lambda[unGroomed],m_a[i],m_b[i]);
       
       // add NLL parts to R and Rp
       const double r1p_coeff = m_logdbar[i]-m_b[i]*log(2.0*El/muQ()) + m_logFac;
-      
+
+
       R -= colfac*(r2+r1p_coeff*r1prime+hardcoll*T(m_lambda/(m_a[i]+m_b[i])));
-      
       double r1d_coeff = (m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()));
       double T_coeff = log(s_12/muQ()); 
       if(!IsZero(m_etamin[i])) {
@@ -1707,43 +1722,44 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
       Rp += r1prime*colfac;        
     }
 
-    double SD_RAtEnd;
-    G(1,2) += deltaGroomed * ( -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]));
-    G(1,1) += deltaGroomed * ( -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)+(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])) );
-    G(1,0) += deltaGroomed * ( 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)-(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp)) );
+    msg_Debugging()<<"Now calculate expansion.\n";
+
+    G(1,2)[groomed] += std::valarray<double>(-2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]),nGroomed);
+    G(1,1)[groomed] += std::valarray<double>( -4.*colfac*(log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) + hardcoll/(m_a[i]+m_b[i]) + m_beta/(m_a[i]*(1.+m_beta)+m_b[i])/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)+(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])), nGroomed);
+    G(1,0)[groomed] += std::valarray<double>( 4.*colfac*(sqr(log(1./transp))/2.0/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) - (1./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)-(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]))*log(1./transp)), nGroomed );
         
-    Rexp(1,2) += deltaGroomed * ( -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]) );
-    Rexp(1,1) += deltaGroomed * ( -4.*colfac*log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
-        
-        
-    G(2,3) += deltaGroomed * (-8.*M_PI*beta0()*colfac/3.*m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i])));
-    G(2,2) += deltaGroomed * (-8.*M_PI*beta0()*colfac*((m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp)
+    Rexp(1,2)[groomed] += std::valarray<double>( -2.*colfac*m_beta/(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i]), nGroomed );
+    Rexp(1,1)[groomed] += std::valarray<double>( -4.*colfac*log(1./transp)/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]), nGroomed );
+
+               
+    G(2,3)[groomed] += std::valarray<double>(-8.*M_PI*beta0()*colfac/3.*m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i])), nGroomed);
+    G(2,2)[groomed] += std::valarray<double>(-8.*M_PI*beta0()*colfac*((m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp)
                                           +m_beta*(K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/2./(m_a[i]+m_b[i])/(m_a[i]*(1.+m_beta)+m_b[i])
                                           +m_beta*(2.*(m_beta+1.)*m_a[i]+(m_beta+2.)*m_b[i])/sqr((m_a[i]+m_b[i])*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
-                                          +(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))
-                                                       +hardcoll/sqr(m_a[i]+m_b[i])) );
-    G(2,1) += deltaGroomed * (-8.*M_PI*beta0()*colfac*(m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*sqr(log(1./transp)) 
+                                                                      +(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))
+                                                                      +hardcoll/sqr(m_a[i]+m_b[i])), nGroomed );
+    G(2,1)[groomed] += std::valarray<double>(-8.*M_PI*beta0()*colfac*(m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*sqr(log(1./transp)) 
                                           +( (K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])
                                            +2.*(m_beta+1.)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
-                                             +2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))* (m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*log(1./transp)) );
-    G(2,0) += deltaGroomed * (-8.*M_PI*beta0()*colfac*(-(m_a[i]*(1.+m_beta)+2.*m_b[i])/3./sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*pow(log(1./transp),3)
+                                             +2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))* (m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*log(1./transp)), nGroomed );
+    G(2,0)[groomed] += std::valarray<double>(-8.*M_PI*beta0()*colfac*(-(m_a[i]*(1.+m_beta)+2.*m_b[i])/3./sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*pow(log(1./transp),3)
                                           +( -(K_CMW()/2./M_PI/beta0()+log(muR2()/muQ2()))/2./m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])
                                            +m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)
-                                             -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*sqr(log(1./transp))) );
+                                             -(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())))*sqr(log(1./transp))), nGroomed );
 
     if(!IsZero(m_etamin[i])) {
-      G(1,1) += deltaGroomed * ( 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]) );
-      G(1,0) += deltaGroomed * ( -4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp) );
-      G(2,2) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12)) );
-      G(2,1) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*log(1./transp) );
-      G(2,0) += deltaGroomed * ( -8.*M_PI*beta0()*colfac*(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*sqr(log(1./transp)) );
+      G(1,1)[groomed] += std::valarray<double>( 4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i]), nGroomed );
+      G(1,0)[groomed] += std::valarray<double>( -4.*colfac*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))/m_a[i]/(m_a[i]*(1.+m_beta)+m_b[i])*log(1./transp), nGroomed );
+      G(2,2)[groomed] += std::valarray<double>( 8.*M_PI*beta0()*colfac*(1.+m_beta)/m_a[i]/sqr(m_a[i]*(1.+m_beta)+m_b[i])*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12)), nGroomed );
+      G(2,1)[groomed] += std::valarray<double>( 8.*M_PI*beta0()*colfac*2.*m_b[i]/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*log(1./transp), nGroomed );
+      G(2,0)[groomed] += std::valarray<double>( -8.*M_PI*beta0()*colfac*(m_a[i]*(1.+m_beta)+2.*m_b[i])/sqr(m_a[i]*(m_a[i]*(1.+m_beta)+m_b[i]))*(m_b[i]+(1.+m_beta)*m_a[i])*(m_etamin[i]-log(2.*El/s_12))*sqr(log(1./transp)), nGroomed );
           
-      G(1,0) += deltaGroomed * ( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] * log(1./transp) );
-      G(2,0) += deltaGroomed * ( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) * sqr(log(1./transp)) );
+      G(1,0)[groomed] += std::valarray<double>( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] * log(1./transp), nGroomed );
+      G(2,0)[groomed] += std::valarray<double>( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) * sqr(log(1./transp)), nGroomed );
     }
 
-        
-    RAtEnd += deltaGroomed * ( colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0() );
+ 
+    RAtEnd[groomed] += std::valarray<double>( colfac*log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/M_PI/m_b[i]/beta0(), nGroomed );
 
     const double r2_beta1AtEnd = -alphaS()*beta1()/M_PI/beta0()/beta0()*m_a[i]*(log(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))+2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))/(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]));
     const double r2_cmwAtEnd = 2.*alphaS()*beta0()*(K_CMW()/pow(2.*M_PI*beta0(),2.)+log(muR2()/muQ2())/M_PI/beta0()/2.)*(1./(1.-2.*m_b[i]*lambdaZ/(m_a[i]*(1.+m_beta)+m_b[i]))-1.);
@@ -1753,33 +1769,37 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
         
     const double r2AtEnd=1./m_b[i]*(r2_cmwAtEnd+r2_beta1AtEnd)+m_logFac*r1pAtEnd;
         
-    RAtEnd += deltaGroomed * ( (-1.)*colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ()))+r1dAtEnd*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ()))+hardcoll*r2_hardcollAtEnd) );        
-    // end expansion for grooming
 
 
-    RAtEnd += deltaUnGroomed * (-2./M_PI*alphaS()*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)));
+    RAtEnd[groomed] += std::valarray<double>( -colfac*(r2AtEnd+r1pAtEnd*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())) +r1dAtEnd*(m_logdbar[i]+m_logFac+m_a[i]*log(2.*El/muQ())-(m_b[i]+(1.+m_beta)*m_a[i])*log(2.*El/s_12)+m_beta*log(2.0*El/muQ())) +hardcoll*r2_hardcollAtEnd), nGroomed );        
+
+    msg_Debugging()<<"Done expansion for grooming.\n";
+
+
+    RAtEnd[unGroomed] += std::valarray<double>(-2./M_PI*alphaS()*(colfac) * (hardcoll/(m_a[i]+m_b[i]) + 1./m_a[i]/(m_a[i]+m_b[i])*(m_logdbar[i]-m_b[i]*log(2.0*El/muQ())+m_logFac)), nUnGroomed);
         
         
-    G(1,2) += deltaUnGroomed * ( -2./m_a[i] * colfac/(m_a[i]+m_b[i]) );
-    G(1,1) += deltaUnGroomed * ( -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)) );
-  
-    Rexp(1,2) += deltaGroomed * ( -2./m_a[i] * colfac/(m_a[i]+m_b[i]) );
+    G(1,2)[unGroomed] += std::valarray<double>( -2./m_a[i] * colfac/(m_a[i]+m_b[i]), nUnGroomed );
+    G(1,1)[unGroomed] += std::valarray<double>( -colfac*(4.*hardcoll/(m_a[i]+m_b[i]) + 4./(m_a[i]*(m_a[i]+m_b[i]))*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)), nUnGroomed );
+
+    Rexp(1,2)[unGroomed] += std::valarray<double>( -2./m_a[i] * colfac/(m_a[i]+m_b[i]), nUnGroomed );
         
-    G(2,3) += deltaUnGroomed * ( -8.*M_PI*beta0()/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2) );
-    G(2,2) += deltaUnGroomed * ( -colfac*(8.*M_PI*beta0() * (hardcoll/pow(m_a[i]+m_b[i],2) + 
+    G(2,3)[unGroomed] += std::valarray<double>( -8.*M_PI*beta0()/3./pow(m_a[i],2) * colfac * (2.*m_a[i]+m_b[i])/pow(m_a[i]+m_b[i],2), nUnGroomed );
+    G(2,2)[unGroomed] += std::valarray<double>( -colfac*(8.*M_PI*beta0() * (hardcoll/pow(m_a[i]+m_b[i],2) + 
                                                              (2.*m_a[i]+m_b[i])/pow(m_a[i]*(m_a[i]+m_b[i]),2)*(m_logdbar[i]-m_b[i]*log(2.*El/muQ())+m_logFac)) \
-                                          +2.*(K_CMW()+M_PI*beta0()*2.*log(muR2()/muQ2()))/m_a[i]/(m_a[i]+m_b[i])) );
+                                          +2.*(K_CMW()+M_PI*beta0()*2.*log(muR2()/muQ2()))/m_a[i]/(m_a[i]+m_b[i])), nUnGroomed );
 
     if(!IsZero(m_etamin[i])) {
-      RAtEnd += deltaUnGroomed * ( 2./M_PI*alphaS()*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] );
+      RAtEnd[unGroomed] += std::valarray<double>( 2./M_PI*alphaS()*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i], nUnGroomed );
             
-      G(1,1) += deltaUnGroomed * ( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i] );
-      G(2,2) += deltaUnGroomed * ( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]) );
+      G(1,1)[unGroomed] += std::valarray<double>( 4.*colfac*(m_etamin[i]-log(2.*El/s_12))/m_a[i], nUnGroomed );
+      G(2,2)[unGroomed] += std::valarray<double>( 8.*M_PI*beta0()*colfac*(m_etamin[i]-log(2.*El/s_12))/sqr(m_a[i]), nUnGroomed );
     } 
-    // end expansion without grooming
+    msg_Debugging()<<"Done expansion without grooming.\n";
 
     S1 += -colfac*log(s_12/muQ());
-  } // end loop over legs
+  }
+  msg_Debugging()<<"Done looping over legs.\n";
   return R;
 }
 
@@ -1840,11 +1860,11 @@ double Resum::CollinearCounterTerms(const int i,
 std::valarray<double> Resum::CalcPDF(double &PDFexp) {
   if(m_gmode & GROOM_MODE::SD) {
     PDFexp = 0;
-    if(m_gmode & GROOM_MODE::SD_PDF or
-       m_collgmodes[0] & GROOM_MODE::SD_PDF or
-       m_collgmodes[1] & GROOM_MODE::SD_PDF) {
-      THROW(not_implemented, "No non-trivial pdf contribution for grooming implemented.");
-    }
+    // if(m_gmode & GROOM_MODE::SD_PDF or
+    //    m_collgmodes[0] & GROOM_MODE::SD_PDF or
+    //    m_collgmodes[1] & GROOM_MODE::SD_PDF) {
+    //   THROW(not_implemented, "No non-trivial pdf contribution for grooming implemented.");
+    // }
     msg_Debugging()<<"Ignoring pdf function for groomed observables.\n";
     return std::valarray<double>(1.,m_nx);
   }
@@ -1976,16 +1996,20 @@ std::valarray<double> Resum::CalcSNGL(double& SnglExpNLL_NLO) {
   return ret;
 }
 
-std::valarray<double> Resum::CalcEP(double&  EPexpNLL_LO, double&  EPexpNLL_NLO) {
+std::valarray<double> Resum::CalcEP( std::valarray<double>&  EPexpNLL_LO,  std::valarray<double>& EPexpNLL_NLO) {
   std::valarray<double> ret(1.,m_nx);
+  size_t idx = m_nx-1;
   if(m_mmode & MATCH_MODE::ADD) {
-    EPexpNLL_LO =  -(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[m_nx-1]); //m_epRatio
+    EPexpNLL_LO +=  -m_epRatio*(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[idx]); //m_epRatio
     ret *= exp(EPexpNLL_LO*alphaSBar()*m_epRatio*m_L);
   }
   if(m_mmode & MATCH_MODE::DERIV) {
-    const double coeff = -(4./m_a[0]*m_S1 + m_P1 + m_RAtEnd[m_nx-1]);
-    EPexpNLL_LO =  -(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[m_nx-1]);
-    ret *= exp(coeff*alphaSBar()*m_epRatio*m_L);
+    ret *= exp(-m_Coll[idx]);
+    EPexpNLL_LO -= m_G(1,0);
+    
+    // const double coeff = -(4./m_a[0]*m_S1 + m_P1 + m_RAtEnd[idx]);
+    // EPexpNLL_LO =  -(4./m_a[0]*m_S1 + m_P1 + m_G(1,1)[idx]);
+    // ret *= exp(coeff*alphaSBar()*m_epRatio*m_L);
   }
   return ret;
 }

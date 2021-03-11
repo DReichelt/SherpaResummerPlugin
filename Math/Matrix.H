@@ -76,7 +76,7 @@ namespace RESUM {
        \param c number of columns
        \param def default entry
     */
-    Matrix(size_t r, size_t c, T def=T()) : m_data(r*c), m_dim(c) {}
+    Matrix(size_t r, size_t c, T def=T()) : m_data(def,r*c), m_dim(c) {}
     
     /// Construct matrix from nested vectors, determine number of rows and cols from vector.
     /**

@@ -150,6 +150,9 @@ namespace RESUM {
     std::vector<RESUM::GROOM_MODE> m_collgmodes_end;
     RESUM::GROOM_MODE m_softgmode_end = GROOM_MODE::SD;
 
+    std::vector<std::valarray<bool>> m_collGroomed;
+    std::valarray<bool> m_softGroomed;
+
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 
     
@@ -162,7 +165,7 @@ namespace RESUM {
     std::valarray<double> CalcSNGL(double& SnglExpNLL_NLO);
     std::valarray<double> CalcF(double& FexpNLL_NLO);
 
-    std::valarray<double> CalcEP(double& EPexpNLL_LO, double& EPexpNLL_NLO);
+    std::valarray<double> CalcEP(std::valarray<double>& EPexpNLL_LO, std::valarray<double>& EPexpNLL_NLO);
 
 
     double CalcColl(const double L, const double LResum, const int order,
@@ -267,8 +270,8 @@ namespace RESUM {
     double m_P1;
     double m_F2;
     double m_SNGL2;
-    double m_EP1;
-    double m_EP2;
+    std::valarray<double> m_EP1;
+    std::valarray<double> m_EP2;
     std::valarray<double> m_RAtEnd;
       
     std::valarray<double> m_Coll;
@@ -315,6 +318,14 @@ namespace RESUM {
     std::valarray<double> SD_r2_beta1_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
     std::valarray<double> SD_r1p_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
     std::valarray<double> SD_r1d_b0(std::valarray<double> lambda, double lambdaZ, double a) const;
+
+    void printLists(std::ostream& stream, std::vector<std::valarray<double>> lists) {
+      for(size_t i=0; i<m_nx; i++) {
+        for(auto& l: lists) stream<<l[i]<<" ";
+        stream<<"\n";
+      }
+    }
+    
 
   };// end of class Resum
   
