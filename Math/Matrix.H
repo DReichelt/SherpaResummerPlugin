@@ -565,6 +565,29 @@ namespace RESUM {
     }
 
     /// Calculate the trace of the product of \p a and \p b.
+    friend inline T TraceReal(const Matrix<T>& a, Matrix<std::complex<T>> bc) {
+      Matrix<T> b = bc.real();
+      if(a.isSquare() && b.isSquare() && a.sameDim(b)) {
+        return (a.m_data*b.transposeInPlace().m_data).sum();
+      }
+      else{
+        return Trace(a*b);
+      }
+    }
+
+    /// Calculate the trace of the product of \p a and \p b.
+    friend inline T Trace(const Matrix<std::complex<T>>& ac, Matrix<T> b) {
+      Matrix<T> a = ac.real();
+      if(a.isSquare() && b.isSquare() && a.sameDim(b)) {
+        return (a.m_data*b.transposeInPlace().m_data).sum();
+      }
+      else{
+        return Trace(a*b);
+      }
+    }
+
+
+    /// Calculate the trace of the product of \p a and \p b.
     template<template <class X> class ItAble>
     friend inline ItAble<T> Trace(const ItAble<Matrix<T>>& a, Matrix<T> b) {
       ItAble<T> ret(a.size());
@@ -580,22 +603,55 @@ namespace RESUM {
       return ret;
     }
 
+    /// Calculate the trace of the product of \p a and \p b.
+    template<template <class X> class ItAble>
+    friend inline ItAble<T> Trace(const ItAble<Matrix<std::complex<T>>>& ac, Matrix<T> b) {
+      ItAble<T> ret(ac.size());
+      b.transposeInPlace();
+      for(size_t i=0; i<ac.size(); i++) {
+        Matrix<T> a = ac[i].real();
+        if(a.isSquare() && b.isSquare() && a.sameDim(b)) {
+          ret[i] = (a.m_data*b.m_data).sum();
+        }
+        else{
+          ret[i] = Trace(a*Transpose(b));
+        }
+      }
+      return ret;
+    }
+
     
     
     /// Calculate the conjugate of \p matrix.
     friend inline Matrix<T> Conjugate(Matrix<T> matrix) {
       return matrix.conjugateInPlace();
     }
+
+    /// Calculate the conjugate of all matrices in \p matrix.
+    friend inline std::valarray<Matrix<T>> Conjugate(std::valarray<Matrix<T>> matrix) {
+      return matrix.apply([](Matrix<T> x)-> Matrix<T> {return Conjugate(x);});
+    }
+
     
     /// Calculate the hermitian transpose of \p matrix.
     friend inline Matrix<T> HermitianTranspose(Matrix<T> matrix) {
       return matrix.hermitianTransposeInPlace();
     }
+
+    /// Calculate the hermitian transpose of all matrices in \p matrix.
+    friend inline std::valarray<Matrix<T>> HermitianTranspose(std::valarray<Matrix<T>> matrix) {
+      return matrix.apply([](Matrix<T> x)-> Matrix<T> {return HermitianTranspose(x);});
+    }
     
-    /// Calculate matrix exponential of \p x.
+    /// Calculate matrix exponential of  \p x.
     friend Matrix<T> exp(Matrix<T> x) {
       return x.exponentiateInPlace();
     } 
+
+    /// Calculate matrix exponential of all matrices in \p x.
+    friend std::valarray<Matrix<T>> exp(std::valarray<Matrix<T>> matrix) {
+      return matrix.apply([](Matrix<T> x)-> Matrix<T> {return x.exponentiateInPlace();});
+    }
     
     /// Calculate the inverse of the symmetric matrix with lower triangular matrix equal \p matrix.
     friend Matrix<T> InverseLowerTriangular(Matrix<T> matrix) {
@@ -641,6 +697,7 @@ namespace RESUM {
     lhs *= rhs;
     return lhs;
   }
+
   
   /// Multiplication of scalar with matrix.
   template <typename T, typename Y>

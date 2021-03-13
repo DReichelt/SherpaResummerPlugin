@@ -156,38 +156,17 @@ namespace RESUM {
     MATCH_MODE m_mmode = MATCH_MODE::NONE;
 
     
-    double CalcS(const double L, const double LResum, double &SoftexpNLL_LO, double& SoftexpNLL_NLO, MODE Check=MODE::RESUM);
 
     std::valarray<double> CalcS(double& SoftexpNLL_LO, 
                                 double& SoftexpNLL_NLO, 
                                 MODE Check=MODE::RESUM);
-
     std::valarray<double> CalcSNGL(double& SnglExpNLL_NLO);
     std::valarray<double> CalcF(double& FexpNLL_NLO);
-
     std::valarray<double> CalcEP(std::valarray<double>& EPexpNLL_LO, std::valarray<double>& EPexpNLL_NLO);
-
-
-    double CalcColl(const double L, const double LResum, const int order,
-                    double &Rp, MatrixD& G, MatrixD& Rexp, double& S1) {
-      double dummy1;
-      return CalcColl(L, LResum, order, Rp, G, Rexp, S1, dummy1);
-    }
-    double CalcColl_end(const double L, const double LResum, const int order,
-                    double &Rp, MatrixD& G, MatrixD& Rexp, double& RAtEnd) {
-      double dummy1;
-      return CalcColl(L, LResum, order, Rp, G, Rexp, dummy1, RAtEnd);
-    }
-    double CalcColl(const double L, const double LResum, const int order,
-                    double &Rp, MatrixD& G, MatrixD& Rexp, double& S1, double& RAtEnd);
-    
     std::valarray<double> CalcColl(std::valarray<double>& Rp, Matrix<std::valarray<double>>& G, 
                                    Matrix<std::valarray<double>>& Rexp, double& S1, 
                                    std::valarray<double>& RAtEnd);
-
     double CalcRpp(const double L, GROOM_MODE gmode, double &exp12);
-
-    double CalcPDF(const double L, const double LResum, double &PDFexp);
     std::valarray<double> CalcPDF(double &PDFexp);
 
     double CollinearCounterTerms( const int i,
@@ -198,9 +177,6 @@ namespace RESUM {
 
     double T(const double& x) const;
     std::valarray<double> T(const std::valarray<double>& x) const;
-
-    double Value(const double v, const double LResum, double epRatio);
-    void FillValue(size_t i, const double v, const double LResum, double epRatio);
     
   public:
 
@@ -281,6 +257,7 @@ namespace RESUM {
     std::valarray<double> m_SNGL;
     std::valarray<double> m_Ep;
 
+
     double NC() const {return m_params.NC();}
     double CA() const {return m_params.CA();}
     double CF() const {return m_params.CF();}
@@ -299,6 +276,17 @@ namespace RESUM {
     double muR() const {return sqrt(muR2());}
     double muF() const {return sqrt(muF2());}
     double muQ() const {return sqrt(muQ2());}
+
+    std::vector<double> m_colfac;
+    std::vector<double> m_hardcoll;
+    std::vector<double> m_energy;
+
+    inline double colfac(size_t l) const {return m_colfac[l];}
+    inline double C(size_t l) const {return colfac(l);}
+    inline double hardcoll(size_t l) const {return m_hardcoll[l];}
+    inline double B(size_t l) const {return hardcoll(l);}
+    inline double energy(size_t l) const {return m_energy[l];}
+    inline double E(size_t l) const {return energy(l);}
 
     std::valarray<double> r1(std::valarray<double> lambda, double a, double b) const;
     std::valarray<double> r1_b0(std::valarray<double> lambda, double a) const;
@@ -329,6 +317,9 @@ namespace RESUM {
 
   };// end of class Resum
   
+  double NaNtoZero(double x) {return std::isnan(x)?0.:x;}
+  double FuzzyZeroToZero(double x) {return ATOOLS::IsZero(x)?0.:x;}
+    
 }// end of namespace RESUM
 
 #endif

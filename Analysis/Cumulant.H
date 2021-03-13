@@ -60,11 +60,6 @@ namespace RESUM {
       return ret;
     }
     
-    // Cumulant(std::valarray<double> edges, const std::string& name, int oform=1) 
-    //   : m_name(name), m_edges(edges), m_nEdges(m_edges.size()), m_oform(oform),  
-    //     m_weights(0.,m_nEdges), m_weight2s(0.,m_nEdges),
-    //     m_barWeights(0.,m_nEdges), m_barWeight2s(0.,m_nEdges) {}
-
     Cumulant(std::valarray<double> edges, const std::string& name, 
              std::shared_ptr<VarWeightMap> varweights=nullptr, int oform=1,
              const std::string& cname="CENTRAL")
@@ -79,14 +74,6 @@ namespace RESUM {
         m_cname(cname)
     {
       DEBUG_FUNC(name);
-      // if(!p_varweights) {
-      //   msg_Out()<<"Initialized Cumulant without varweight.\n";
-      //   if(varweights)
-      //     msg_Out()<<"But had some earlier.\n";
-      // }
-      // else{
-      //   msg_Out()<<"Initialize Cumulant with varweight.\n";
-      // }
     }
 
     Cumulant& operator+=(Cumulant other) {
