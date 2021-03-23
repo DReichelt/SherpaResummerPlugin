@@ -39,7 +39,8 @@ namespace RESUM {
       : m_name(params.Name()),  m_params(params.m_params) { 
       m_tag = params.KwArg("TAG","");
     }
-  
+
+    virtual ~ChannelAlgorithm_Base() = default;
 
     virtual std::string Channel(const ATOOLS::Particle_List& particles, bool addTag,
                                 std::vector<ATOOLS::Vec4D>* pout=nullptr,

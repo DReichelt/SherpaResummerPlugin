@@ -156,6 +156,7 @@ namespace RESUM {
     RESUM::GROOM_MODE m_softgmode_end = GROOM_MODE::SD;
 
     std::vector<std::valarray<bool>> m_collGroomed;
+    std::valarray<bool> m_groomed;
     std::valarray<bool> m_softGroomed;
 
     MATCH_MODE m_mmode = MATCH_MODE::NONE;

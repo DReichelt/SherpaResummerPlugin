@@ -167,7 +167,7 @@ int Resum::PerformShowers()
   for (m_n = 0; m_n<m_obss.size(); m_n++) {
     const std::string& tag = m_obss[m_n]->Tag();
     msg_Debugging()<<"Resummation for "<<m_obss[m_n]->Name()<<" "<<tag<<"\n";
-    if(not m_resultsNLL[tag] or not m_treat[m_n]&TREAT::needs_resum) continue;
+    if(not m_resultsNLL[tag] or not (m_treat[m_n]&TREAT::needs_resum)) continue;
     if(m_obss[m_n] == nullptr)
       THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
     if(!m_init) m_init = true;
@@ -201,7 +201,8 @@ int Resum::PerformShowers()
     }
     
     m_allCollgmodes = std::vector<std::valarray<GROOM_MODE>>(moms.size(),std::valarray<GROOM_MODE>(m_gmode,m_nx));
-    m_collGroomed = std::vector<std::valarray<bool>>(moms.size(),std::valarray<bool>(m_nx));
+    m_collGroomed = std::vector<std::valarray<bool>>(moms.size(),std::valarray<bool>(false,m_nx));
+    m_softGroomed = std::valarray<bool>(false,m_nx);
     m_allSoftgmodes = std::valarray<GROOM_MODE>(m_gmode,m_nx);
 
     msg_Debugging()<<"Log rescaling etc.\n";
@@ -221,18 +222,27 @@ int Resum::PerformShowers()
           m_collGroomed[j][i] = m_obss[m_n]->GroomMode(m_logArg[i], p_ampl, j) & GROOM_MODE::SD_COLL;
           //        Transition for soft function if any coll-mode is groomed
           if(m_allCollgmodes[j][i] & GROOM_MODE::SD_COLL){
-              if(!(m_softgmode_end & GROOM_MODE::SD_SOFT)) m_allSoftgmodes[i] = GROOM_MODE::SD_SOFT;
-              else m_allSoftgmodes[i] = GROOM_MODE::SD;
+            if(!(m_softgmode_end & GROOM_MODE::SD_SOFT)) {
+              m_softGroomed[i] = true;
+              m_allSoftgmodes[i] = GROOM_MODE::SD_SOFT;
+            }
+            else {
+              m_softGroomed[i] = false;
+              m_allSoftgmodes[i] = GROOM_MODE::SD;
+            }
           }
         }
       }
     }
 
+    m_groomed = std::valarray<bool>(false,m_nx);
+    for(const std::valarray<bool>& cg: m_collGroomed) m_groomed &= cg;
+    
     m_L = -std::log(m_logArg);
     m_Lz = -log(m_obss[m_n]->GroomTransitionPoint(p_ampl));
     m_Lsoft = m_L;
-    m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD_SOFT] = m_Lz;
-    m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD] = 0.;
+    m_Lsoft[m_softGroomed] = m_Lz;
+    m_Lsoft[m_groomed and not m_softGroomed] = 0.;
     
     for(const auto& p: m_varParams) {
       msg_Debugging()<<"Resum with variation "<<p.first<<".\n";
@@ -1109,7 +1119,7 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
         T_coeff += -(m_etamin[i]-log(2.*El/s_12));
       }
       r1dot *= colfac*r1d_coeff;
-      R[groomed] -= r1dot[groomed];
+      R[groomed] -= std::valarray<double>(r1dot[groomed]);
 
       // this is almost but not quite the same being based on lambda_soft, since the collinear transition point might be different
       std::valarray<double> Targ = m_lambda/m_a[i];
