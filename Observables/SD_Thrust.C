@@ -63,6 +63,12 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    virtual std::set<size_t> ResumMult() {return {4};}
+    virtual size_t ResumQCDorderBorn() {return 2;};
+    virtual size_t ResumQCDorderLO() {return 3;}
+    virtual size_t ResumQCDorderNLO() {return 4;}
+
+
     double LogFac(ATOOLS::Cluster_Amplitude* ampl) {
       if(!m_unitNorm) return RESUM::Observable_Base::LogFac();
       double avg = 0;

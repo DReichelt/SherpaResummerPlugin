@@ -17,6 +17,10 @@ namespace RESUM {
     std::string m_name;
     const std::string& Name() const {return m_name;}
     const std::string& Arg(size_t i) const {return m_params.at(i);}
+    void SetKwArg(const std::string& kw, const std::string& arg) {m_params_map[kw] = arg;}
+    void SetKwArg(const std::map<std::string,std::string>& kw_args) {for(auto& kw_arg: kw_args) SetKwArg(kw_arg.first, 
+                                                                                                         kw_arg.second);}
+    void SetKwArg(const Key_Base& kw_args) {SetKwArg(kw_args.m_params_map);}
     const std::string& KwArg(const std::string& kw) const {return m_params_map.at(kw);}
     const std::string& KwArg(const std::string& kw,
                              const std::string& def) const {

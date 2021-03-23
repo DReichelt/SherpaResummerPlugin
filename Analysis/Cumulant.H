@@ -195,7 +195,7 @@ namespace RESUM {
     void SetVariants(const std::vector<std::string>& names) {
       m_variantNames = names;
       for(const std::string& name: names) {
-        m_variants[name] = std::make_shared<Cumulant>(m_edges,name+"_"+m_name,p_varweights);;
+        m_variants[name] = std::make_shared<Cumulant>(m_edges,name+" "+m_name,p_varweights);;
       }
     }
 
@@ -320,8 +320,8 @@ namespace RESUM {
         m_barErrors = sqrt((m_barWeight2s-m_barWeights*m_barWeights)/(m_fills-1));
       }
       else {
-        std::fill(std::begin(m_errors),std::end(m_errors),0);
-        std::fill(std::begin(m_barErrors),std::end(m_barErrors),0);
+        m_errors = std::valarray<double>(0.,m_weights.size());
+        m_barErrors = std::valarray<double>(0.,m_weights.size());
       }
       switch(m_oform) {
       case 1:
@@ -371,10 +371,11 @@ namespace RESUM {
       }
       for(const auto& var: *p_varweights) {
         *ofile.stream()<<"# BEGIN \n# ";
-        if(title!="") *ofile.stream()<<title<<"_";
+        if(title!="") *ofile.stream()<<title<<" ";
         *ofile.stream()<<Name()<<" "<<var.first<<"\n";
         *ofile.stream()<<"# v Sigma{sumW sumW2 err} barSigma{sumW sumW2 err} NumEntries\n";
         *ofile.stream()<<"# v_min = "<<m_minvalue<<", v_max = "<<m_maxvalue<<"\n";
+
         const std::valarray<double>& weights = m_weights[var.second];
         const std::valarray<double>& weight2s = m_weight2s[var.second];
         const std::valarray<double>& errors = m_errors[var.second];
@@ -402,6 +403,11 @@ namespace RESUM {
 
     const std::string& Name() {return m_name;}
 
+    void InitVarWeights(std::vector<std::string> weightNames, bool addCName=false) {
+      std::map<std::string,double> tmp;
+      for(const std::string& wn: weightNames) tmp[wn+(addCName?"+"+m_cname:"")] = 0; 
+      InitVarWeights(&tmp);
+    }
 
     void InitVarWeights(std::map<std::string,double>* weightsMap=nullptr) {
       DEBUG_FUNC((weightsMap ? weightsMap->size()+1:1));

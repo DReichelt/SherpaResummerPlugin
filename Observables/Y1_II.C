@@ -32,6 +32,11 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    virtual std::set<size_t> ResumMult() {return {2};}
+    virtual size_t ResumQCDorderBorn() {return 0;};
+    virtual size_t ResumQCDorderLO() {return 1;}
+    virtual size_t ResumQCDorderNLO() {return 2;}
+
 
     double KT2(const Vec4D& p1) const {
       return p1.PPerp2();

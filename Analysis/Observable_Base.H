@@ -13,6 +13,7 @@
 
 #include <limits>
 #include <functional>
+#include <valarray>
 
 namespace RESUM {
 
@@ -57,6 +58,9 @@ namespace RESUM {
     double m_logfac = 1.;
     double m_logpow = 1.;
     double m_endpoint = 1.;
+    double m_muQ2fac = 1.;
+    double m_muR2fac = 1.;
+    double m_muF2fac = 1.;
     bool m_unitNorm = true;
 
     enum EP_MODE {
@@ -87,6 +91,12 @@ namespace RESUM {
                  to_type<double>(ip->Interprete(args.KwArg("logfac","1"))));
       m_logpow = read.GetValue<double>("RESUM::LOGPOW",
                  to_type<double>(ip->Interprete(args.KwArg("logpow","1"))));
+      m_muQ2fac = read.GetValue<double>("RESUM::MUQ2FAC",
+                 to_type<double>(ip->Interprete(args.KwArg("muQ2fac","1"))));
+      m_muR2fac = read.GetValue<double>("RESUM::MUR2FAC",
+                 to_type<double>(ip->Interprete(args.KwArg("muR2fac","1"))));
+      m_muF2fac = read.GetValue<double>("RESUM::MUF2FAC",
+                 to_type<double>(ip->Interprete(args.KwArg("muF2fac","1"))));
       m_unitNorm = bool(read.GetValue<int>("RESUM::UNITNORM",
                         to_type<int>(args.KwArg("unitnorm","1"))));
       m_endpoint = read.GetValue<double>("RESUM::"+m_name+"::ENDPOINT",
@@ -101,27 +111,6 @@ namespace RESUM {
           m_epmode = static_cast<EP_MODE>(m_epmode | m_EPModeToEnum.at(m));
         }
       }
-      /*
-      const std::string& gmode = read.GetValue<std::string>("RESUM::"+m_name+"::GROOM","NONE");
-      if(is_int(gmode)) {
-        m_gmode = static_cast<GROOM_MODE>(to_type<int>(gmode));
-      }
-      else {
-        if(!(gmode=="DEFAULT")) {
-          for(const std::string& m: split(gmode,"\\|")) {
-            m_gmode = static_cast<GROOM_MODE>(m_gmode | m_GroomModeToEnum.at(m));
-          }
-        }
-      }*/
-      /*
-      if(m_gmode & GROOM_MODE::SD) {
-        m_zcut = read.GetValue<double>("RESUM::"+m_name+"::GROOM::ZCUT",
-                                       read.GetValue<double>("RESUM::GROOM::ZCUT", 0.1) );
-        m_beta = read.GetValue<double>("RESUM::"+m_name+"::GROOM::BETA",
-                                       read.GetValue<double>("RESUM::GROOM::BETA", 0));
-        m_R0   = read.GetValue<double>("RESUM::"+m_name+"::GROOM::RAD0",
-                                       read.GetValue<double>("RESUM::GROOM::RAD0", 1));
-      }*/
     }
 
     virtual ~Observable_Base_Template() {};
@@ -142,7 +131,7 @@ namespace RESUM {
         flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
       }
       Obs_Params p = Parameters(moms,flavs,l);
-      double logdbar = p.m_logdbar + p.m_a/2.*log(ampl->MuQ2()/cme.Abs2()); 
+      double logdbar = p.m_logdbar + p.m_a/2.*log(MuQ2fac()*ampl->MuQ2()/cme.Abs2()); 
       DEBUG_FUNC(Tag()+" -> "+Name());
       msg_Debugging()<<"Parameters for leg "<<l<<" of "; 
       msg_Debugging()<<*ampl<<"\n\n";
@@ -154,7 +143,43 @@ namespace RESUM {
       return {p.m_a,p.m_b,logdbar,p.m_g,p.m_etamin,p.m_deltad};
     }
 
-
+    void Parameters(ATOOLS::Cluster_Amplitude* ampl, 
+                    std::vector<double>& a, 
+                    std::vector<double>& b,
+                    std::vector<double>& logdbar,
+                    std::vector<double>& etamin,
+                    std::vector<int>& deltad) {
+      const size_t nl = ampl->Legs().size();
+      a.resize(nl);
+      b.resize(nl);
+      logdbar.resize(nl);
+      etamin.resize(nl);
+      deltad.resize(nl);
+      std::vector<Vec4T> moms(nl);
+      std::vector<ATOOLS::Flavour> flavs(nl);
+      Vec4T cme = {T(0),T(0),T(0),T(0)};
+      DEBUG_FUNC(Tag()+" -> "+Name());
+      msg_Debugging()<<*ampl<<"\n\n";
+      for (size_t l=0; l<nl; l++) {
+        if(l<ampl->NIn()) cme += -ampl->Leg(l)->Mom();
+        moms[l]=l<ampl->NIn()?-ampl->Leg(l)->Mom():ampl->Leg(l)->Mom();
+        flavs[l]=l<ampl->NIn()?ampl->Leg(l)->Flav().Bar():ampl->Leg(l)->Flav();
+      }
+      for (size_t l=0; l<nl; l++) {
+        const Obs_Params& p = Parameters(moms,flavs,l);
+        const double ldbar = p.m_logdbar + p.m_a/2.*log(MuQ2fac()*ampl->MuQ2()/cme.Abs2()); 
+        msg_Debugging()<<"a("<<l<<") = "<<p.m_a<<"\n";
+        msg_Debugging()<<"b("<<l<<") = "<<p.m_b<<"\n";
+        msg_Debugging()<<"log(\\bar{d})("<<l<<") = "<<p.m_logdbar<<"\n";
+        msg_Debugging()<<"g("<<l<<") = "<<p.m_g<<"\n";
+        msg_Debugging()<<"\\eta_{min}("<<l<<") = "<<p.m_etamin<<".\n";
+        a[l] = p.m_a;
+        b[l] = p.m_b;
+        logdbar[l] = ldbar;
+        etamin[l] = p.m_etamin;
+        deltad[l] = p.m_deltad;
+      }
+    }
 
     virtual Obs_Params Parameters(const std::vector<Vec4T>& p,
                                   const std::vector<ATOOLS::Flavour>& fl,
@@ -170,7 +195,10 @@ namespace RESUM {
       return [](double t,double& SnglExpNLL_NLO) {SnglExpNLL_NLO=0.; return 1.; };
     }
 
-
+    virtual std::set<size_t> ResumMult() = 0;
+    virtual size_t ResumQCDorderBorn() = 0;
+    virtual size_t ResumQCDorderLO() = 0;
+    virtual size_t ResumQCDorderNLO() = 0;
     
     virtual double SoftGlobal(ATOOLS::Cluster_Amplitude* ampl, size_t i, size_t j, double scale) {
       if(ampl->Leg(i)->Flav().Strong() and ampl->Leg(j)->Flav().Strong()) {
@@ -210,12 +238,28 @@ namespace RESUM {
       return LogArg(v, logfac, logpow, endpoint);
     }
 
+    std::valarray<double> LogArg(std::valarray<double> v, ATOOLS::Cluster_Amplitude* ampl) {
+      double endpoint = Endpoint(ampl);
+      double logfac = LogFac(ampl);
+      double logpow = LogPow(ampl);
+      return LogArg(v, logfac, logpow, endpoint);
+    }
+
+
     double ObsVal(double logarg, ATOOLS::Cluster_Amplitude* ampl) {
       double endpoint = Endpoint(ampl);
       double logfac = LogFac(ampl);
       double logpow = LogPow(ampl);
       return ObsVal(logarg, logfac, logpow, endpoint);
     }
+
+    std::valarray<double> ObsVal(std::valarray<double> logarg, ATOOLS::Cluster_Amplitude* ampl) {
+      double endpoint = Endpoint(ampl);
+      double logfac = LogFac(ampl);
+      double logpow = LogPow(ampl);
+      return ObsVal(logarg, logfac, logpow, endpoint);
+    }
+
 
     double Endpoint(ATOOLS::Cluster_Amplitude* ampl) {
       if( (m_epmode & EP_MODE::DYNAMIC) != 0) {
@@ -232,8 +276,15 @@ namespace RESUM {
     }
 
 
-    double LogFac() {return m_logfac;}
-    double LogPow() {return m_logpow;}
+    inline double LogFac() const {return m_logfac;}
+    inline double LogPow() const {return m_logpow;}
+    inline double MuR2fac() const {return m_muR2fac;}
+    inline double MuQ2fac() const {return m_muQ2fac;}
+    inline double MuF2fac() const {return m_muF2fac;}
+    inline double MuRfac() const {return sqrt(m_muR2fac);}
+    inline double MuQfac() const {return sqrt(m_muQ2fac);}
+    inline double MuFfac() const {return sqrt(m_muF2fac);}
+
 
     virtual double LogFac(ATOOLS::Cluster_Amplitude* ampl) {
       if(!m_unitNorm) return LogFac();
@@ -264,6 +315,25 @@ namespace RESUM {
       return 1./pow(ret,1./logpow);
     }
 
+    std::valarray<double> LogArg(std::valarray<double> v, double logfac, 
+                  double logpow, double endpoint) {
+      v[v>endpoint] = endpoint;
+      v = pow(v/logfac,-logpow) - pow(endpoint/logfac,-logpow) + 1.;
+      return pow(v,-1./logpow);
+    }
+
+    double ObsVal(double logarg, double logfac, 
+                  double logpow, double endpoint) {
+      const double ret = pow(1./logarg,logpow)+pow(logfac/endpoint,logpow)-1;
+      return logfac/pow(ret,1./logpow);
+
+    }
+
+    std::valarray<double> ObsVal(std::valarray<double> logarg, double logfac, 
+                  double logpow, double endpoint ) {
+      logarg = pow(logarg,-logpow) + pow(endpoint/logfac,-logpow)-1;
+      return logfac*pow(logarg,-1./logpow);
+    }
 
     // stuff for grooming
     virtual GROOM_MODE GroomMode() {
@@ -306,7 +376,7 @@ namespace RESUM {
         if(para.m_etamin>0.) {
             etamin+=para.m_etamin-log(2.*El/Q12);
         }
-        double Q = sqrt(ampl->MuQ2());
+        double Q = sqrt(MuQ2fac()*ampl->MuQ2());
         
         double zcp = pow(2.*cosh(pl.Eta())/m_R0,m_beta)*m_zcut;
         
@@ -328,12 +398,6 @@ namespace RESUM {
     }
                 
     
-    double ObsVal(double logarg, double logfac, 
-                  double logpow, double endpoint) {
-      double ret = pow(1./logarg,logpow)+pow(logfac/endpoint,logpow)-1;
-      return logfac/pow(ret,1./logpow);
-
-    }
 
     virtual double _Endpoint_Dynamic(ATOOLS::Cluster_Amplitude* ampl) {
       THROW(not_implemented,"No dynamic endpoint implemented for "+m_name+".");
@@ -371,6 +435,18 @@ namespace RESUM {
      const size_t &nin=2) {
       return Value(p, fl, nin);
     }
+
+    virtual T Value(ATOOLS::Cluster_Amplitude* ampl) {
+      std::vector<ATOOLS::Vec4D> moms(ampl->Legs().size());
+      std::vector<ATOOLS::Flavour> flavs(ampl->Legs().size());
+        for (size_t i(0);i<ampl->Legs().size();++i) {
+          moms[i]=i<ampl->NIn()?-ampl->Leg(i)->Mom():ampl->Leg(i)->Mom();
+          flavs[i]=i<ampl->NIn()?ampl->Leg(i)->Flav().Bar():ampl->Leg(i)->Flav();
+        }
+        return Value(moms,flavs,ampl->NIn());
+    }
+
+
 
     virtual bool VetoEvent(const std::vector<Vec4T>& p,
                            const std::vector<ATOOLS::Flavour>& fl,

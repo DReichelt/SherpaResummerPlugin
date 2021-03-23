@@ -86,6 +86,7 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                   'Math/blas1_d.cpp',
                                   'Math/HypGeo.C',
                                   'Math/DiGamma.C',
+                                  'Math/InterpolationWrapper.C',
                                   'Tools/StringTools.C',
                                   'Tools/Key_Base.C',
                                   'Tools/ReadInFunction.C'],
@@ -114,7 +115,7 @@ resumcommon = env.SharedLibrary('ResumCommon',
                                          if arblib else [])))
    
 resumlib = env.SharedLibrary('SherpaResum',
-	                     ['Math/InterpolationWrapper.C',
+	                     [
 	                      'Tools/CBasis.C',
 	                      'Tools/CMetric_Base.C',
 	                      'Tools/Hard_Matrix.C',
@@ -123,11 +124,20 @@ resumlib = env.SharedLibrary('SherpaResum',
 	                      'Main/Comix_Interface.C',
 	                      'Main/Resum.C',
                               'Main/Params.C',
-                              'Main/Cluster_Definitions.C'
+                              'Main/Cluster_Definitions.C',
                              ],
 	                     LIBPATH=['${sherpa}/lib/SHERPA-MC'],
 	                     RPATH=['${sherpa}/lib/SHERPA-MC'],
 	                     LIBS=['ResumCommon'])
+
+hooklib = env.SharedLibrary('SherpaUserhookResum',
+	                     [
+                                'Main/Resum_Hook.C'
+                             ],
+	                     LIBPATH=['${sherpa}/lib/SHERPA-MC'],
+	                     RPATH=['${sherpa}/lib/SHERPA-MC'],
+	                     LIBS=['ResumCommon', 'SherpaResum'])
+
 
 observables = ['Observables/Y2_IF.C',
 	       'Observables/Y1_II.C',
@@ -166,12 +176,13 @@ analysislib = env.SharedLibrary('ResumAnalysis',
                                  'Analysis/ChannelAlgorithms/KT2_pp_Ordered.C',
                                  'Analysis/ChannelAlgorithms/NJet_pp_Resolved.C',
                                  'Analysis/ChannelAlgorithms/NJet_pp_Resolved_KTBins.C',
-                                 'Analysis/NLO_Analysis.C',
-                                 'Analysis/NLO_Analysis_2.C',
-                                 'Analysis/RSCheck_Analysis.C',
+                                 # 'Analysis/NLO_Analysis.C',
+                                 # 'Analysis/NLO_Analysis_2.C',
+                                 # 'Analysis/RSCheck_Analysis.C',
                                  # 'Analysis/Matching_Analysis.C',
                                  # 'Analysis/NLL_Analysis.C',
-                                 'Analysis/NLL_Analysis_2.C',
+                                 # 'Analysis/NLL_Analysis_2.C',
+                                 # 'Analysis/Resum_Analysis.C',
                                  'Analysis/Resum_Enhance_Observable.C',
                                  'Scales/Resum_Scale_Setter.C',
                                  'Scales/Resum_Scale_Setter_Durham.C',
@@ -262,7 +273,7 @@ env.Command(target='${sherpa}/bin/resum-match', source="Scripts/resum-match",
 		                      new="!"+subprocess.check_output(['which',
                                                                        'python']))))
 
-env.Install('${sherpa}/lib/SHERPA-MC', [resumcommon,resumlib,analysislib] +(
+env.Install('${sherpa}/lib/SHERPA-MC', [resumcommon,resumlib,hooklib,analysislib] +(
    [rratiolib] if yoda else []))
 env.Install('${sherpa}/share/RESUM',['share/pre_calc','share/FFunction'])
 env.Alias('install', ['Tools/Files.H',

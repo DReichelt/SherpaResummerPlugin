@@ -17,6 +17,7 @@ namespace PHASIC {
     double m_taumin = -std::numeric_limits<double>::infinity();
     double m_taumax = std::numeric_limits<double>::infinity();
     bool m_checkRange = true;
+    bool m_nloOnly  = false;
   public:
 
     Observable_Selector(const Selector_Key &key): 
@@ -30,10 +31,15 @@ namespace PHASIC {
       if (p_tau==nullptr) THROW(fatal_error,"Observable not found '"+key[0][0]+"'");
       if(key[0][1] == "CHECK_VETO") {
         m_checkRange = false;
+        if(key[0][2] == "NLO_RANGE") {
+          m_nloOnly = true;
+          m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][3]));
+          if(key[0].size() > 4) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][4]));
+        }
       }
       else {
         m_taumin=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][1]));
-        if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));      
+        if(key[0].size() > 2) m_taumax=ToType<double>(key.p_read->Interpreter()->Interprete(key[0][2]));
       }
     }
 
@@ -52,7 +58,9 @@ namespace PHASIC {
       //msg_Out()<<p<<"\n";
       std::map<std::string, typename RESUM::Algorithm<double>::Ptr> algorithms;
       bool pass = not p_tau->VetoEvent(p,p_proc->Process()->Flavours(), algorithms, p_proc->NIn());
-      if(m_checkRange and pass) {
+      const bool checkRange = m_checkRange or 
+        (m_nloOnly and p_proc->Process()->MaxOrder(0) >= p_tau->ResumQCDorderNLO());
+      if(checkRange and pass) {
         const double tau=p_tau->Value(p, p_proc->Process()->Flavours(), algorithms, p_proc->NIn());
         pass=tau>m_taumin && tau<m_taumax;
       }
@@ -69,7 +77,9 @@ namespace PHASIC {
       std::map<std::string, typename RESUM::Algorithm<double>::Ptr> algorithms;
       std::vector<ATOOLS::Flavour> flavs = {sub->back()->p_fl, sub->back()->p_fl+sub->back()->m_n};
       bool pass = not p_tau->VetoEvent(p, flavs, algorithms,p_proc->NIn());
-      if(m_checkRange and pass) {
+      const bool checkRange = m_checkRange or 
+        (m_nloOnly and p_proc->Process()->MaxOrder(0) >= p_tau->ResumQCDorderNLO());
+      if(checkRange and pass) {
         const double tau=p_tau->Value(p, flavs, algorithms, p_proc->NIn());
         pass=tau>m_taumin && tau<m_taumax;
       }

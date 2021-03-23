@@ -45,7 +45,7 @@ Resum::Resum(ISR_Handler *const isr,
   p_clus = new Cluster_Definitions();
   
   p_isr = isr;
-
+ 
   p_pdf = new PDF_Base*[2];
   for (int i=0;i<2; i++) p_pdf[i] = isr->PDF(i);
 
@@ -85,7 +85,9 @@ Resum::Resum(ISR_Handler *const isr,
   msg_Debugging()<<"Resum Mode: "<<m_amode<<"\n";
   msg_Debugging()<<"Match Mode: "<<m_mmode<<"\n";
   p_as=(Running_AlphaS*)model->GetScalarFunction("alpha_S");
-  m_params = Params(p_as, (m_amode & MODE::LARGENC),read.GetValue<double>("RESUM::CONSTAS",-1));
+ 
+  m_params = Params(p_as, isr->PDF(0), isr->PDF(1), (m_amode & MODE::LARGENC),read.GetValue<double>("RESUM::CONSTAS",-1), 1., 1.);
+  m_varParams["CENTRAL"] = m_params;
   m_LogOrd = read.GetValue<size_t>("RESUM::LogOrd", 1);
 }
 
@@ -102,41 +104,76 @@ Resum::~Resum()
 }
 
 
+void Resum::SetVariationParameters(const std::vector<SHERPA::Variation_Parameters *> * pvec) {
+  if(not pvec) return;
+  m_varNames.clear(); 
+  for(SHERPA::Variation_Parameters* p: *pvec) {
+    m_varNames.push_back(p->m_name);
+    m_varParams[p->m_name] = Params(p->p_alphas, p->p_pdf1, p->p_pdf2, m_params.largeNC(), m_params.constAlpha(), 
+                                    p->m_muR2fac, p->m_muF2fac);
+  }
+}
+
+void Resum::SetVariationParameters(const SHERPA::Variations* vars) {
+  if(not vars) return;
+  SetVariationParameters(vars->GetParametersVector());
+}
+
+
+
 int Resum::PerformShowers()
 {
-//   DEBUG_FUNC(this);
+  if(m_obss.size() == 0) return 1;
   if (p_ampl==nullptr) THROW(fatal_error,"No process info");
-//   msg_Debugging()<<*p_ampl<<"\n";
-  m_weight=1.0;
+
+
+  if(m_globaltreat & (TREAT::lo|TREAT::nlo)) {
+    std::map<std::string, double> varweights = VarWeightsMap();
+    for(size_t i=0; i<m_obss.size(); i++) {
+      const std::string& tag = m_obss[i]->Tag();
+      msg_Debugging()<<"Fixed order for "<<m_obss[i]->Name()<<" "<<tag<<"\n";
+      if(m_resultsLO[tag] and m_treat[i]&TREAT::lo) { 
+        m_resultsLO[tag]->FillMCB(m_resFO[i], m_weight, &varweights, 1);
+        m_resultsLO[tag]->FillMCB(m_curChannels);
+      }
+      if(m_resultsNLO[tag] and m_treat[i]&TREAT::nlo) {
+        m_resultsNLO[tag]->FillMCB(m_resFO[i], m_weight, &varweights, 1);  
+        m_resultsNLO[tag]->FillMCB(m_curChannels);
+      }
+    }
+  }
+
+  if(not (m_globaltreat & TREAT::needs_resum)) return 1;
+
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
   for (size_t i(0);i<p_ampl->Legs().size();++i) {
     moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
     flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
   }
+  Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
   m_rn[0]=ran->Get();
   m_rn[1]=ran->Get();
+
+  m_energy = std::vector<double>(nLegs());
+  for (size_t i=0; i<nLegs(); i++) {
+    Vec4D pl(p_ampl->Leg(i)->Mom());
+    cms.Boost(pl);
+    m_energy[i] = std::abs(pl[0]);
+  }
+
+
   // loop over observables
   for (m_n = 0; m_n<m_obss.size(); m_n++) {
-    msg_Debugging()<<"Setting observable to "<<m_obss[m_n]->Name()<<".\n";
+    const std::string& tag = m_obss[m_n]->Tag();
+    msg_Debugging()<<"Resummation for "<<m_obss[m_n]->Name()<<" "<<tag<<"\n";
+    if(not m_resultsNLL[tag] or not m_treat[m_n]&TREAT::needs_resum) continue;
+    if(m_obss[m_n] == nullptr)
+      THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
     if(!m_init) m_init = true;
-    m_a.clear();
-    m_b.clear();
-    m_logdbar.clear();
-    m_etamin.clear();
-    m_deltad.clear();
-    for (size_t i=0; i<nLegs(); i++) {
-      if(m_obss[m_n] == nullptr)
-        THROW(fatal_error,"Observable "+std::to_string(m_n)+" not initalized.");
-      Obs_Params ps = m_obss[m_n]->Parameters(p_ampl, i);
-      m_a.push_back(ps.m_a);
-      m_b.push_back(ps.m_b);
+    m_obss[m_n]->Parameters(p_ampl,m_a,m_b,m_logdbar,m_etamin,m_deltad);
 
-      m_logdbar.push_back(ps.m_logdbar);
-      
-      m_etamin.push_back(ps.m_etamin);
-      m_deltad.push_back(ps.m_deltad);
-    }
+
     msg_Debugging()<<"Setting F function.\n";
     m_F = m_obss[m_n]->FFunction(moms, flavs, m_params);
 
@@ -173,12 +210,10 @@ int Resum::PerformShowers()
     m_logFac = -log(m_obss[m_n]->LogFac(p_ampl));
     m_epRatio = pow(m_xvals[m_n]/m_ep,m_p);
 
-    m_logArg.resize(m_nx);
-
+    m_logArg = m_obss[m_n]->LogArg(m_xvals[m_n], p_ampl);
 
     for(size_t i=0; i<m_nx; i++) {
       const double x = m_xvals[m_n][i];
-      m_logArg[i] = m_obss[m_n]->LogArg(x, p_ampl);
       if(m_gmode & GROOM_MODE::SD) {
         m_allSoftgmodes[i] = GROOM_MODE::NONE;
         for(size_t j=0; j<moms.size(); j++) {
@@ -194,126 +229,182 @@ int Resum::PerformShowers()
     }
 
     m_L = -std::log(m_logArg);
-    m_lambda = alphaS()*beta0()*m_L;
-
     m_Lz = -log(m_obss[m_n]->GroomTransitionPoint(p_ampl));
     m_Lsoft = m_L;
     m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD_SOFT] = m_Lz;
     m_Lsoft[m_allSoftgmodes == GROOM_MODE::SD] = 0.;
-    m_lambdaSoft = alphaS()*beta0()*m_Lsoft;
-    m_TofLoverA = T(m_lambdaSoft/m_a[0]);
+    
+    for(const auto& p: m_varParams) {
+      msg_Debugging()<<"Resum with variation "<<p.first<<".\n";
+      m_params = m_varParams[p.first];
+      m_lambda = alphaS()*beta0()*m_L;
+      m_lambdaSoft = alphaS()*beta0()*m_Lsoft;
+      m_TofLoverA = T(m_lambdaSoft/m_a[0]);
 
-    m_Rp = std::valarray<double>(0., m_nx);
+      m_Rp = std::valarray<double>(0., m_nx);
 
-    m_G = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
-    m_Rexp = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
-    m_S1 = 0; 
-    m_S2 = 0;
-    m_P1 = 0;
-    m_F2 = 0;
-    m_SNGL2 = 0;
-    m_EP1 = std::valarray<double> (0., m_nx);
-    m_EP2 = std::valarray<double> (0., m_nx);
-    m_RAtEnd = std::valarray<double> (0., m_nx);
+      m_G = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
+      m_Rexp = Matrix<std::valarray<double>>(4,4,std::valarray<double>(0.,m_nx));
+      m_S1 = 0; 
+      m_S2 = 0;
+      m_P1 = 0;
+      m_F2 = 0;
+      m_SNGL2 = 0;
+      m_EP1 = std::valarray<double> (0., m_nx);
+      m_EP2 = std::valarray<double> (0., m_nx);
+      m_RAtEnd = std::valarray<double> (0., m_nx);
 
 
       
-    m_Coll  =  (m_amode&MODE::IGNCOLL)  ? std::valarray<double>(1.,m_nx) : CalcColl(m_Rp,m_G,m_Rexp,m_S1,m_RAtEnd);
-    m_Soft  =  (m_amode&MODE::IGNSOFT)  ? std::valarray<double>(1.,m_nx) : CalcS(m_S1,m_S2);
-    if(m_amode & MODE::CKINV) {
-      double dummy1, dummy2;
-      const std::valarray<double> ckinv = std::abs(m_Soft-CalcS(dummy1, dummy2, MODE::CKINV)).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
-      const bool failed =  not IsZero(ckinv.max(),1e-6);
-      msg_Debugging()<<"Check inversion -> "<<ckinv.max()<<".\n";
-      if(failed) {
-        msg_Error()<<"Check inversion -> "<<ckinv.max()<<".\n";
-        msg_Error()<<"L\t diff\n";
-        printLists(msg_Error(),{m_L,ckinv});
-      }
-    }
-    if(m_amode & MODE::CKCOUL) {
-      double dummy1, dummy2;
-      const std::valarray<double> ckcoul = std::abs(m_Soft-CalcS(dummy1, dummy2, MODE::CKCOUL)).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});;
-      const bool singletInitial = p_ampl->Leg(0)->Flav().StrongCharge()==0 and p_ampl->Leg(1)->Flav().StrongCharge()==0;
-      const bool failed = (singletInitial and not IsZero(ckcoul.max(),1e-6)) or (not singletInitial and IsZero(ckcoul.max(),1e-6));
-      msg_Debugging()<<"Check couomb cancellation.\n";
-      if(failed) {
-        if(singletInitial) {
-          msg_Error()<<"Coulomb phases did not cancel despite singlet initial state.\n";
+      m_Coll  =  (m_amode&MODE::IGNCOLL)  ? std::valarray<double>(1.,m_nx) : CalcColl(m_Rp,m_G,m_Rexp,m_S1,m_RAtEnd);
+      m_Soft  =  (m_amode&MODE::IGNSOFT)  ? std::valarray<double>(1.,m_nx) : CalcS(m_S1,m_S2);
+      if(m_amode & MODE::CKINV) {
+        double dummy1, dummy2;
+        const std::valarray<double> ckinv = std::abs(m_Soft-CalcS(dummy1, dummy2, MODE::CKINV)).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
+        const bool failed =  not IsZero(ckinv.max(),1e-6);
+        msg_Debugging()<<"Check inversion -> "<<ckinv.max()<<".\n";
+        if(failed) {
+          msg_Error()<<"Check inversion -> "<<ckinv.max()<<".\n";
           msg_Error()<<"L\t diff\n";
-          printLists(msg_Error(), {m_L,ckcoul});
-        }
-        else {
-          msg_Out()<<"Complete cancellation of coulomb phases with non-singlet II states.\n";
-          msg_Out()<<"L\t diff\n";
-          printLists(msg_Out(), {m_L,ckcoul});
+          printLists(msg_Error(),{m_L,ckinv});
         }
       }
-    }
-    m_PDF   =  (m_amode&MODE::IGNPDF)   ? std::valarray<double>(1.,m_nx) : CalcPDF(m_P1);
-    m_Ffunc =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcF(m_F2);
-    m_SNGL  =  (m_amode&MODE::IGNSNGL) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
-    m_Ep    =  CalcEP(m_EP1, m_EP2);
+      if(m_amode & MODE::CKCOUL) {
+        double dummy1, dummy2;
+        const std::valarray<double> ckcoul = std::abs(m_Soft-CalcS(dummy1, dummy2, MODE::CKCOUL)).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});;
+        const bool singletInitial = p_ampl->Leg(0)->Flav().StrongCharge()==0 and p_ampl->Leg(1)->Flav().StrongCharge()==0;
+        const bool failed = (singletInitial and not IsZero(ckcoul.max(),1e-6)) or (not singletInitial and IsZero(ckcoul.max(),1e-6));
+        msg_Debugging()<<"Check couomb cancellation.\n";
+        if(failed) {
+          if(singletInitial) {
+            msg_Error()<<"Coulomb phases did not cancel despite singlet initial state.\n";
+            msg_Error()<<"L\t diff\n";
+            printLists(msg_Error(), {m_L,ckcoul});
+          }
+          else {
+            msg_Out()<<"Complete cancellation of coulomb phases with non-singlet II states.\n";
+            msg_Out()<<"L\t diff\n";
+            printLists(msg_Out(), {m_L,ckcoul});
+          }
+        }
+      }
+      m_PDF   =  (m_amode&MODE::IGNPDF)   ? std::valarray<double>(1.,m_nx) : CalcPDF(m_P1);
+      m_Ffunc =  (m_amode&MODE::IGNFFUNC) ? std::valarray<double>(1.,m_nx) : CalcF(m_F2);
+      m_SNGL  =  (m_amode&MODE::IGNSNGL) ? std::valarray<double>(1.,m_nx) : CalcSNGL(m_SNGL2);
+      m_Ep    =  CalcEP(m_EP1, m_EP2);
+
+    
+
+      // m_resNLL[m_n] = ( exp(m_Coll)*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep ).apply([](double x)->double {return std::isnan(x)?0.:x;});
+      m_varResNLL[m_n][p.first] = ( exp(m_Coll)*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep ).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
+
+      // some legacy options
+      if(!(m_amode & MODE::COLLEXPAND)) {
+        msg_Debugging()<<"Ignore coll. expansion.\n";
+        m_G = MatrixD(4,4,0);
+        m_F2 = 0;
+      }
+      if(!(m_amode & MODE::SOFTEXPAND)) {
+        msg_Debugging()<<"Ignore soft expansion.\n";
+        m_S1 = 0;
+        m_S2 = 0;
+      }
+      if(!(m_amode & MODE::PDFEXPAND)) {
+        msg_Debugging()<<"Ignore pdf expansion.\n";
+        m_P1 = 0;
+      }
 
 
-
-    // m_resNLL[m_n] = ( exp(m_Coll)*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep ).apply([](double x)->double {return std::isnan(x)?0.:x;});
-    m_resNLL[m_n] = ( exp(m_Coll)*m_Soft*m_SNGL*m_PDF*m_Ffunc*m_Ep ).apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
-
-    // some legacy options
-    if(!(m_amode & MODE::COLLEXPAND)) {
-      msg_Debugging()<<"Ignore coll. expansion.\n";
-      m_G = MatrixD(4,4,0);
-      m_F2 = 0;
-    }
-    if(!(m_amode & MODE::SOFTEXPAND)) {
-      msg_Debugging()<<"Ignore soft expansion.\n";
-      m_S1 = 0;
-      m_S2 = 0;
-    }
-    if(!(m_amode & MODE::PDFEXPAND)) {
-      msg_Debugging()<<"Ignore pdf expansion.\n";
-      m_P1 = 0;
-    }
-
-
-    std::valarray<double> expCollLO = pow(m_L,2.)*m_G(1,2)  + m_L*m_G(1,1)  + m_G(1,0);
-    std::valarray<double> expSoftLO = m_Lsoft * 4./m_a[0] * m_S1;
-    std::valarray<double> expPdfLO = m_L * m_P1;
-    m_resExpLO[m_n] = alphaSBar() * ( expCollLO
-                                      + expSoftLO
-                                      + expPdfLO
-                                      + m_EP1
-                                      );
-    m_resExpLO[m_n] = m_resExpLO[m_n].apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
+      std::valarray<double> expCollLO = pow(m_L,2.)*m_G(1,2)  + m_L*m_G(1,1)  + m_G(1,0);
+      std::valarray<double> expSoftLO = m_Lsoft * 4./m_a[0] * m_S1;
+      std::valarray<double> expPdfLO = m_L * m_P1;
+      m_varResExpLO[m_n][p.first] = alphaSBar() * ( expCollLO
+                                        + expSoftLO
+                                        + expPdfLO
+                                        + m_EP1
+                                        );
+      m_varResExpLO[m_n][p.first] = m_varResExpLO[m_n][p.first].apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
 
 
   
-    m_resExpNLO[m_n] = pow(alphaSBar(),2)*pow(m_L,4.) * ( 0.5*pow(m_G(1,2),2.) ); // H24
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,3.) * ( m_G(2,3) + m_G(1,2)*(m_G(1,1) ) ); // H23
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,2.) * ( 0.5*pow(m_G(1,1),2.) + m_G(2,2) +
-                                                           m_G(1,2)*m_G(1,0) +
-                                                           4.*m_F2*pow(m_Rexp(1,2),2.) ); // H22
+      m_varResExpNLO[m_n][p.first] = pow(alphaSBar(),2)*pow(m_L,4.) * ( 0.5*pow(m_G(1,2),2.) ); // H24
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*pow(m_L,3.) * ( m_G(2,3) + m_G(1,2)*(m_G(1,1) ) ); // H23
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*pow(m_L,2.) * ( 0.5*pow(m_G(1,1),2.) + m_G(2,2) +
+                                                             m_G(1,2)*m_G(1,0) +
+                                                             4.*m_F2*pow(m_Rexp(1,2),2.) ); // H22
 
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,1.) * ( m_G(2,1) + m_G(1,1)*m_G(1,0) +  4.*m_F2*m_Rexp(1,2)*m_Rexp(1,1) ); // H21
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_L,0.) * ( m_G(2,0) + 0.5*pow(m_G(1,0),2.) + m_F2*pow(m_Rexp(1,1),2.) ); // H20
-
-
-
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*pow(m_Lsoft,2.) * (16./pow(m_a[0],2)*(m_S2 + m_SNGL2) + 4./m_a[0]*m_S1*(2.*M_PI*beta0()/m_a[0]));
-    m_resExpNLO[m_n] += pow(alphaSBar(),2)*expSoftLO*expCollLO;
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*pow(m_L,1.) * ( m_G(2,1) + m_G(1,1)*m_G(1,0) +  4.*m_F2*m_Rexp(1,2)*m_Rexp(1,1) ); // H21
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*pow(m_L,0.) * ( m_G(2,0) + 0.5*pow(m_G(1,0),2.) + m_F2*pow(m_Rexp(1,1),2.) ); // H20
 
 
-    m_resExpNLO[m_n] += pow(alphaSBar(),2) * (expCollLO+expSoftLO+expPdfLO)*m_EP1;
-    m_resExpNLO[m_n] += pow(alphaSBar(),2) * m_EP2;
 
-    m_resExpNLO[m_n] = m_resExpNLO[m_n].apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*pow(m_Lsoft,2.) * (16./pow(m_a[0],2)*(m_S2 + m_SNGL2) + 4./m_a[0]*m_S1*(2.*M_PI*beta0()/m_a[0]));
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2)*expSoftLO*expCollLO;
 
+
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2) * (expCollLO+expSoftLO+expPdfLO)*m_EP1;
+      m_varResExpNLO[m_n][p.first] += pow(alphaSBar(),2) * m_EP2;
+
+      m_varResExpNLO[m_n][p.first] = m_varResExpNLO[m_n][p.first].apply([](double x)->double {return FuzzyZeroToZero(NaNtoZero(x));});
+    }
+    m_params = m_varParams["CENTRAL"];
+    // m_resNLL[m_n] = m_varResNLL[m_n]["CENTRAL"];
+    // m_resExpLO[m_n] = m_varResExpLO[m_n]["CENTRAL"];
+    // m_resExpNLO[m_n] = m_varResExpNLO[m_n]["CENTRAL"];
   }
   CleanUp();
   return 1;
 }
 
+void Resum::FinishShowers(double weight, int ntrial) {
+  std::map<std::string, double> weights;
+  if(m_globaltreat & TREAT::needs_resum) {
+    weights = VarWeightsMap();
+    weights["CENTRAL"] = weight;
+  }
+  for(size_t k=0; k<m_obss.size(); k++) {
+    // std::map<std::string, double> weights;
+    const std::string& tag = m_obss[k]->Tag();
+    if(m_resultsNLL[tag] and m_treat[k]&TREAT::needs_resum) {
+      // std::map<std::string,std::valarray<double>> NLL;
+      // std::map<std::string,std::valarray<double>> expLO;
+      // std::map<std::string,std::valarray<double>> expNLO;
+      // weights["CENTRAL"] = weight;
+      // NLL["CENTRAL"] = m_resNLL[k];
+      // expLO["CENTRAL"] = m_resExpLO[k];
+      // expNLO["CENTRAL"] = m_resExpNLO[k];
+      // for(size_t nv=0; nv<VarNum(); nv++) {
+      //   const std::string& vName = VarName(nv);
+      //   const double vWeight = VarWeight(nv);
+      //   weights[vName] = vWeight;
+      //   NLL[vName] = m_varResNLL[k][vName];
+      //   expLO[vName] = m_varResExpLO[k][vName];
+      //   expNLO[vName] = m_varResExpNLO[k][vName];
+      // }
+      // m_resultsNLL[tag]->Fill(&weights,&NLL,ntrial);
+      // m_resultsNLL[tag]->Fill(m_curChannels);    
+      // m_resultsExpLO[tag]->Fill(&weights,&expLO,ntrial);
+      // m_resultsExpLO[tag]->Fill(m_curChannels);    
+      // m_resultsExpNLO[tag]->Fill(&weights,&expNLO,ntrial);
+      // m_resultsExpNLO[tag]->Fill(m_curChannels);    
+
+      m_resultsNLL[tag]->Fill(&weights,&m_varResNLL[k],ntrial);
+      m_resultsNLL[tag]->Fill(m_curChannels);    
+      m_resultsExpLO[tag]->Fill(&weights,&m_varResExpLO[k],ntrial);
+      m_resultsExpLO[tag]->Fill(m_curChannels);    
+      m_resultsExpNLO[tag]->Fill(&weights,&m_varResExpNLO[k],ntrial);
+      m_resultsExpNLO[tag]->Fill(m_curChannels);
+    }
+    if(m_resultsLO[tag]) {
+      m_resultsLO[tag]->AddZeroPointMCB(ntrial);
+      m_resultsLO[tag]->FinishMCB();
+    }
+    if(m_resultsNLO[tag]) {
+      m_resultsNLO[tag]->AddZeroPointMCB(ntrial);
+      m_resultsNLO[tag]->FinishMCB();
+    }
+  }
+}
 
 
 
@@ -366,6 +457,9 @@ bool Resum::PrepareShower
   DEBUG_FUNC(this);
   DEBUG_VAR(ampl->Proc<Process_Base>());
 
+  if(m_obss.size() == 0) return true;
+
+
   p_ampl=ampl->Copy();
   p_ampl->SetNIn(0);
   
@@ -391,64 +485,78 @@ bool Resum::PrepareShower
 
   //number of color singlets
   color_sings = p_ampl->Legs().size() - (n_g + n_aq + n_q);
-   
-  std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
-  
-  msg_Debugging()<<" Found process with "<<n_g<<" Gluons, "<<n_q<<" Quarks and "<<n_aq<<" Anti-Quarks : "<<name<<std::endl;
 
-  //search for metric in m_cmetrics, 
-  //otherwise get it from available getters
-  CMetric_Map::const_iterator CMiter=m_cmetrics.find(pname);
-  //get_Cbasis(name)
-  if (CMiter!=m_cmetrics.end()) {
-    cmetric=CMiter->second;
-    msg_Debugging()<<" found metric in list : "<<pname<<" -> "<<cmetric<<std::endl;
-  }
-  else {
-    //initial bases calc 
-    //Compute metric for process arranged like q...qb...g
-    msg_Debugging() << name << std::endl;
-    cmetric=CMetric_Base::GetCM(CMetric_Key(name,p_ampl));
-    if (cmetric==nullptr) THROW(not_implemented,"No metric for "+name);
-    msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
-    m_cmetrics.insert(make_pair(pname,cmetric));
+  m_globaltreat = TREAT::none;
+  for(size_t i=0; i<m_obss.size(); i++) {
+    m_resFO[i] = m_obss[i]->Value(ampl);
+    m_treat[i] = TREAT::none;
+    if(ampl->OrderQCD() == m_obss[i]->ResumQCDorderBorn()) m_treat[i] |= TREAT::born;
+    if(ampl->OrderQCD() == m_obss[i]->ResumQCDorderLO())   m_treat[i] |= TREAT::lo;
+    if(ampl->OrderQCD() == m_obss[i]->ResumQCDorderNLO())  m_treat[i] |= TREAT::nlo;
+    if(m_treat[i]&TREAT::born and m_obss[i]->ResumMult().count(nColoredLegs()) > 0)   
+      m_treat[i] |= TREAT::needs_resum;
+    m_globaltreat |= m_treat[i];
   }
 
-  m_ordered_ids = vector<size_t>(p_ampl->Legs().size());
-  for(size_t i=0; i<p_ampl->Legs().size(); i++) {
-    m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id();
-  }
+  if(m_globaltreat & TREAT::needs_resum) {
+
+    std::string name= ToString(n_g)+"_G_"+ToString(n_q)+"_Q_"+ToString(n_aq)+"_AQ";
   
-  p_cmetric=cmetric;
+    msg_Debugging()<<" Found process with "<<n_g<<" Gluons, "<<n_q<<" Quarks and "<<n_aq<<" Anti-Quarks : "<<name<<std::endl;
+
+    //search for metric in m_cmetrics, 
+    //otherwise get it from available getters
+    CMetric_Map::const_iterator CMiter=m_cmetrics.find(pname);
+    //get_Cbasis(name)
+    if (CMiter!=m_cmetrics.end()) {
+      cmetric=CMiter->second;
+      msg_Debugging()<<" found metric in list : "<<pname<<" -> "<<cmetric<<std::endl;
+    }
+    else {
+      //initial bases calc 
+      //Compute metric for process arranged like q...qb...g
+      msg_Debugging() << name << std::endl;
+      cmetric=CMetric_Base::GetCM(CMetric_Key(name,p_ampl));
+      if (cmetric==nullptr) THROW(not_implemented,"No metric for "+name);
+      msg_Debugging()<<"Metric for '"<<pname<<"' is "<<cmetric<<"\n";
+      m_cmetrics.insert(make_pair(pname,cmetric));
+    }
+
+    m_ordered_ids = vector<size_t>(p_ampl->Legs().size());
+    for(size_t i=0; i<p_ampl->Legs().size(); i++) {
+      m_ordered_ids.at(i) = p_ampl->Leg(cmetric->Map(i))->Id();
+    }
+  
+    p_cmetric=cmetric;
  
-  //extract colored kinematics
-  std::vector<Vec4D> lab_moms;
-  std::vector<Flavour> tmp_lab;
-  std::vector<int> tmp_sig;
-  int p_it;
-  for (int i = 0 ; i < (n_g + n_aq + n_q) ; i++) {
-    p_it = p_cmetric->Map(i);  
-    Flavour flav = p_ampl->Leg(p_it)->Flav();
-    Vec4D tmp = p_ampl->Leg(p_it)->Mom();
-    //Determine color sign
-    int sign = (tmp[0] > 0 ? 1 : -1);
-    tmp_sig.push_back(sign);
-    msg_Debugging()<< p_it <<": " << tmp[0] << "  "<<  p_ampl->Leg(p_it)->Flav() << "  " << sign << std::endl;
-    if(tmp[0] < 0) tmp=-tmp;
-    lab_moms.push_back(tmp);
-    tmp_lab.push_back(flav);
-  }
+    //extract colored kinematics
+    std::vector<Vec4D> lab_moms;
+    std::vector<Flavour> tmp_lab;
+    std::vector<int> tmp_sig;
+    int p_it;
+    for (int i = 0 ; i < (n_g + n_aq + n_q) ; i++) {
+      p_it = p_cmetric->Map(i);  
+      Flavour flav = p_ampl->Leg(p_it)->Flav();
+      Vec4D tmp = p_ampl->Leg(p_it)->Mom();
+      //Determine color sign
+      int sign = (tmp[0] > 0 ? 1 : -1);
+      tmp_sig.push_back(sign);
+      msg_Debugging()<< p_it <<": " << tmp[0] << "  "<<  p_ampl->Leg(p_it)->Flav() << "  " << sign << std::endl;
+      if(tmp[0] < 0) tmp=-tmp;
+      lab_moms.push_back(tmp);
+      tmp_lab.push_back(flav);
+    }
   
-  Poincare cms_boost(lab_moms[0]+lab_moms[1]);
+    Poincare cms_boost(lab_moms[0]+lab_moms[1]);
   
-  for (size_t i=0;i<lab_moms.size();i++) {
-    Vec4D tmp=lab_moms[i];
-    cms_boost.Boost(tmp);
-    m_cms.push_back(tmp);
-  }
+    for (size_t i=0;i<lab_moms.size();i++) {
+      Vec4D tmp=lab_moms[i];
+      cms_boost.Boost(tmp);
+      m_cms.push_back(tmp);
+    }
   
-  //kinematic invariants
-  for (size_t i=0;i<lab_moms.size();i++) {
+    //kinematic invariants
+    for (size_t i=0;i<lab_moms.size();i++) {
       for (size_t j=i+1;j<lab_moms.size();j++) {
 	m_Qij.push_back(sqrt((lab_moms[i]+lab_moms[j])*(lab_moms[i]+lab_moms[j])));
         momlabels.push_back(lab_moms[i]);
@@ -458,52 +566,37 @@ bool Resum::PrepareShower
 	signlabels.push_back(tmp_sig[i]);  
 	signlabels.push_back(tmp_sig[j]);
       }
-  }
-  
-  
-  p_ampl->Delete();
-  p_ampl=ampl->Copy();
-
-  for(size_t i=0; i<p_ampl->Legs().size()-color_sings; i++) {
-    for(size_t j=i+1; j<p_ampl->Legs().size()-color_sings; j++) {
-      m_kij.push_back({p_ampl->IdIndex(m_ordered_ids[i]),p_ampl->IdIndex(m_ordered_ids[j])});
     }
+  
+  
+    p_ampl->Delete();
+    p_ampl=ampl->Copy();
+
+    for(size_t i=0; i<p_ampl->Legs().size()-color_sings; i++) {
+      for(size_t j=i+1; j<p_ampl->Legs().size()-color_sings; j++) {
+        m_kij.push_back({p_ampl->IdIndex(m_ordered_ids[i]),p_ampl->IdIndex(m_ordered_ids[j])});
+      }
+    }
+
+  }
+  else {
+    p_ampl->Delete();
+    p_ampl=ampl->Copy();
   }
 
-  m_colfac = std::vector<double>(nLegs());
-  m_hardcoll = std::vector<double>(nLegs());
-  m_energy = std::vector<double>(nLegs());
-
-
-  Poincare cms(p_ampl->Leg(0)->Mom()+p_ampl->Leg(1)->Mom());
   Vec4D_Vector moms(p_ampl->Legs().size());
   Flavour_Vector flavs(p_ampl->Legs().size());
   for (size_t i(0);i<p_ampl->Legs().size();++i) {
-      moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
-      flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
+    moms[i]=i<p_ampl->NIn()?-p_ampl->Leg(i)->Mom():p_ampl->Leg(i)->Mom();
+    flavs[i]=i<p_ampl->NIn()?p_ampl->Leg(i)->Flav().Bar():p_ampl->Leg(i)->Flav();
   }
-
-  for(size_t i=0; i<nLegs(); i++) {
-    if (p_ampl->Leg(i)->Flav().StrongCharge() == 8) {
-      m_colfac[i] = CA();
-      m_hardcoll[i] = CollDimGlue();
-    }
-    else if (abs(p_ampl->Leg(i)->Flav().StrongCharge()) == 3) {
-      m_colfac[i] = CF();
-      m_hardcoll[i] = CollDimQuark();
-    }
-    else {
-      m_colfac[i] = 0;
-      m_hardcoll[i] = 0;
-    }
-    Vec4D pl(p_ampl->Leg(i)->Mom());
-    cms.Boost(pl);
-    m_energy[i] = std::abs(pl[0]);
-
-  }
-
   
 
+  m_curChannels = vector<string>(m_channelAlgs.size());
+  for(size_t i=0; i<m_curChannels.size(); i++) {
+    m_curChannels[i] = m_channelAlgs[i]->Channel(moms,flavs,2,true);
+  }
+  
   return true;
 } 
   
@@ -536,6 +629,9 @@ std::string Resum::AddObservable(const RESUM::Observable_Key& key,
     m_resNLL.push_back(valarray<double>(nx));
     m_resExpLO.push_back(valarray<double>(nx));
     m_resExpNLO.push_back(valarray<double>(nx));
+    m_varResNLL.push_back(std::map<std::string,valarray<double>>());
+    m_varResExpLO.push_back(std::map<std::string,valarray<double>>());
+    m_varResExpNLO.push_back(std::map<std::string,valarray<double>>());
     m_ress.push_back({-1,-1});
     msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
   }
@@ -543,6 +639,73 @@ std::string Resum::AddObservable(const RESUM::Observable_Key& key,
   return obs->Tag();
 }
 
+std::string Resum::AddObservable(const RESUM::Observable_Key& key,
+                                 std::valarray<double>& xvals,
+                                 std::string title, bool calcNLL, 
+                                 bool calcLO, bool calcNLO)
+{
+  DEBUG_FUNC(key.Name());
+  Observable_Base* obs = RESUM::Observable_Getter::GetObject(key.Name(),key);
+  if(obs != nullptr) {
+    calcNLL = calcNLL and HasOrder(obs->ResumQCDorderBorn());
+    calcLO = calcLO and HasOrder(obs->ResumQCDorderLO());
+    calcNLO = calcNLO and HasOrder(obs->ResumQCDorderNLO());
+    m_obss.push_back(obs);
+    // by convention, xvals are always ordred and there is always an xvalue above or at the max endpoint
+    const double ep = obs->MaxEndpoint();
+    std::sort(std::begin(xvals),std::end(xvals));
+    const size_t nx = xvals.max() < ep ? xvals.size()+1 : xvals.size();
+    m_xvals.emplace_back(nx);
+    std::valarray<double>& xv = m_xvals.back(); 
+    for(size_t i=0; i<nx; i++) {
+      if(i<xvals.size()) xv[i] = xvals[i];
+      else xv[i] = ep;
+    }
+    const std::string& tag = obs->Tag();
+    m_treat.push_back(TREAT::none);
+    m_resFO.push_back(double());
+    m_resultsLO[tag] = calcLO ? std::make_shared<Cumulant>(xvals, title, nullptr, 1, "CENTRAL") : nullptr;
+    if(m_resultsLO[tag]) {
+      msg_Debugging()<<"Add LO for "<<tag<<".\n";
+      m_resultsLO[tag]->InitVarWeights(m_varNames);
+      m_resultsLO[tag]->SetVariants(m_channels);
+    }
+    m_resultsNLO[tag] = calcNLO ? std::make_shared<Cumulant>(xvals, title, nullptr, 1, "CENTRAL") : nullptr;
+    if(m_resultsNLO[tag]) {
+      msg_Debugging()<<"Add NLO for "<<tag<<".\n";
+      m_resultsNLO[tag]->InitVarWeights(m_varNames);
+      m_resultsNLO[tag]->SetVariants(m_channels);
+    }
+    m_resultsNLL[tag] = calcNLL ? std::make_shared<Cumulant>(xvals, title, nullptr, 1, "CENTRAL") : nullptr;
+    m_resultsExpLO[tag] = calcNLL ? std::make_shared<Cumulant>(xvals, title, nullptr, 1, "CENTRAL") : nullptr;
+    m_resultsExpNLO[tag] = calcNLL ? std::make_shared<Cumulant>(xvals, title, nullptr, 1, "CENTRAL") : nullptr;
+    if(m_resultsNLL[tag]) {
+      msg_Debugging()<<"Add NLL for "<<tag<<".\n";
+      m_resultsNLL[tag]->InitVarWeights(m_varNames);
+      m_resultsNLL[tag]->SetVariants(m_channels);
+      m_resultsExpLO[tag]->InitVarWeights(m_varNames);
+      m_resultsExpLO[tag]->SetVariants(m_channels);
+      m_resultsExpNLO[tag]->InitVarWeights(m_varNames);
+      m_resultsExpNLO[tag]->SetVariants(m_channels);
+      m_resNLL.push_back(valarray<double>(nx));
+      m_resExpLO.push_back(valarray<double>(nx));
+      m_resExpNLO.push_back(valarray<double>(nx));
+      m_varResNLL.push_back(std::map<std::string,valarray<double>>());
+      m_varResExpLO.push_back(std::map<std::string,valarray<double>>());
+      m_varResExpNLO.push_back(std::map<std::string,valarray<double>>());
+    }
+    msg_Debugging()<<"Added "<<obs->Name()<<" as "<<obs->Tag()<<".\n";
+  }
+  else  msg_Error()<<"Observable not found: "<<key.Name()<<".\n";
+  return obs->Tag();
+}
+
+void Resum::AddChAlg(const std::string& name, const std::vector<std::string> args) {
+  m_channelAlgs.emplace_back(ChAlg_Getter::GetObject(name, {name, args}));
+  for(const std::string& ch: m_channelAlgs.back()->ChannelNames(true)) {
+    m_channels.push_back(ch);
+  }
+}
 
 void Resum::ResetObservables() {
   m_obss.clear();
@@ -896,7 +1059,7 @@ std::valarray<double> Resum::CalcColl(std::valarray<double>& Rp, Matrix<std::val
     const double colfac = C(i);
     const double hardcoll = B(i);
     const double El = E(i);
-
+    msg_Debugging()<<"Cl = "<<colfac<<", Bl = "<<hardcoll<<", El = "<<El<<".\n";
     const std::valarray<bool>& groomed =  m_collGroomed.at(i);
     const std::valarray<bool>& unGroomed = not groomed;
     const size_t nGroomed = std::count(std::begin(groomed),std::end(groomed),true);
@@ -1113,27 +1276,27 @@ std::valarray<double> Resum::CalcPDF(double &PDFexp) {
     const double x = i==0 ? (-p_ampl->Leg(i)->Mom()).PPlus()/rpa->gen.PBeam(0).PPlus() : (-p_ampl->Leg(i)->Mom().PMinus())/rpa->gen.PBeam(1).PMinus();
 
     //original PDF
-    p_pdf[i]->Calculate(x,scale);
+    m_params.PDF(i)->Calculate(x,scale);
 
     const double z = x+(1.0-x)*m_rn[i];
 
     msg_Debugging()<<"Calculate PDF expansion with z = "<<z<<".\n";
     PDFexp += -2.0/(m_a[i]+m_b[i])*CollinearCounterTerms(i,p_ampl->Leg(i)->Flav().Bar(),-p_ampl->Leg(i)->Mom(),z,scale);
 
-    const double fb = p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
+    const double fb = m_params.PDF(i)->GetXPDF(p_ampl->Leg(i)->Flav().Bar());
     old_pdffac *= fb;
 
     //new PDF scale
     const std::valarray<double> newscale = pow(exp(-m_L),2./(m_a[i]+m_b[i]))*scale;
     for(size_t j=0; j<m_nx; j++) {
-      if (newscale[j]<p_pdf[i]->Q2Min()) {
+      if (newscale[j]<m_params.PDF(i)->Q2Min()) {
         //freeze PDF at Q2Min 
-        p_pdf[i]->Calculate(x,p_pdf[i]->Q2Min());
+        m_params.PDF(i)->Calculate(x,m_params.PDF(i)->Q2Min());
       }
       else {
-        p_pdf[i]->Calculate(x,newscale[j]);
+        m_params.PDF(i)->Calculate(x,newscale[j]);
       }
-      new_pdffac[j] *= p_pdf[i]->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
+      new_pdffac[j] *= m_params.PDF(i)->GetXPDF(p_ampl->Leg(i)->Flav().Bar());      
     }
   }
   return new_pdffac/old_pdffac;

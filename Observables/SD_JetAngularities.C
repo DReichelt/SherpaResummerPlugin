@@ -37,6 +37,10 @@ namespace RESUM {
     }
 
 
+    virtual std::set<size_t> ResumMult() {return {3};}
+    virtual size_t ResumQCDorderBorn() {return 1;};
+    virtual size_t ResumQCDorderLO() {return 2;}
+    virtual size_t ResumQCDorderNLO() {return 3;}
     
 
 

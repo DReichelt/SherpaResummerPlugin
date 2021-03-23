@@ -29,6 +29,12 @@ namespace RESUM {
       return Value(moms, flavs, dummy, nin);
     }
 
+    virtual std::set<size_t> ResumMult() {return {2};}
+    virtual size_t ResumQCDorderBorn() {return 0;};
+    virtual size_t ResumQCDorderLO() {return 1;}
+    virtual size_t ResumQCDorderNLO() {return 2;}
+
+
     std::function<double(double,double&)> FFunction(const std::vector<ATOOLS::Vec4D>& p,
                                                     const std::vector<ATOOLS::Flavour>& fl, 
                                                     const RESUM::Params& params) {

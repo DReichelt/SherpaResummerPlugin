@@ -34,6 +34,12 @@ namespace RESUM {
       //@TODO: find expansion
       return [](double Rp,double& Fexp) {Fexp=1.; return exp(-GAMMA_E*Rp-2*ATOOLS::Gammln(1.+0.5*Rp)); };
     }
+
+    virtual std::set<size_t> ResumMult() {return {2};}
+    virtual size_t ResumQCDorderBorn() {return 0;};
+    virtual size_t ResumQCDorderLO() {return 1;}
+    virtual size_t ResumQCDorderNLO() {return 2;}
+
        
     T Value(const std::vector<Vec4T>& moms,
             const std::vector<ATOOLS::Flavour>& flavs,

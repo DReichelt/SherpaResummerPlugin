@@ -83,7 +83,7 @@ namespace RESUM {
       const double b = m_alpha-1;
       const Poincare cms= {p[0]+p[1]};
       Vec4D pl = p[l];
-      Poincare(p[0]+p[1]).Boost(pl);
+      cms.Boost(pl);
       const double d = pow(2.*cosh(pl.Eta())/m_R,m_alpha-1) * (p[0]+p[1]).Abs()/(p[l].PPerp()*m_R);
       const double etamin = log(2.*cosh(pl.Eta())/m_R);
       return Obs_Params(a,b,log(d),0.0,etamin,1);
@@ -95,14 +95,20 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    virtual std::set<size_t> ResumMult() {return {3};}
+    virtual size_t ResumQCDorderBorn() {return 1;};
+    virtual size_t ResumQCDorderLO() {return 2;}
+    virtual size_t ResumQCDorderNLO() {return 3;}
+
+
     std::function<double(double,double&)> SnglFunction(const std::vector<Vec4T>& p,
                                                        const std::vector<ATOOLS::Flavour>& fl,
                                                        const RESUM::Params& params) override {
       for(size_t i=2; i<fl.size(); i++) {
         if(fl[i].IsGluon()) {
           if(p_SNGLgluon == nullptr) {
-            msg_Error()<<"Gluon Jet, but no NGL function provided.";
-            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?";              
+            msg_Error()<<"Gluon Jet, but no NGL function provided.\n";
+            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?\n";              
           }
           else {
             return *p_SNGLgluon;
@@ -110,8 +116,8 @@ namespace RESUM {
         }
         if(fl[i].IsQuark()) {
           if(p_SNGLquark == nullptr) {
-            msg_Error()<<"Quark Jet, but no NGL function provided.";
-            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?";              
+            msg_Error()<<"Quark Jet, but no NGL function provided.\n";
+            msg_Error()<<"Maybe you meant to IGNORESOFTNGL?\n";              
             
           }
           else {

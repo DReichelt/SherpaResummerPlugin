@@ -8,6 +8,9 @@
 #include "Tools/CMetric_Base.H"
 #include "Analysis/Observable_Base.H"
 
+#include "Analysis/Cumulant.H"
+#include "Analysis/ChannelAlgorithms/ChannelAlgorithm_Base.H"
+
 #include <map>
 #include <string>
 #include <functional>
@@ -44,6 +47,8 @@ namespace RESUM {
     PDF::ISR_Handler* p_isr;
 
     Params m_params;
+    std::map<std::string,Params> m_varParams;
+
 
     //list of available and initialized bases
     CMetric_Map    m_cmetrics;
@@ -186,8 +191,9 @@ namespace RESUM {
     ~Resum();
 
 
-    int  PerformShowers();
-    int  PerformDecayShowers();
+    int PerformShowers(double weight) {m_weight=weight; return PerformShowers();}
+    int PerformShowers();
+    int PerformDecayShowers();
 
     bool ExtractPartons(ATOOLS::Blob_List *const bl);
     void CleanUp();
@@ -196,8 +202,9 @@ namespace RESUM {
 
     bool PrepareShower(ATOOLS::Cluster_Amplitude *const ampl,
 		       const bool & soft=false);
-
    
+    void FinishShowers(double weight, int ntrials);
+
     double CplFac(const ATOOLS::Flavour &fli,const ATOOLS::Flavour &flj,
 		  const ATOOLS::Flavour &flk,const int type,
 		  const int cpl,const double &mu2) const;
@@ -207,6 +214,16 @@ namespace RESUM {
 
     virtual std::string AddObservable(const RESUM::Observable_Key& key,
                                       std::valarray<double>& xvals);
+
+    virtual std::string AddObservable(const RESUM::Observable_Key& key,
+                                      std::valarray<double>& xvals,
+                                      std::string title, bool calcNLL, 
+                                      bool calcLO, bool calcNLO);
+    
+    void AddChAlg(const std::string& name, const std::vector<std::string> args);
+    std::vector<std::string> m_channels;
+    std::vector<std::string> m_curChannels;
+    std::vector<ChannelAlgorithm_Base::Ptr> m_channelAlgs;
    
     size_t nLegs() const {return n_g+n_q+n_aq+color_sings;}
     size_t nColoredLegs() const {return n_g+n_q+n_aq;}
@@ -214,12 +231,61 @@ namespace RESUM {
     bool Initialized() const { return m_init; } 
     virtual void ResetObservables();
 
+    std::vector<std::string> m_varNames;
+    const std::vector<std::string>& VarNames() {return m_varNames;}
+    int m_varIdx = -1;
+
+    void SetVariationParameters(const std::vector<SHERPA::Variation_Parameters *> * pvec);
+    void SetVariationParameters(const SHERPA::Variations* vars);
+    void SetVariationIdx(int idx) {m_varIdx=idx;}
+
+    size_t VarNum() {return p_variationweights ? p_variationweights->GetNumberOfVariations() : 0;}
+    int VarSubNum() {return p_variationweights ? p_variationweights->GetNumberOfSubevents() : 0;} 
+    int VarIdx() {return std::min(m_varIdx,VarSubNum());}
+    std::string VarName(size_t i) {return p_variationweights ? p_variationweights->GetVariationNameAt(i) : "";}
+    double VarWeight(size_t i) {return p_variationweights ? p_variationweights->GetVariationWeightAt(i, SHERPA::Variations_Type::all, VarIdx()) : 0;}
+
+    std::map<std::string, double> VarWeightsMap() {
+      std::map<std::string, double> varweights;
+      for(size_t i=0; i<VarNum(); i++) {
+        varweights[VarName(i)] = VarWeight(i);
+      }
+      return varweights;
+    }
+
     std::vector<std::valarray<double>> m_resNLL;
+    std::vector<std::map<std::string,std::valarray<double>>> m_varResNLL;
     std::vector<double> resNLL(size_t i) { return {std::begin(m_resNLL[i]),std::end(m_resNLL[i])};}
     std::vector<std::valarray<double>> m_resExpLO;
+    std::vector<std::map<std::string,std::valarray<double>>> m_varResExpLO;
     std::vector<double> resExpLO(size_t i) { return {std::begin(m_resExpLO[i]),std::end(m_resExpLO[i])};}
     std::vector<std::valarray<double>> m_resExpNLO;
+    std::vector<std::map<std::string,std::valarray<double>>> m_varResExpNLO;
     std::vector<double> resExpNLO(size_t i) { return {std::begin(m_resExpNLO[i]),std::end(m_resExpNLO[i])};}
+
+    std::set<size_t> m_orders;
+    void SetOrders(std::set<size_t> orders) {m_orders = orders;}
+    void AddOrder(size_t order) {m_orders.insert(order);}
+    bool HasOrder(size_t order) {return m_orders.find(order) != m_orders.end();}
+
+    std::map<std::string, Cumulant::Ptr> m_resultsNLL;
+    std::map<std::string, Cumulant::Ptr> m_resultsExpLO;
+    std::map<std::string, Cumulant::Ptr> m_resultsExpNLO;
+    std::map<std::string, Cumulant::Ptr> m_resultsLO;
+    std::map<std::string, Cumulant::Ptr> m_resultsNLO;
+
+
+    enum TREAT {
+      none = 0,
+      born   = 1      << 1,
+      lo = 1          << 2,
+      nlo  = 1        << 3,
+      needs_resum = 1 << 4
+    };    
+
+    std::vector<size_t> m_treat;
+    size_t m_globaltreat = TREAT::none;
+    std::vector<double> m_resFO;
 
     std::vector<std::valarray<double>> m_xvals;
     
@@ -263,27 +329,29 @@ namespace RESUM {
     double CF() const {return m_params.CF();}
     double TR() const {return m_params.TR();}
     bool largeNC() const {return m_params.largeNC();}
-    double beta0() const {return m_params.beta0(muR2());}
-    double beta1() const {return m_params.beta1(muR2());}
-    double K_CMW() const {return m_params.K_CMW(muR2());}
-    double CollDimGlue() const {return m_params.CollDimGlue(muR2());}
-    double CollDimQuark() const {return m_params.CollDimQuark(muR2());}
-    double alphaS() const {return m_params.alphaS(muR2());}
+    double beta0() const {return m_params.beta0(p_ampl->MuR2());}
+    double beta1() const {return m_params.beta1(p_ampl->MuR2());}
+    double K_CMW() const {return m_params.K_CMW(p_ampl->MuR2());}
+    double CollDimGlue() const {return m_params.CollDimGlue(p_ampl->MuR2());}
+    double CollDimQuark() const {return m_params.CollDimQuark(p_ampl->MuR2());}
+    double alphaS() const {return m_params.alphaS(p_ampl->MuR2());}
     double alphaSBar() const {return alphaS()/2./M_PI;}
-    double muR2() const {return p_ampl->MuR2();}
-    double muF2() const {return p_ampl->MuF2();}
-    double muQ2() const {return p_ampl->MuQ2();}
+    double muR2() const {return m_params.MuR2fac()*p_ampl->MuR2();}
+    double muF2() const {return m_params.MuF2fac()*p_ampl->MuF2();}
+    double muQ2() const {return m_obss[m_n]->MuQ2fac()*p_ampl->MuQ2();}
     double muR() const {return sqrt(muR2());}
     double muF() const {return sqrt(muF2());}
     double muQ() const {return sqrt(muQ2());}
 
-    std::vector<double> m_colfac;
-    std::vector<double> m_hardcoll;
     std::vector<double> m_energy;
 
-    inline double colfac(size_t l) const {return m_colfac[l];}
+    inline bool isQuark(size_t l) const {return p_ampl->Leg(l)->Flav().IsQuark();}
+    inline bool isGluon(size_t l) const {return p_ampl->Leg(l)->Flav().IsGluon();}
+    inline bool isStrong(size_t l) const {return isQuark(l) or isGluon(l);}
+
+    inline double colfac(size_t l) const {return isQuark(l) ? CF() : (isGluon(l)? CA():0);}
     inline double C(size_t l) const {return colfac(l);}
-    inline double hardcoll(size_t l) const {return m_hardcoll[l];}
+    inline double hardcoll(size_t l) const {return isQuark(l) ? CollDimQuark() : (isGluon(l)? CollDimGlue():0);}
     inline double B(size_t l) const {return hardcoll(l);}
     inline double energy(size_t l) const {return m_energy[l];}
     inline double E(size_t l) const {return energy(l);}

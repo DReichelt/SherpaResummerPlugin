@@ -22,30 +22,6 @@ namespace RESUM {
     YN_Durham(const Observable_Key &args): 
     Observable_Base(args) {}
 
-    // Obs_Params Parameters
-    //   (const std::vector<Vec4D>& p,
-    //    const std::vector<Flavour>& fl,
-    //    const size_t &l) {
-    //   DO_STACK_TRACE;
-    //   THROW(not_implemented, "This should not be called!");
-    // }
-
-    // Obs_Params Parameters(ATOOLS::Cluster_Amplitude* ampl,
-    //                       const size_t l) {
-    //   DEBUG_FUNC(this);
-    //   Vec4D sp = {0,0,0,0};
-    //   for(int i=ampl->NIn(); i<ampl->Legs().size(); i++) {
-    //     sp += ampl->Leg(i)->Mom();
-    //   }
-    //   double d = ampl->MuQ2()/sp.Abs2();
-    //   Obs_Params ret = Obs_Params(2.0,0.0,log(d),0.0);
-    //   // msg_Out()<<*ampl<<"\n";
-    //   // msg_Out()<<"-> a = "<<ret.m_a;
-    //   // msg_Out()<<", b = "<<ret.m_b;
-    //   // msg_Out()<<", d = "<<exp(ret.m_logdbar)<<"\n\n";
-    //   // a, b, logdbar, g
-    //   return ret;
-    // }
 
     Obs_Params Parameters
       (const std::vector<Vec4D>& p,
@@ -102,6 +78,11 @@ namespace RESUM {
       THROW(fatal_error,"No F function for events with " + std::to_string(N_gluon) + " gluons.");
       return 0;
     }
+
+    virtual std::set<size_t> ResumMult() {return {NJETS-1};}
+    virtual size_t ResumQCDorderBorn() {return NJETS-3;};
+    virtual size_t ResumQCDorderLO() {return NJETS-2;}
+    virtual size_t ResumQCDorderNLO() {return NJETS-1;}
   
     
     double KT2(const Vec4D &p1, const Vec4D &p2) const

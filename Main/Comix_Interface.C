@@ -120,15 +120,15 @@ Process_Base *Comix_Interface::GetProcess
   NLOTypeStringProcessMap_Map *mp=
     ampl->Procs<NLOTypeStringProcessMap_Map>();
 
-  if (mp==nullptr) THROW(fatal_error,"Missing process map");
+  if (not mp) THROW(fatal_error,"Missing NLO process map");
   StringProcess_Map *pm((*mp)[nlo_type::lo]);
-
+  if(not pm) pm = (*mp)[nlo_type::born];
+  if (not pm) THROW(fatal_error,"Missing process map");
   Process_Base::SortFlavours(ampl);
 
   std::string name(Process_Base::GenerateName(ampl));
 
   StringProcess_Map::const_iterator pit(pm->find(name));
-
   Process_Base *xs=nullptr;
 
   if (pit!=pm->end() && pit->second->

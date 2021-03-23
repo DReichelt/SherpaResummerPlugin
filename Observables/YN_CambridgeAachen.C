@@ -32,6 +32,12 @@ namespace RESUM {
       return [](double Rp,double& exp) {exp=0.;return 1.;};
     }
 
+    virtual std::set<size_t> ResumMult() {return {NJETS-1};}
+    virtual size_t ResumQCDorderBorn() {return NJETS-3;};
+    virtual size_t ResumQCDorderLO() {return NJETS-2;}
+    virtual size_t ResumQCDorderNLO() {return NJETS-1;}
+
+
     double KT2(const Vec4D &p1, const Vec4D &p2) const
     {
       return 2.0*sqr(Min(p1[0],p2[0]))*(1.0-p1.CosTheta(p2));

@@ -27,21 +27,13 @@ NJet_pp_Resolved_KTBins::NJet_pp_Resolved_KTBins(const ChAlg_Key& parameters)
         names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
       }
       names.insert(name+"_PtLead_"+m_edges.back());
-      collapse(name,"Other");
-      for(size_t i=0; i<m_edges.size()-1; i++) {
-        names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
-      }
-      names.insert(name+"_PtLead_"+m_edges.back());
-      // collapse(name,"EW");
+      // collapse(name,"Other");
       // for(size_t i=0; i<m_edges.size()-1; i++) {
       //   names.insert(name+"_PtLead_"+m_edges[i]+"_"+m_edges[i+1]);
       // }
       // names.insert(name+"_PtLead_"+m_edges.back());
     }
     m_channelNames.assign(names.begin(), names.end());
-    // m_channelNames.insert(m_channelNames.end(),
-    //                       m_resolvers.back()->ChannelNames().begin(),
-    //                       m_resolvers.back()->ChannelNames().end());
   }
 }
 
@@ -70,13 +62,6 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   }
   std::vector<ATOOLS::Vec4D> p = ip;
   std::vector<ATOOLS::Flavour> f = fl;
-  // for(int i=0; i<ip.size(); i++) {
-  //   if(fl[i].Strong()) {
-  //     p.push_back(ip[i]);
-  //     f.push_back(fl[i]);
-  //     msg_Debugging()<<"Added "<<f.back()<<" "<<p.back()<<"\n";
-  //   }
-  // }
   const Observable_Key ChKey = {"ChAlg",m_params};
   int n = p.size()-nin;
   for(int i=0; i<ip.size(); i++) {
@@ -88,16 +73,7 @@ std::string NJet_pp_Resolved_KTBins::Channel(const std::vector<ATOOLS::Vec4D>& i
   // pt of leading (ungroomed) jet
   FJmaxPTjet fj(p,f,nin,ChKey);
   const double PT = fj.jetScales(0);
-  // bool ew = false;
-  // for(ATOOLS::Flavour flav: fj.apply(f,0)) {
-  //   if(not flav.Strong()) {
-  //     ew = true;
-  //     collapse(channel,"EW");
-  //     break;
-  //   }
-  // }
   msg_Debugging()<<"Channel candidate: "<<channel<<".\n";
-  // if(not ew) {
 
   std::string flname = "";
   while(fj.pseudoJets().size() > 0 and fj.pseudoJets()[0].has_constituents() and fj.pseudoJets()[0].constituents().size() > 1) {

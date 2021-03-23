@@ -43,6 +43,10 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    virtual std::set<size_t> ResumMult() {return {4};}
+    virtual size_t ResumQCDorderBorn() {return 2;};
+    virtual size_t ResumQCDorderLO() {return 3;}
+    virtual size_t ResumQCDorderNLO() {return 4;}
     
     void RotateMoms(std::vector<Vec3D> &p,const Vec3D &ref)
     {

@@ -66,6 +66,12 @@ namespace RESUM {
       return FFUNCTION::Additive;
     }
 
+    virtual std::set<size_t> ResumMult() {return {3};}
+    virtual size_t ResumQCDorderBorn() {return 1;};
+    virtual size_t ResumQCDorderLO() {return 2;}
+    virtual size_t ResumQCDorderNLO() {return 3;}
+
+
     GROOM_MODE GroomMode(double v, ATOOLS::Cluster_Amplitude* ampl,
                          const size_t &l) {
       if(l<2 or not ampl->Leg(l)->Flav().Strong()) {
